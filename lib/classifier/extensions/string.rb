@@ -3,7 +3,7 @@
 # License::   LGPL
 
 begin
-	require_gem 'stemmer'
+	require 'stemmer'
 rescue LoadError
 	puts "Please install stemmer from http://rubyforge.org/projects/stemmer or 'gem install stemmer'"
 	exit(-1)

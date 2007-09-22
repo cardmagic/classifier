@@ -7,7 +7,7 @@ module GSL
     
     def self._load(arr)
       arry = Marshal.load(arr)
-      return GSL::Vector.new(arry)
+      return GSL::Vector.alloc(arry)
     end
     
   end

@@ -2,7 +2,7 @@
 
 begin
         require 'rubygems'
-        require_gem 'classifier'
+        require 'classifier'
 rescue
         require 'classifier'
 end

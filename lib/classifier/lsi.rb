@@ -123,11 +123,11 @@ module Classifier
       tda = doc_list.collect { |node| node.raw_vector_with( @word_list ) }
       
       if $GSL
-         tdm = GSL::Matrix.new(*tda).trans
+         tdm = GSL::Matrix.alloc(*tda).trans
          ntdm = build_reduced_matrix(tdm, cutoff)
 
          ntdm.size[1].times do |col| 
-           vec = GSL::Vector.new( ntdm.column(col) ).row
+           vec = GSL::Vector.alloc( ntdm.column(col) ).row
            doc_list[col].lsi_vector = vec
            doc_list[col].lsi_norm = vec.normalize
          end
