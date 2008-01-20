@@ -5,7 +5,7 @@ require 'rake/rdoctask'
 require 'rake/gempackagetask'
 require 'rake/contrib/rubyforgepublisher'
 
-PKG_VERSION = "1.3.0"
+PKG_VERSION = "1.3.1"
 
 PKG_FILES = FileList[
     "lib/**/*", "bin/*", "test/**/*", "[A-Z]*", "Rakefile", "html/**/*"
@@ -70,7 +70,6 @@ spec = Gem::Specification.new do |s|
   s.requirements << "A porter-stemmer module to split word stems."
 
   #### Author and project details.
-
   s.author = "Lucas Carlson"
   s.email = "lucas@rufy.com"
   s.homepage = "http://classifier.rufy.com/"
