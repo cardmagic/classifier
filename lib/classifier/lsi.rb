@@ -287,7 +287,7 @@ module Classifier
         s[ord] = 0.0 if s[ord] < s_cutoff
       end
       # Reconstruct the term document matrix, only with reduced rank
-      u * Matrix.diag( s ) * v.trans
+      u * ($GSL ? GSL::Matrix : ::Matrix).diag( s ) * v.trans
     end
     
     def node_for_content(item, &block)    
