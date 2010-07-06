@@ -7,9 +7,15 @@ require 'matrix'
 require 'mathn'
 
 class Array
-   def sum
-      inject(0) { |sum,term| sum += term  }.to_f
-   end
+  def sum(identity = 0, &block)
+    return identity unless size > 0
+  
+    if block_given?
+      map(&block).sum
+    else
+      inject { |sum, element| sum + element }.to_f
+    end
+  end
 end
 
 class Vector
