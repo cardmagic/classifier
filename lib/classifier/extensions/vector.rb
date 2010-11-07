@@ -7,7 +7,7 @@ require 'matrix'
 require 'mathn'
 
 class Array
-  def sum(identity = 0, &block)
+  def sum_with_identity(identity = 0, &block)
     return identity unless size > 0
   
     if block_given?
@@ -17,6 +17,7 @@ class Array
     end
   end
 end
+
 
 class Vector
   def magnitude
