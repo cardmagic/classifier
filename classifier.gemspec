@@ -5,7 +5,7 @@
 
 Gem::Specification.new do |s|
   s.name = %q{classifier}
-  s.version = "1.3.3"
+  s.version = "1.3.4"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.autorequire = %q{classifier}
@@ -17,12 +17,14 @@ Gem::Specification.new do |s|
      "README"
   ]
   s.files = [
-    "LICENSE",
+    ".gitignore",
+     "LICENSE",
      "README",
      "Rakefile",
      "VERSION",
      "bin/bayes.rb",
      "bin/summarize.rb",
+     "classifier.gemspec",
      "install.rb",
      "lib/classifier.rb",
      "lib/classifier/bayes.rb",
