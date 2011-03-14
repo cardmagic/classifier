@@ -42,7 +42,7 @@ class Bayes
 		category = category.prepare_category_name
 		text.word_hash.each do |word, count|
 			if @total_words >= 0
-				orig = @categories[category][word]
+				orig = @categories[category][word] || 0
 				@categories[category][word]     ||=     0
 				@categories[category][word]      -=     count
 				if @categories[category][word] <= 0
