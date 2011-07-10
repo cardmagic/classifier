@@ -44,8 +44,8 @@ module Classifier
       end
      
       # Perform the scaling transform
-      total_words = vec.sum_with_identity
-      
+      total_words = $GSL ? vec.sum : vec.sum_with_identity
+
       # Perform first-order association transform if this vector has more
       # than one word in it. 
       if total_words > 1.0 
