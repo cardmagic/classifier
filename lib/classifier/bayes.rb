@@ -56,7 +56,7 @@ class Bayes
 					count = orig
 				end
 
-				if @category_word_count[category] > count
+				if @category_word_count[category] >= count
 					@category_word_count[category] -= count
 				end
 				@total_words -= count
