@@ -12,6 +12,7 @@ class Bayes
 		@categories = Hash.new
 		categories.each { |category| @categories[category.prepare_category_name] = Hash.new }
 		@total_words = 0
+		@category_word_count = Hash.new()
 	end
 
 	#
@@ -23,10 +24,13 @@ class Bayes
 	#     b.train "The other", "The other text"
 	def train(category, text)
 		category = category.prepare_category_name
+		@category_word_count[category] ||= 0
+
 		text.word_hash.each do |word, count|
 			@categories[category][word]     ||=     0
 			@categories[category][word]      +=     count
 			@total_words += count
+			@category_word_count[category] += count
 		end
 	end
 
@@ -40,14 +44,20 @@ class Bayes
 	#     b.untrain :this, "This text"
 	def untrain(category, text)
 		category = category.prepare_category_name
+		@category_word_count[category] ||= 0
+
 		text.word_hash.each do |word, count|
 			if @total_words >= 0
-				orig = @categories[category][word]
+				orig = @categories[category][word] || 0
 				@categories[category][word]     ||=     0
 				@categories[category][word]      -=     count
 				if @categories[category][word] <= 0
 					@categories[category].delete(word)
 					count = orig
+				end
+
+				if @category_word_count[category] > count
+					@category_word_count[category] -= count
 				end
 				@total_words -= count
 			end
@@ -63,7 +73,7 @@ class Bayes
 		score = Hash.new
 		@categories.each do |category, category_words|
 			score[category.to_s] = 0
-			total = category_words.values.inject(0) {|sum, element| sum+element}
+			total = @category_word_count[category] || 1
 			text.word_hash.each do |word, count|
 				s = category_words.has_key?(word) ? category_words[word] : 0.1
 				score[category.to_s] += Math.log(s/total.to_f)
