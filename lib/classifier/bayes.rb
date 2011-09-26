@@ -73,10 +73,10 @@ class Bayes
 		score = Hash.new
 		@categories.each do |category, category_words|
 			score[category.to_s] = 0
-			total = @category_word_count[category] || 1
+			total = (@category_word_count[category] || 1).to_f
 			text.word_hash.each do |word, count|
 				s = category_words.has_key?(word) ? category_words[word] : 0.1
-				score[category.to_s] += Math.log(s/total.to_f)
+				score[category.to_s] += Math.log(s/total)
 			end
 		end
 		return score
