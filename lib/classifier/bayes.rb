@@ -71,10 +71,11 @@ class Bayes
 	# The largest of these scores (the one closest to 0) is the one picked out by #classify
 	def classifications(text)
 		score = Hash.new
+		word_hash = text.word_hash
 		@categories.each do |category, category_words|
 			score[category.to_s] = 0
 			total = (@category_word_count[category] || 1).to_f
-			text.word_hash.each do |word, count|
+			word_hash.each do |word, count|
 				s = category_words.has_key?(word) ? category_words[word] : 0.1
 				score[category.to_s] += Math.log(s/total)
 			end
