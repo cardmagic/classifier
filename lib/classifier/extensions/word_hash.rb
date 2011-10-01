@@ -19,7 +19,9 @@ class String
   # Return a Hash of strings => ints. Each word in the string is stemmed,
   # interned, and indexes to its frequency in the document.  
 	def word_hash
-		word_hash_for_words(gsub(/[^\w\s]/,"").split + gsub(/[\w]/," ").split)
+		word_hash = clean_word_hash()
+		symbol_hash = word_hash_for_symbols(gsub(/[\w]/," ").split)
+		return word_hash.merge(symbol_hash)
 	end
 
 	# Return a word hash without extra punctuation or short symbols, just stemmed words
@@ -32,12 +34,23 @@ class String
 	def word_hash_for_words(words)
 		d = Hash.new
 		words.each do |word|
-			word.downcase! if word =~ /[\w]+/
+			word.downcase!
 			key = word.stem.intern
-			if word =~ /[^\w]/ || ! CORPUS_SKIP_WORDS.include?(word) && word.length > 2
+			if ! CORPUS_SKIP_WORDS.include?(word) && word.length > 2
 				d[key] ||= 0
 				d[key] += 1
 			end
+		end
+		return d
+	end
+
+
+	def word_hash_for_symbols(words)
+		d = Hash.new
+		words.each do |word|
+			key = word.intern
+			d[key] ||= 0
+			d[key] += 1
 		end
 		return d
 	end
