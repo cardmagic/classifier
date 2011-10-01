@@ -2,6 +2,8 @@
 # Copyright:: Copyright (c) 2005 Lucas Carlson
 # License::   LGPL
 
+require "set"
+
 # These are extensions to the String class to provide convenience 
 # methods for the Classifier package.
 class String
@@ -40,7 +42,7 @@ class String
 		return d
 	end
 	
-	CORPUS_SKIP_WORDS = [
+	CORPUS_SKIP_WORDS = Set.new([
       "a",
       "again",
       "all",
@@ -121,5 +123,5 @@ class String
       "yes",
       "you",
       "youll",
-      ]
+      ])
 end
