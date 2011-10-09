@@ -32,12 +32,11 @@ class String
 	private
 	
 	def word_hash_for_words(words)
-		d = Hash.new
+		d = Hash.new(0)
 		words.each do |word|
 			word.downcase!
 			key = word.stem.intern
 			if ! CORPUS_SKIP_WORDS.include?(word) && word.length > 2
-				d[key] ||= 0
 				d[key] += 1
 			end
 		end
@@ -46,10 +45,9 @@ class String
 
 
 	def word_hash_for_symbols(words)
-		d = Hash.new
+		d = Hash.new(0)
 		words.each do |word|
 			key = word.intern
-			d[key] ||= 0
 			d[key] += 1
 		end
 		return d
