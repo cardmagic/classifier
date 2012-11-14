@@ -13,7 +13,7 @@ class Array
     if block_given?
       map(&block).sum
     else
-      inject { |sum, element| sum + element }.to_f
+      reduce(:+)
     end
   end
 end
