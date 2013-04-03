@@ -1,8 +1,9 @@
 require 'rubygems'
 require 'rake'
 require 'rake/testtask'
-require 'rake/rdoctask'
-require 'rake/gempackagetask'
+#require 'rake/rdoctask'
+#require 'rdoc/task'
+#require 'rake/gempackagetask'
 require 'rake/contrib/rubyforgepublisher'
 
 PKG_VERSION = "1.3.3"
@@ -30,12 +31,15 @@ end
 
 # Genereate the RDoc documentation
 desc "Create documentation"
-Rake::RDocTask.new("doc") { |rdoc|
+#Rake::RDocTask.new("doc") { |rdoc|
+=begin
+RDoc::Task("doc") { |rdoc|
   rdoc.title = "Ruby Classifier - Bayesian and LSI classification library"
   rdoc.rdoc_dir = 'html'
   rdoc.rdoc_files.include('README')
   rdoc.rdoc_files.include('lib/**/*.rb')
 }
+=end
 
 # Genereate the package
 spec = Gem::Specification.new do |s|
@@ -75,10 +79,12 @@ spec = Gem::Specification.new do |s|
   s.homepage = "http://classifier.rufy.com/"
 end
 
+=begin
 Rake::GemPackageTask.new(spec) do |pkg|
   pkg.need_zip = true
   pkg.need_tar = true
 end
+=end
 
 desc "Report code statistics (KLOCs, etc) from the application"
 task :stats do
