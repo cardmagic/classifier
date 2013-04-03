@@ -84,7 +84,7 @@ module Classifier
     #
     def remove_item( item )
       if @items.has_key? item
-        @items.remove item
+        @items.delete item
         @version += 1
       end
     end
