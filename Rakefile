@@ -13,15 +13,13 @@ require 'rake'
 
 require 'jeweler'
 Jeweler::Tasks.new do |gem|
-  # gem is a Gem::Specification... see http://docs.rubygems.org/read/chapter/20 for more options
   gem.name = "classifier"
-  gem.homepage = "http://github.com/dougsko/classifier"
+  gem.homepage = "http://classifier.rufy.com"
   gem.license = "MIT"
   gem.summary = %Q{A general classifier module to allow Bayesian and other types of classifications.}
   gem.description = %Q{A general classifier module to allow Bayesian and other types of classifications.}
-  gem.email = "dougtko@gmail.com"
-  gem.authors = ["Doug P."]
-  # dependencies defined in Gemfile
+  gem.email = "lucas@rufy.com"
+  gem.authors = ["Lucas Carlson"]
 end
 Jeweler::RubygemsDotOrgTasks.new
 
@@ -31,16 +29,6 @@ Rake::TestTask.new(:test) do |test|
   test.pattern = 'test/**/test_*.rb'
   test.verbose = true
 end
-
-=begin
-require 'rcov/rcovtask'
-Rcov::RcovTask.new do |test|
-  test.libs << 'test'
-  test.pattern = 'test/**/test_*.rb'
-  test.verbose = true
-  test.rcov_opts << '--exclude "gems/*"'
-end
-=end
 
 task :default => :test
 
