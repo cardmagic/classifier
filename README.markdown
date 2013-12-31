@@ -88,9 +88,9 @@ with more than just simple strings.
 
 ## Authors    
 
-* Lucas Carlson  (mailto:lucas@rufy.com)
-* David Fayram II (mailto:dfayram@gmail.com)
-* Cameron McBride (mailto:cameron.mcbride@gmail.com)
+* Lucas Carlson  (lucas@rufy.com)
+* David Fayram II (dfayram@gmail.com)
+* Cameron McBride (cameron.mcbride@gmail.com)
 
 This library is released under the terms of the GNU LGPL. See LICENSE for more details.
 
