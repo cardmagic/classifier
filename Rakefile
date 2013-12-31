@@ -1,14 +1,14 @@
 require 'rubygems'
 require 'rake'
 require 'rake/testtask'
-require 'rake/rdoctask'
+require 'rdoc/task'
 require 'rake/gempackagetask'
 require 'rake/contrib/rubyforgepublisher'
 
 PKG_VERSION = "1.3.3"
 
 PKG_FILES = FileList[
-    "lib/**/*", "bin/*", "test/**/*", "[A-Z]*", "Rakefile", "html/**/*"
+    "lib/**/*", "bin/*", "test/**/*", "[A-Z]*", "Rakefile", "Gemfile", "html/**/*"
 ]
 
 desc "Default Task"

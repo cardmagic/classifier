@@ -1,15 +1,17 @@
-== Welcome to Classifier
+## Welcome to Classifier
 
 Classifier is a general module to allow Bayesian and other types of classifications.
 
-== Download
+## Download
 
 * http://rubyforge.org/projects/classifier
 * gem install classifier
 * svn co http://rufy.com/svn/classifier/trunk
 
-== Dependencies
+## Dependencies
+
 If you install Classifier from source, you'll need to install Martin Porter's stemmer algorithm with RubyGems as follows:
+
   gem install stemmer
 
 If you would like to speed up LSI classification by at least 10x, please install the following libraries:
@@ -18,10 +20,12 @@ rb-gsl:: http://rb-gsl.rubyforge.org
 
 Notice that LSI will work without these libraries, but as soon as they are installed, Classifier will make use of them. No configuration changes are needed, we like to keep things ridiculously easy for you.
 
-== Bayes
+## Bayes
+
 A Bayesian classifier by Lucas Carlson. Bayesian Classifiers are accurate, fast, and have modest memory requirements.
 
-=== Usage
+### Usage
+
     require 'classifier'
     b = Classifier::Bayes.new 'Interesting', 'Uninteresting'
     b.train_interesting "here are some good words. I hope you love them"
@@ -39,19 +43,21 @@ A Bayesian classifier by Lucas Carlson. Bayesian Classifiers are accurate, fast,
 
 Using Madeleine, your application can persist the learned data over time.
 
-=== Bayesian Classification
+### Bayesian Classification
 
 * http://www.process.com/precisemail/bayesian_filtering.htm
 * http://en.wikipedia.org/wiki/Bayesian_filtering
 * http://www.paulgraham.com/spam.html
 
-== LSI
+## LSI
+
 A Latent Semantic Indexer by David Fayram. Latent Semantic Indexing engines
 are not as fast or as small as Bayesian classifiers, but are more flexible, providing 
 fast search and clustering detection as well as semantic analysis of the text that 
 theoretically simulates human learning.
 
-=== Usage
+### Usage
+
   require 'classifier'
   lsi = Classifier::LSI.new
   strings = [ ["This text deals with dogs. Dogs.", :dog],
@@ -74,12 +80,14 @@ theoretically simulates human learning.
 Please see the Classifier::LSI documentation for more information. It is possible to index, search and classify
 with more than just simple strings. 
 
-=== Latent Semantic Indexing
+### Latent Semantic Indexing
+
 * http://www.c2.com/cgi/wiki?LatentSemanticIndexing
 * http://www.chadfowler.com/index.cgi/Computing/LatentSemanticIndexing.rdoc
 * http://en.wikipedia.org/wiki/Latent_semantic_analysis
 
-== Authors    
+## Authors    
+
 * Lucas Carlson  (mailto:lucas@rufy.com)
 * David Fayram II (mailto:dfayram@gmail.com)
 * Cameron McBride (mailto:cameron.mcbride@gmail.com)
