@@ -2,6 +2,8 @@
 # Copyright:: Copyright (c) 2005 Lucas Carlson
 # License::   LGPL
 
+require "set"
+
 # These are extensions to the String class to provide convenience 
 # methods for the Classifier package.
 class String
@@ -17,7 +19,9 @@ class String
   # Return a Hash of strings => ints. Each word in the string is stemmed,
   # interned, and indexes to its frequency in the document.  
 	def word_hash
-		word_hash_for_words(gsub(/[^\w\s]/,"").split + gsub(/[\w]/," ").split)
+		word_hash = clean_word_hash()
+		symbol_hash = word_hash_for_symbols(gsub(/[\w]/," ").split)
+		return word_hash.merge(symbol_hash)
 	end
 
 	# Return a word hash without extra punctuation or short symbols, just stemmed words
@@ -28,19 +32,26 @@ class String
 	private
 	
 	def word_hash_for_words(words)
-		d = Hash.new
+		d = Hash.new(0)
 		words.each do |word|
-			word.downcase! if word =~ /[\w]+/
-			key = word.stem.intern
-			if word =~ /[^\w]/ || ! CORPUS_SKIP_WORDS.include?(word) && word.length > 2
-				d[key] ||= 0
-				d[key] += 1
+			word.downcase!
+			if ! CORPUS_SKIP_WORDS.include?(word) && word.length > 2
+				d[word.stem.intern] += 1
 			end
 		end
 		return d
 	end
+
+
+	def word_hash_for_symbols(words)
+		d = Hash.new(0)
+		words.each do |word|
+			d[word.intern] += 1
+		end
+		return d
+	end
 	
-	CORPUS_SKIP_WORDS = [
+	CORPUS_SKIP_WORDS = Set.new([
       "a",
       "again",
       "all",
@@ -121,5 +132,5 @@ class String
       "yes",
       "you",
       "youll",
-      ]
+      ])
 end
