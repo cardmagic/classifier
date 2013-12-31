@@ -91,6 +91,7 @@ with more than just simple strings.
 * Lucas Carlson  (lucas@rufy.com)
 * David Fayram II (dfayram@gmail.com)
 * Cameron McBride (cameron.mcbride@gmail.com)
+* Ivan Acosta-Rubio (ivan@softwarecriollo.com)
 
 This library is released under the terms of the GNU LGPL. See LICENSE for more details.
 
