@@ -12,6 +12,7 @@ class Bayes
 		@categories = Hash.new
 		categories.each { |category| @categories[category.prepare_category_name] = Hash.new }
 		@total_words = 0
+                @category_counts = Hash.new(0)
 	end
 
 	#
@@ -23,6 +24,7 @@ class Bayes
 	#     b.train "The other", "The other text"
 	def train(category, text)
 		category = category.prepare_category_name
+                @category_counts[category] += 1
 		text.word_hash.each do |word, count|
 			@categories[category][word]     ||=     0
 			@categories[category][word]      +=     count
@@ -40,6 +42,7 @@ class Bayes
 	#     b.untrain :this, "This text"
 	def untrain(category, text)
 		category = category.prepare_category_name
+                @category_counts[category] -= 1
 		text.word_hash.each do |word, count|
 			if @total_words >= 0
 				orig = @categories[category][word]
@@ -61,6 +64,7 @@ class Bayes
 	# The largest of these scores (the one closest to 0) is the one picked out by #classify
 	def classifications(text)
 		score = Hash.new
+                training_count = @category_counts.values.inject { |x,y| x+y }.to_f
 		@categories.each do |category, category_words|
 			score[category.to_s] = 0
 			total = category_words.values.inject(0) {|sum, element| sum+element}
@@ -68,6 +72,9 @@ class Bayes
 				s = category_words.has_key?(word) ? category_words[word] : 0.1
 				score[category.to_s] += Math.log(s/total.to_f)
 			end
+                        # now add prior probability for the category
+                        s = @category_counts.has_key?(category) ? @category_counts[category] : 0.1
+                        score[category.to_s] += Math.log(s / training_count)
 		end
 		return score
 	end
