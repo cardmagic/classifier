@@ -17,7 +17,7 @@ end
 class ArrayExtensionsTest < Test::Unit::TestCase
 
   def test_plays_nicely_with_any_array
-    assert_equal [Array].sum, nil
+    assert_equal [Array].sum, Array
   end
 
   def test_monkey_path_array_sum
