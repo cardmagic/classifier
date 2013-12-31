@@ -4,9 +4,9 @@ Classifier is a general module to allow Bayesian and other types of classificati
 
 ## Download
 
-* http://rubyforge.org/projects/classifier
+* https://github.com/cardmagic/classifier
 * gem install classifier
-* svn co http://rufy.com/svn/classifier/trunk
+* git clone https://github.com/cardmagic/classifier.git
 
 ## Dependencies
 
