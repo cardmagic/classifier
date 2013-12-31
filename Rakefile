@@ -2,7 +2,6 @@ require 'rubygems'
 require 'rake'
 require 'rake/testtask'
 require 'rdoc/task'
-require 'rubygems/packagetask'
 require 'rake/contrib/rubyforgepublisher'
 
 PKG_VERSION = "1.3.3"
