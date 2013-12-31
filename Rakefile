@@ -74,11 +74,6 @@ spec = Gem::Specification.new do |s|
   s.homepage = "http://classifier.rufy.com/"
 end
 
-Rake::GemPackageTask.new(spec) do |pkg|
-  pkg.need_zip = true
-  pkg.need_tar = true
-end
-
 desc "Report code statistics (KLOCs, etc) from the application"
 task :stats do
   require 'code_statistics'

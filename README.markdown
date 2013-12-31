@@ -10,9 +10,9 @@ Classifier is a general module to allow Bayesian and other types of classificati
 
 ## Dependencies
 
-If you install Classifier from source, you'll need to install Martin Porter's stemmer algorithm with RubyGems as follows:
+If you install Classifier from source, you'll need to install Roman Shterenzon's fast-stemmer gem with RubyGems as follows:
 
-    gem install stemmer
+    gem install fast-stemmer
 
 If you would like to speed up LSI classification by at least 10x, please install the following libraries:
 GNU GSL:: http://www.gnu.org/software/gsl

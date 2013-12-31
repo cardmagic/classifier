@@ -2,6 +2,7 @@ GEM
   remote: https://rubygems.org/
   specs:
     diff-lcs (1.2.5)
+    fast-stemmer (1.0.2)
     json (1.8.1)
     rake (10.1.1)
     rdoc (4.1.0)
@@ -19,6 +20,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  fast-stemmer
   rake
   rdoc
   rspec
