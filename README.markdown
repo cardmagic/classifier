@@ -12,7 +12,7 @@ Classifier is a general module to allow Bayesian and other types of classificati
 
 If you install Classifier from source, you'll need to install Martin Porter's stemmer algorithm with RubyGems as follows:
 
-  gem install stemmer
+    gem install stemmer
 
 If you would like to speed up LSI classification by at least 10x, please install the following libraries:
 GNU GSL:: http://www.gnu.org/software/gsl
@@ -58,24 +58,24 @@ theoretically simulates human learning.
 
 ### Usage
 
-  require 'classifier'
-  lsi = Classifier::LSI.new
-  strings = [ ["This text deals with dogs. Dogs.", :dog],
+    require 'classifier'
+    lsi = Classifier::LSI.new
+    strings = [ ["This text deals with dogs. Dogs.", :dog],
               ["This text involves dogs too. Dogs! ", :dog],
               ["This text revolves around cats. Cats.", :cat],
               ["This text also involves cats. Cats!", :cat],
               ["This text involves birds. Birds.",:bird ]]
-  strings.each {|x| lsi.add_item x.first, x.last}
+    strings.each {|x| lsi.add_item x.first, x.last}
   
-  lsi.search("dog", 3)
-  # returns => ["This text deals with dogs. Dogs.", "This text involves dogs too. Dogs! ", 
-  #             "This text also involves cats. Cats!"]
+    lsi.search("dog", 3)
+    # returns => ["This text deals with dogs. Dogs.", "This text involves dogs too. Dogs! ", 
+    #             "This text also involves cats. Cats!"]
 
-  lsi.find_related(strings[2], 2)
-  # returns => ["This text revolves around cats. Cats.", "This text also involves cats. Cats!"]
+    lsi.find_related(strings[2], 2)
+    # returns => ["This text revolves around cats. Cats.", "This text also involves cats. Cats!"]
   
-  lsi.classify "This text is also about dogs!"
-  # returns => :dog
+    lsi.classify "This text is also about dogs!"
+    # returns => :dog
   
 Please see the Classifier::LSI documentation for more information. It is possible to index, search and classify
 with more than just simple strings. 
