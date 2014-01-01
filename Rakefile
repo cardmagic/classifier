@@ -2,6 +2,7 @@ require 'rubygems'
 require 'rake'
 require 'rake/testtask'
 require 'rdoc/task'
+require 'rubygems/package_task'
 require 'rake/contrib/rubyforgepublisher'
 
 PKG_VERSION = "1.3.4"
@@ -72,6 +73,11 @@ spec = Gem::Specification.new do |s|
   s.author = "Lucas Carlson"
   s.email = "lucas@rufy.com"
   s.homepage = "http://classifier.rufy.com/"
+end
+
+Gem::PackageTask.new(spec) do |pkg|
+  pkg.need_zip = true
+  pkg.need_tar = true
 end
 
 desc "Report code statistics (KLOCs, etc) from the application"
