@@ -44,6 +44,7 @@ spec = Gem::Specification.new do |s|
 
   s.name = 'classifier'
   s.version = PKG_VERSION
+  s.version = "#{s.version}-alpha-#{ENV['TRAVIS_BUILD_NUMBER']}" if ENV['TRAVIS']
   s.summary = <<-EOF
    A general classifier module to allow Bayesian and other types of classifications.
   EOF

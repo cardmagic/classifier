@@ -1,10 +1,13 @@
 language: ruby
 rvm:
-  - ruby-head
-  - 2.0.0
-  - 1.9.3
-  - 1.8.7
-  - jruby-head
-  - jruby-19mode
-  - ree
-
+- ruby-head
+- 2.0.0
+- 1.9.3
+- 1.8.7
+- ree
+deploy:
+  provider: rubygems
+  on:
+    tags: true
+  api_key:
+    secure: jLs8Q68pEvJrFGGWfbWp90V7E9JEIjpbPwtcUkbGG2mD3lIMuREuDSaRE7pqHMhNC7AVUfJ9czmMSNC3PPO5mnJPMsAsNbfEWureG7PVrWH6LI3gLu27fvkdH1ShWqpCSNv2p3/lz+Wx3tRGiVqAI+09I9QuMe8ARBvA9QvOHBw=
