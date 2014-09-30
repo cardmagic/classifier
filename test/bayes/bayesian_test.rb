@@ -29,5 +29,6 @@ class BayesianTest < Test::Unit::TestCase
 		@classifier.train_interesting "here are some good words. I hope you love them"
 		@classifier.train_uninteresting "here are some bad words, I hate you"
 		assert_equal 'Uninteresting', @classifier.classify("I hate bad words and you")
+		assert_equal 'Interesting', @classifier.classify("I love words that are good")
 	end
 end
