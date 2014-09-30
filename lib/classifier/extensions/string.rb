@@ -1,8 +1,11 @@
 # Author::    Lucas Carlson  (mailto:lucas@rufy.com)
 # Copyright:: Copyright (c) 2005 Lucas Carlson
 # License::   LGPL
-
-require 'fast_stemmer'
+if RUBY_PLATFORM =~ /java/
+  require 'stemmify'
+else
+  require 'fast_stemmer'
+end
 require 'classifier/extensions/word_hash'
 
 class Object
