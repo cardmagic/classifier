@@ -24,3 +24,4 @@ DEPENDENCIES
   rake
   rdoc
   rspec
+  stemmify

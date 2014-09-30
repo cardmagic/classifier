@@ -66,9 +66,13 @@ spec = Gem::Specification.new do |s|
   s.has_rdoc = true
 
   #### Dependencies and requirements.
-
-  s.add_dependency('fast-stemmer', '>= 1.0.0')
-  s.requirements << "A porter-stemmer module to split word stems."
+  if RUBY_PLATFORM =~ /java/
+    s.add_dependency('stemmify')
+    s.requirements << "A ruby only porter-stemmer module to split word stems."
+  else
+    s.add_dependency('fast-stemmer', '>= 1.0.0')
+    s.requirements << "A porter-stemmer module to split word stems."
+  end
 
   #### Author and project details.
   s.author = "Lucas Carlson"

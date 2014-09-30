@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/Ch4s3/classifier.svg)](https://travis-ci.org/Ch4s3/classifier)
+
 ## Welcome to Classifier
 
 Classifier is a general module to allow Bayesian and other types of classifications.
@@ -13,6 +15,11 @@ Classifier is a general module to allow Bayesian and other types of classificati
 If you install Classifier from source, you'll need to install Roman Shterenzon's fast-stemmer gem with RubyGems as follows:
 
     gem install fast-stemmer
+
+Currently using Classifier with JRuby requires the all ruby version of fast-stemmer, [Stemmify](https://github.com/raypereda/stemmify).
+Future versions will rely on a java implementation.
+
+    gem install stemmify
 
 If you would like to speed up LSI classification by at least 10x, please install the following libraries:
 GNU GSL:: http://www.gnu.org/software/gsl
