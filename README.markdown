@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/Ch4s3/classifier.svg)](https://travis-ci.org/Ch4s3/classifier)
+
 ## Welcome to Classifier
 
 Classifier is a general module to allow Bayesian and other types of classifications.
