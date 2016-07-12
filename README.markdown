@@ -76,6 +76,10 @@ theoretically simulates human learning.
   
     lsi.classify "This text is also about dogs!"
     # returns => :dog
+
+    lsi.classify_with_confidence "This text is also about dogs!"
+    # returns => [:dog, 1.0]
+  
   
 Please see the Classifier::LSI documentation for more information. It is possible to index, search and classify
 with more than just simple strings. 
