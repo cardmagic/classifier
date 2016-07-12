@@ -26,5 +26,6 @@
 
 require 'rubygems'
 require 'classifier/extensions/string'
+require 'classifier/extensions/vector'
 require 'classifier/bayes'
 require 'classifier/lsi'
