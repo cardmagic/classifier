@@ -6,7 +6,7 @@ module Classifier
 
 class Bayes
   # The class can be created with one or more categories, each of which will be
-  # initialized and given a training method. E.g., 
+  # initialized and given a training method. E.g.,
   #      b = Classifier::Bayes.new 'Interesting', 'Uninteresting', 'Spam'
 	def initialize(*categories)
 		@categories = Hash.new
@@ -56,7 +56,7 @@ class Bayes
 			end
 		end
 	end
-		
+
 	#
 	# Returns the scores in each category the provided +text+. E.g.,
 	#    b.classifications "I hate bad words and you"
@@ -80,14 +80,14 @@ class Bayes
 	end
 
   #
-  # Returns the classification of the provided +text+, which is one of the 
+  # Returns the classification of the provided +text+, which is one of the
   # categories given in the initializer. E.g.,
   #    b.classify "I hate bad words and you"
   #    =>  'Uninteresting'
 	def classify(text)
 		(classifications(text).sort_by { |a| -a[1] })[0][0]
 	end
-	
+
 	#
 	# Provides training and untraining methods for the categories specified in Bayes#new
 	# For example:
@@ -106,7 +106,7 @@ class Bayes
 	    super  #raise StandardError, "No such method: #{name}"
 		end
 	end
-	
+
 	#
 	# Provides a list of category names
 	# For example:
@@ -115,7 +115,7 @@ class Bayes
 	def categories # :nodoc:
 		@categories.keys.collect {|c| c.to_s}
 	end
-	
+
 	#
 	# Allows you to add categories to the classifier.
 	# For example:
@@ -128,7 +128,7 @@ class Bayes
 	def add_category(category)
 		@categories[category.prepare_category_name] = Hash.new
 	end
-	
+
 	alias append_category add_category
 end
 

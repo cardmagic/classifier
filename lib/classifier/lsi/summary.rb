@@ -14,13 +14,13 @@ class String
    def split_sentences
       split /(\.|\!|\?)/ # TODO: make this less primitive
    end
-   
+
    def split_paragraphs
       split /(\n\n|\r\r|\r\n\r\n)/ # TODO: make this less primitive
    end
-   
+
    private
-   
+
    def perform_lsi(chunks, count, separator)
       lsi = Classifier::LSI.new :auto_rebuild => false
       chunks.each { |chunk| lsi << chunk unless chunk.strip.empty? || chunk.strip.split.size == 1 }
