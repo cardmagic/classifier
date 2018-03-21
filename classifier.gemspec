@@ -11,5 +11,6 @@ Gem::Specification.new do |s|
 
   s.add_dependency 'fast-stemmer', '~> 1.0.0'
   s.add_dependency 'rake'
+  s.add_development_dependency 'minitest'
   s.add_development_dependency 'rdoc'
 end
