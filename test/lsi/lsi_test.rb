@@ -1,4 +1,5 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative '../test_helper'
+
 class LSITest < Minitest::Test
 	def setup
 	  # we repeat principle words to help weight them.
@@ -55,7 +56,7 @@ class LSITest < Minitest::Test
 	  # will fail here, but the LSI recognizes content.
 	  tricky_case = "This text revolves around dogs."
 	  assert_equal "Dog", lsi.classify( tricky_case )
-	  assert_not_equal "Dog", bayes.classify( tricky_case )
+	  assert_equal "Cat", bayes.classify( tricky_case )
 	end
 
 	def test_recategorize_interface
