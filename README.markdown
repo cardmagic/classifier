@@ -31,7 +31,7 @@ A Bayesian classifier by Lucas Carlson. Bayesian Classifiers are accurate, fast,
     b.train_interesting "here are some good words. I hope you love them"
     b.train_uninteresting "here are some bad words, I hate you"
     b.classify "I hate bad words and you" # returns 'Uninteresting'
-    
+
     require 'madeleine'
     m = SnapshotMadeleine.new("bayes_data") {
         Classifier::Bayes.new 'Interesting', 'Uninteresting'
@@ -52,8 +52,8 @@ Using Madeleine, your application can persist the learned data over time.
 ## LSI
 
 A Latent Semantic Indexer by David Fayram. Latent Semantic Indexing engines
-are not as fast or as small as Bayesian classifiers, but are more flexible, providing 
-fast search and clustering detection as well as semantic analysis of the text that 
+are not as fast or as small as Bayesian classifiers, but are more flexible, providing
+fast search and clustering detection as well as semantic analysis of the text that
 theoretically simulates human learning.
 
 ### Usage
@@ -66,19 +66,19 @@ theoretically simulates human learning.
               ["This text also involves cats. Cats!", :cat],
               ["This text involves birds. Birds.",:bird ]]
     strings.each {|x| lsi.add_item x.first, x.last}
-  
+
     lsi.search("dog", 3)
-    # returns => ["This text deals with dogs. Dogs.", "This text involves dogs too. Dogs! ", 
+    # returns => ["This text deals with dogs. Dogs.", "This text involves dogs too. Dogs! ",
     #             "This text also involves cats. Cats!"]
 
     lsi.find_related(strings[2], 2)
     # returns => ["This text revolves around cats. Cats.", "This text also involves cats. Cats!"]
-  
+
     lsi.classify "This text is also about dogs!"
     # returns => :dog
-  
+
 Please see the Classifier::LSI documentation for more information. It is possible to index, search and classify
-with more than just simple strings. 
+with more than just simple strings.
 
 ### Latent Semantic Indexing
 
@@ -86,7 +86,7 @@ with more than just simple strings.
 * http://www.chadfowler.com/index.cgi/Computing/LatentSemanticIndexing.rdoc
 * http://en.wikipedia.org/wiki/Latent_semantic_analysis
 
-## Authors    
+## Authors
 
 * Lucas Carlson  (lucas@rufy.com)
 * David Fayram II (dfayram@gmail.com)

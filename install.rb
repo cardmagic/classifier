@@ -37,7 +37,7 @@ end
 files = FileList["**/*"]
 
 # File::safe_unlink *deprecated.collect{|f| File.join($sitedir, f.split(/\//))}
-files.each {|f| 
+files.each {|f|
   File::install(f, File.join($sitedir, *f.split(/\//)), 0644, true)
 }
 
