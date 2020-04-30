@@ -10,7 +10,10 @@ Gem::Specification.new do |s|
   s.license = 'LGPL'
 
   s.add_dependency 'fast-stemmer', '~> 1.0.0'
+  # mathn deprecated and removed in >= 2.5
   s.add_dependency 'mathn' if RUBY_VERSION >= '2.5'
+  # cmath moved to gem, mathn depends on cmath, but won't be updated due to deprecation
+  s.add_dependency 'cmath' if RUBY_VERSION >= '2.7'
   s.add_dependency 'rake'
   s.add_development_dependency 'minitest'
   s.add_development_dependency 'rdoc'
