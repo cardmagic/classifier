@@ -4,7 +4,7 @@
 # These are extensions to the std-lib 'matrix' to allow an all ruby SVD
 
 require 'matrix'
-require 'mathn'
+require 'mathn' if RUBY_VERSION >= '2.5'
 
 class Array
   def sum(identity = 0, &block)
