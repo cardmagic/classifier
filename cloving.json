@@ -1,0 +1,27 @@
+{
+  "languages": [
+    {
+      "name": "Ruby",
+      "primary": true,
+      "directory": "lib",
+      "extension": ".rb"
+    }
+  ],
+  "frameworks": [],
+  "testingFrameworks": [
+    {
+      "name": "Test::Unit",
+      "type": "Testing framework",
+      "directory": "test"
+    }
+  ],
+  "buildTools": [
+    {
+      "name": "Rake",
+      "type": "Build tool"
+    }
+  ],
+  "packageManager": "Bundler",
+  "linters": [],
+  "projectType": "Ruby Gem"
+}
