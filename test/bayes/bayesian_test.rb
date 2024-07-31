@@ -42,4 +42,56 @@ class BayesianTest < Minitest::Test
     assert_equal 'Lion', bayes.classify('lion')
     assert_equal 'Elephant', bayes.classify('elephant')
   end
+
+  def test_remove_category
+    @classifier.train_interesting 'This is interesting content'
+    @classifier.train_uninteresting 'This is uninteresting content'
+
+    assert_equal %w[Interesting Uninteresting].sort, @classifier.categories.sort
+
+    @classifier.remove_category 'Uninteresting'
+
+    assert_equal ['Interesting'], @classifier.categories
+  end
+
+  def test_remove_nonexistent_category
+    assert_raises(StandardError) do
+      @classifier.remove_category 'NonexistentCategory'
+    end
+  end
+
+  def test_remove_category_affects_classification
+    @classifier.train_interesting 'This is interesting content'
+    @classifier.train_uninteresting 'This is uninteresting content'
+
+    assert_equal 'Uninteresting', @classifier.classify('This is uninteresting')
+
+    @classifier.remove_category 'Uninteresting'
+
+    assert_equal 'Interesting', @classifier.classify('This is uninteresting')
+  end
+
+  def test_remove_all_categories
+    @classifier.remove_category 'Interesting'
+    @classifier.remove_category 'Uninteresting'
+
+    assert_empty @classifier.categories
+  end
+
+  def test_remove_and_add_category
+    @classifier.remove_category 'Uninteresting'
+    @classifier.add_category 'Neutral'
+
+    assert_equal %w[Interesting Neutral].sort, @classifier.categories.sort
+  end
+
+  def test_remove_category_preserves_other_category_data
+    @classifier.train_interesting 'This is interesting content'
+    @classifier.train_uninteresting 'This is uninteresting content'
+
+    interesting_classification = @classifier.classify('This is interesting')
+    @classifier.remove_category 'Uninteresting'
+
+    assert_equal interesting_classification, @classifier.classify('This is interesting')
+  end
 end

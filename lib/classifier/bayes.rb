@@ -139,5 +139,23 @@ module Classifier
     end
 
     alias append_category add_category
+
+    #
+    # Allows you to remove categories from the classifier.
+    # For example:
+    #     b.remove_category "Spam"
+    #
+    # WARNING: Removing categories from a trained classifier will
+    # result in the loss of all training data for that category.
+    # Make sure you really want to do this before calling this method.
+    def remove_category(category)
+      category = category.prepare_category_name
+      raise StandardError, "No such category: #{category}" unless @categories.key?(category)
+
+      @categories.delete(category)
+      @category_counts.delete(category)
+      @category_word_count.delete(category)
+      @total_words -= @category_word_count[category].to_i
+    end
   end
 end
