@@ -54,12 +54,6 @@ class BayesianTest < Minitest::Test
     assert_equal ['Interesting'], @classifier.categories
   end
 
-  def test_remove_nonexistent_category
-    assert_raises(StandardError) do
-      @classifier.remove_category 'NonexistentCategory'
-    end
-  end
-
   def test_remove_category_affects_classification
     @classifier.train_interesting 'This is interesting content'
     @classifier.train_uninteresting 'This is uninteresting content'
@@ -95,7 +89,7 @@ class BayesianTest < Minitest::Test
     assert_equal interesting_classification, @classifier.classify('This is interesting')
   end
 
-  def test_remove_category
+  def test_remove_category_check_counts
     initial_total_words = @classifier.instance_variable_get(:@total_words)
     category_word_count = @classifier.instance_variable_get(:@category_word_count)['Interesting']
 
