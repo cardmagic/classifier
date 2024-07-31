@@ -2,7 +2,8 @@ PATH
   remote: .
   specs:
     classifier (1.4.2)
-      fast-stemmer (~> 1.0.0)
+      fast-stemmer (~> 1.0)
+      mutex_m (~> 0.2)
       rake
 
 GEM
