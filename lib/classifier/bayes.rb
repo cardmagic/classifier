@@ -152,10 +152,11 @@ module Classifier
       category = category.prepare_category_name
       raise StandardError, "No such category: #{category}" unless @categories.key?(category)
 
+      @total_words -= @category_word_count[category].to_i
+
       @categories.delete(category)
       @category_counts.delete(category)
       @category_word_count.delete(category)
-      @total_words -= @category_word_count[category].to_i
     end
   end
 end
