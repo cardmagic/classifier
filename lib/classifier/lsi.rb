@@ -247,6 +247,13 @@ module Classifier
     # what category the document is in. This may not always make sense.
     #
     def classify(doc, cutoff = 0.30, &block)
+      votes = vote(doc, cutoff, &block)
+
+      ranking = votes.keys.sort_by { |x| votes[x] }
+      ranking[-1]
+    end
+
+    def vote(doc, cutoff = 0.30, &block)
       icutoff = (@items.size * cutoff).round
       carry = proximity_array_for_content(doc, &block)
       carry = carry[0..icutoff - 1]
@@ -258,9 +265,30 @@ module Classifier
           votes[category] += pair[1]
         end
       end
+      votes
+    end
+
+    # Returns the same category as classify() but also returns
+    # a confidence value derived from the vote share that the
+    # winning category got.
+    #
+    # e.g.
+    # category,confidence = classify_with_confidence(doc)
+    # if confidence < 0.3
+    #   category = nil
+    # end
+    #
+    #
+    # See classify() for argument docs
+    def classify_with_confidence(doc, cutoff = 0.30, &block)
+      votes = vote(doc, cutoff, &block)
+      votes_sum = votes.values.inject(0.0) { |sum, v| sum + v }
+      return [nil, nil] if votes_sum.zero?
 
       ranking = votes.keys.sort_by { |x| votes[x] }
-      ranking[-1]
+      winner = ranking[-1]
+      vote_share = votes[winner] / votes_sum.to_f
+      [winner, vote_share]
     end
 
     # Prototype, only works on indexed documents.
