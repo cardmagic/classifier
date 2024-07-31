@@ -27,4 +27,19 @@ class BayesianTest < Minitest::Test
     @classifier.train_uninteresting 'here are some bad words, I hate you'
     assert_equal 'Uninteresting', @classifier.classify('I hate bad words and you')
   end
+
+  def test_safari_animals
+    bayes = Classifier::Bayes.new 'Lion', 'Elephant'
+    bayes.train_lion 'lion'
+    bayes.train_lion 'zebra'
+    bayes.train_elephant 'elephant'
+    bayes.train_elephant 'trunk'
+    bayes.train_elephant 'tusk'
+
+    assert_equal 'Lion', bayes.classify('zebra')
+    assert_equal 'Elephant', bayes.classify('trunk')
+    assert_equal 'Elephant', bayes.classify('tusk')
+    assert_equal 'Lion', bayes.classify('lion')
+    assert_equal 'Elephant', bayes.classify('elephant')
+  end
 end
