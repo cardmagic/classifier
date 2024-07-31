@@ -94,4 +94,34 @@ class BayesianTest < Minitest::Test
 
     assert_equal interesting_classification, @classifier.classify('This is interesting')
   end
+
+  def test_remove_category
+    initial_total_words = @classifier.instance_variable_get(:@total_words)
+    category_word_count = @classifier.instance_variable_get(:@category_word_count)['Interesting']
+
+    @classifier.remove_category('Interesting')
+
+    assert_nil @classifier.instance_variable_get(:@categories)['Interesting']
+    assert_equal @classifier.instance_variable_get(:@category_counts)['Interesting'], 0
+    assert_equal @classifier.instance_variable_get(:@category_word_count)['Interesting'], 0
+
+    new_total_words = @classifier.instance_variable_get(:@total_words)
+    assert_equal initial_total_words - category_word_count, new_total_words
+  end
+
+  def test_remove_category_updates_total_words_before_deletion
+    initial_total_words = @classifier.instance_variable_get(:@total_words)
+    category_word_count = @classifier.instance_variable_get(:@category_word_count)['Interesting']
+
+    @classifier.remove_category('Interesting')
+
+    new_total_words = @classifier.instance_variable_get(:@total_words)
+    assert_equal initial_total_words - category_word_count, new_total_words
+  end
+
+  def test_remove_nonexistent_category
+    assert_raises(StandardError, 'No such category: Nonexistent Category') do
+      @classifier.remove_category('Nonexistent Category')
+    end
+  end
 end

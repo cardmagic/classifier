@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    classifier (1.4.0)
+    classifier (1.4.1)
       fast-stemmer (~> 1.0.0)
       rake
 
