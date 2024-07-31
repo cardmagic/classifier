@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'classifier'
-  s.version     = '1.4.3'
+  s.version     = '1.4.4'
   s.summary     = 'A general classifier module to allow Bayesian and other types of classifications.'
   s.description = 'A general classifier module to allow Bayesian and other types of classifications.'
   s.author = 'Lucas Carlson'

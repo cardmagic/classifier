@@ -40,6 +40,7 @@ class LSITest < Minitest::Test
     assert_equal 'Dog', lsi.classify(@str1)
     assert_equal 'Cat', lsi.classify(@str3)
     assert_equal 'Bird', lsi.classify(@str5)
+    assert_equal 'Bird', lsi.classify('Bird me to Bird')
   end
 
   def test_external_classifying
