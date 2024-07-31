@@ -2,16 +2,27 @@
 # Copyright:: Copyright (c) 2005 David Fayram II
 # License::   LGPL
 
+module Classifier
+  class LSI
+    @gsl_available = false
+
+    class << self
+      attr_accessor :gsl_available
+    end
+  end
+end
+
 begin
   # to test the native vector class, try `rake test NATIVE_VECTOR=true`
   raise LoadError if ENV['NATIVE_VECTOR'] == 'true'
+  raise LoadError unless Gem::Specification.find_all_by_name('gsl').any?
 
   require 'gsl' # requires https://github.com/SciRuby/rb-gsl/
   require 'classifier/extensions/vector_serialize'
-  $GSL = true
+  Classifier::LSI.gsl_available = true
 rescue LoadError
-  warn 'Notice: for 10x faster LSI support, please install https://github.com/SciRuby/rb-gsl/'
-  $GSL = false
+  warn 'Notice: for 10x faster LSI support in the classifier gem, please install the gsl gem'
+  Classifier::LSI.gsl_available = false
   require 'classifier/extensions/vector'
 end
 
@@ -29,7 +40,7 @@ module Classifier
 
     # Create a fresh index.
     # If you want to call #build_index manually, use
-    #      Classifier::LSI.new :auto_rebuild => false
+    #      Classifier::LSI.new auto_rebuild: false
     #
     def initialize(options = {})
       @auto_rebuild = true unless options[:auto_rebuild] == false
@@ -118,7 +129,7 @@ module Classifier
       doc_list = @items.values
       tda = doc_list.collect { |node| node.raw_vector_with(@word_list) }
 
-      if $GSL
+      if self.class.gsl_available
         tdm = GSL::Matrix.alloc(*tda).trans
         ntdm = build_reduced_matrix(tdm, cutoff)
 
@@ -152,7 +163,7 @@ module Classifier
       return [] if needs_rebuild?
 
       avg_density = {}
-      @items.each_key { |x| avg_density[x] = proximity_array_for_content(x).inject(0.0) { |x, y| x + y[1] } }
+      @items.each_key { |x| avg_density[x] = proximity_array_for_content(x).inject(0.0) { |i, j| i + j[1] } }
 
       avg_density.keys.sort_by { |x| avg_density[x] }.reverse[0..max_chunks - 1].map
     end
@@ -175,7 +186,7 @@ module Classifier
       content_node = node_for_content(doc, &block)
       result =
         @items.keys.collect do |item|
-          val = if $GSL
+          val = if self.class.gsl_available
                   content_node.search_vector * @items[item].search_vector.col
                 else
                   (Matrix[content_node.search_vector] * @items[item].search_vector)[0]
@@ -196,7 +207,7 @@ module Classifier
       content_node = node_for_content(doc, &block)
       result =
         @items.keys.collect do |item|
-          val = if $GSL
+          val = if self.class.gsl_available
                   content_node.search_norm * @items[item].search_norm.col
                 else
                   (Matrix[content_node.search_norm] * @items[item].search_norm)[0]
@@ -314,7 +325,7 @@ module Classifier
         s[ord] = 0.0 if s[ord] < s_cutoff
       end
       # Reconstruct the term document matrix, only with reduced rank
-      u * ($GSL ? GSL::Matrix : ::Matrix).diag(s) * v.trans
+      u * (self.class.gsl_available ? GSL::Matrix : ::Matrix).diag(s) * v.trans
     end
 
     def node_for_content(item, &block)

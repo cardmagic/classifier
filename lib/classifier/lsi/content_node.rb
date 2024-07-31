@@ -33,7 +33,7 @@ module Classifier
     # Creates the raw vector out of word_hash using word_list as the
     # key for mapping the vector space.
     def raw_vector_with(word_list)
-      vec = if $GSL
+      vec = if Classifier::LSI.gsl_available
               GSL::Vector.alloc(word_list.size)
             else
               Array.new(word_list.size, 0)
@@ -44,7 +44,7 @@ module Classifier
       end
 
       # Perform the scaling transform
-      total_words = $GSL ? vec.sum : vec.sum_with_identity
+      total_words = Classifier::LSI.gsl_available ? vec.sum : vec.sum_with_identity
       total_unique_words = vec.count { |word| word != 0 }
 
       # Perform first-order association transform if this vector has more
@@ -63,7 +63,7 @@ module Classifier
         vec = vec.collect { |val| Math.log(val + 1) / -weighted_total }
       end
 
-      if $GSL
+      if Classifier::LSI.gsl_available
         @raw_norm   = vec.normalize
         @raw_vector = vec
       else
