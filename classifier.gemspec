@@ -9,7 +9,8 @@ Gem::Specification.new do |s|
   s.files = Dir['{lib}/**/*.rb', 'bin/*', 'LICENSE', '*.md', 'test/*']
   s.license = 'LGPL'
 
-  s.add_dependency 'fast-stemmer', '~> 1.0.0'
+  s.add_dependency 'fast-stemmer', '~> 1.0'
+  s.add_dependency 'mutex_m', '~> 0.2'
   s.add_dependency 'rake'
   s.add_development_dependency 'minitest'
   s.add_development_dependency 'rdoc'

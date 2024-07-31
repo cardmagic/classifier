@@ -11,6 +11,7 @@ GEM
     fast-stemmer (1.0.2)
     matrix (0.4.2)
     minitest (5.18.1)
+    mutex_m (0.2.0)
     psych (5.1.2)
       stringio
     rake (13.0.6)
@@ -28,6 +29,7 @@ DEPENDENCIES
   fast-stemmer
   matrix
   minitest
+  mutex_m
   rdoc
 
 BUNDLED WITH
