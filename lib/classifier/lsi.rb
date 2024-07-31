@@ -71,7 +71,7 @@ module Classifier
     # will be duck typed via to_s .
     #
     def <<(item)
-      add_item item
+      add_item(item)
     end
 
     # Returns the categories for a given indexed items. You are free to add and remove
@@ -85,9 +85,9 @@ module Classifier
     # Removes an item from the database, if it is indexed.
     #
     def remove_item(item)
-      return unless @items.keys.contain? item
+      return unless @items.key?(item)
 
-      @items.remove item
+      @items.delete(item)
       @version += 1
     end
 
