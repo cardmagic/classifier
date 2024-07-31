@@ -83,6 +83,31 @@ class LSITest < Minitest::Test
     assert_equal 'Cow', lsi.classify(tricky_case)
   end
 
+  def test_classify_with_confidence
+    lsi = Classifier::LSI.new
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+    lsi.add_item @str4, 'Cat'
+    lsi.add_item @str5, 'Bird'
+
+    category, confidence = lsi.classify_with_confidence(@str1)
+    assert_equal 'Dog', category
+    assert confidence > 0.5, "Confidence should be greater than 0.5, but was #{confidence}"
+
+    category, confidence = lsi.classify_with_confidence(@str3)
+    assert_equal 'Cat', category
+    assert confidence > 0.5, "Confidence should be greater than 0.5, but was #{confidence}"
+
+    category, confidence = lsi.classify_with_confidence(@str5)
+    assert_equal 'Bird', category
+    assert confidence > 0.5, "Confidence should be greater than 0.5, but was #{confidence}"
+
+    tricky_case = 'This text revolves around dogs.'
+    category, confidence = lsi.classify_with_confidence(tricky_case)
+    assert_equal 'Dog', category
+    assert confidence > 0.3, "Confidence should be greater than 0.3, but was #{confidence}"
+  end
+
   def test_search
     lsi = Classifier::LSI.new
     [@str1, @str2, @str3, @str4, @str5].each { |x| lsi << x }
