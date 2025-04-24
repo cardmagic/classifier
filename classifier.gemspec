@@ -12,6 +12,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'fast-stemmer', '~> 1.0'
   s.add_dependency 'mutex_m', '~> 0.2'
   s.add_dependency 'rake'
+  s.add_dependency 'matrix'
   s.add_development_dependency 'minitest'
   s.add_development_dependency 'rdoc'
 end
