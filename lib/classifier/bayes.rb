@@ -98,7 +98,10 @@ module Classifier
     #
     # @rbs (String) -> String
     def classify(text)
-      (classifications(text).min_by { |a| -a[1] } || []).first.to_s
+      best = classifications(text).min_by { |a| -a[1] }
+      raise StandardError, 'No classifications available' unless best
+
+      best.first.to_s
     end
 
     #
