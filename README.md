@@ -101,6 +101,27 @@ with more than just simple strings.
 * http://www.chadfowler.com/index.cgi/Computing/LatentSemanticIndexing.rdoc
 * http://en.wikipedia.org/wiki/Latent_semantic_analysis
 
+## Benchmarks
+
+Run benchmarks to compare LSI performance:
+
+    rake benchmark              # Run with current configuration
+    rake benchmark:compare      # Compare GSL vs native Ruby
+
+Sample results (Native Ruby, 20 documents):
+
+    Operation                  User     System      Total
+    ----------------------------------------------------
+    add_items                0.0001     0.0000     0.0001
+    build_index              0.5458     0.0020     0.5477
+    classify                 0.0139     0.0001     0.0140
+    search                   0.0133     0.0001     0.0134
+    find_related             0.0093     0.0001     0.0093
+    ----------------------------------------------------
+    TOTAL                                          0.5846
+
+GSL provides ~10x faster performance for the `build_index` operation, which dominates the total time.
+
 ## Authors
 
 * Lucas Carlson  (lucas@rufy.com)
