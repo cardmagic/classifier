@@ -4,6 +4,7 @@ gemspec
 gem 'fast-stemmer'
 gem 'matrix'
 gem 'mutex_m'
+gem 'ostruct'
 
 group :test do
   gem 'simplecov', require: false

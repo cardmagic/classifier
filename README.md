@@ -60,7 +60,7 @@ gem install gsl-*.gem
 </details>
 
 <details>
-<summary><strong>Ruby 2 and earlier</strong></summary>
+<summary><strong>Ruby 2.x</strong></summary>
 
 ```bash
 # macOS
