@@ -49,3 +49,5 @@ jobs:
       run: bundle exec rbs-inline --output sig lib/
     - name: Validate RBS types
       run: bundle exec rbs -I sig validate
+    - name: Type check with Steep
+      run: bundle exec steep check

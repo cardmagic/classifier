@@ -98,7 +98,7 @@ module Classifier
     #
     # @rbs (String) -> String
     def classify(text)
-      classifications(text).min_by { |a| -a[1] }[0]
+      (classifications(text).min_by { |a| -a[1] } || []).first.to_s
     end
 
     #
@@ -121,7 +121,7 @@ module Classifier
 
     # @rbs (Symbol, ?bool) -> bool
     def respond_to_missing?(name, include_private = false)
-      name.to_s =~ /(un)?train_(\w+)/ || super
+      !!(name.to_s =~ /(un)?train_(\w+)/) || super
     end
 
     # Provides a list of category names
