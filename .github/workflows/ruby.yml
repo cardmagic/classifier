@@ -33,5 +33,7 @@ jobs:
         bundler-cache: true # runs 'bundle install' and caches installed gems automatically
     - name: Run tests
       run: bundle exec rake test
+    - name: Install RBS
+      run: gem install rbs
     - name: Validate RBS types
       run: rbs -I sig validate
