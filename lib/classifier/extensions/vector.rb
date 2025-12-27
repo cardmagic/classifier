@@ -15,10 +15,8 @@ class Array
 end
 
 class Vector
-  # Small value to prevent division by zero in numerical operations
   EPSILON = 1e-10
 
-  # Override the standard library's normalize to handle zero vectors safely
   def magnitude
     sum_of_squares = 0.to_r
     size.times do |i|
@@ -29,7 +27,6 @@ class Vector
 
   def normalize
     magnitude_value = magnitude
-    # Return zero vector only if magnitude is zero or numerically negative
     return Vector[*Array.new(size, 0.0)] if magnitude_value <= 0.0
 
     normalized_values = []
@@ -68,7 +65,6 @@ class Matrix
           numerator = 2.0 * q_rotation_matrix[row, col]
           denominator = q_rotation_matrix[row, row] - q_rotation_matrix[col, col]
 
-          # Guard against division by zero when diagonal elements are equal
           angle = if denominator.abs < Vector::EPSILON
                     numerator >= 0 ? Math::PI / 4.0 : -Math::PI / 4.0
                   else
@@ -98,14 +94,10 @@ class Matrix
       break if (sum_of_differences <= 0.001 && iteration_count > 1) || iteration_count >= max_sweeps
     end
 
-    singular_values = []
-    q_rotation_matrix.row_size.times do |r|
-      # Guard against negative values due to floating point errors
-      val = q_rotation_matrix[r, r].to_f
-      singular_values << Math.sqrt([val, 0.0].max)
+    singular_values = q_rotation_matrix.row_size.times.map do |r|
+      Math.sqrt([q_rotation_matrix[r, r].to_f, 0.0].max)
     end
 
-    # Replace near-zero singular values with EPSILON to prevent division by zero
     safe_singular_values = singular_values.map { |v| [v, Vector::EPSILON].max }
     u_matrix = (row_size >= column_size ? self : trans) * v_matrix * Matrix.diagonal(*safe_singular_values).inverse
     [u_matrix, v_matrix, singular_values]

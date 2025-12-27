@@ -61,8 +61,6 @@ module Classifier
           weighted_total += val unless val.nan?
         end
 
-        # Guard against division by zero - use small epsilon if weighted_total is near zero,
-        # while preserving the sign relationship with -weighted_total.
         divisor = if weighted_total.abs < Vector::EPSILON
                     weighted_total.negative? ? Vector::EPSILON : -Vector::EPSILON
                   else
