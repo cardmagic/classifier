@@ -3,6 +3,7 @@ PATH
   specs:
     classifier (1.4.4)
       fast-stemmer (~> 1.0)
+      matrix
       mutex_m (~> 0.2)
       rake
 
