@@ -10,7 +10,6 @@ module Classifier
   # You should never have to use it directly.
   class ContentNode
     # @rbs @word_hash: Hash[Symbol, Integer]
-    # @rbs @categories: Array[String | Symbol]
 
     # @rbs @raw_vector: untyped
     # @rbs @raw_norm: untyped
