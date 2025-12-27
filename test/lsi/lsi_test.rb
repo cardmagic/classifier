@@ -263,4 +263,48 @@ class LSITest < Minitest::Test
 
     assert_empty result, 'Should return empty array for nonexistent item'
   end
+
+  # Numerical stability tests
+
+  def test_identical_documents
+    lsi = Classifier::LSI.new auto_rebuild: false
+
+    # Identical documents could cause zero singular values
+    lsi.add_item 'Exactly the same text', 'A'
+    lsi.add_item 'Exactly the same text', 'A'
+    lsi.add_item 'Different content here', 'B'
+
+    # Should handle gracefully without crashing
+    lsi.build_index
+
+    refute_predicate lsi, :needs_rebuild?
+  end
+
+  def test_single_word_documents
+    lsi = Classifier::LSI.new auto_rebuild: false
+
+    # Very short documents could cause edge cases
+    lsi.add_item 'dog', 'Animal'
+    lsi.add_item 'cat', 'Animal'
+    lsi.add_item 'car', 'Vehicle'
+
+    # Should handle gracefully
+    lsi.build_index
+
+    refute_predicate lsi, :needs_rebuild?
+  end
+
+  def test_empty_word_hash_handling
+    lsi = Classifier::LSI.new auto_rebuild: false
+
+    # Documents with only stop words result in empty word hashes
+    lsi.add_item 'the a an', 'StopWords'
+    lsi.add_item 'Dogs are great', 'Animal'
+    lsi.add_item 'Cats are nice', 'Animal'
+
+    # Should handle gracefully
+    lsi.build_index
+
+    refute_predicate lsi, :needs_rebuild?
+  end
 end

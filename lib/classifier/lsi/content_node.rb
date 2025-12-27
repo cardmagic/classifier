@@ -60,7 +60,10 @@ module Classifier
           val = term_over_total * Math.log(term_over_total)
           weighted_total += val unless val.nan?
         end
-        vec = vec.collect { |val| Math.log(val + 1) / -weighted_total }
+
+        sign = weighted_total.negative? ? 1.0 : -1.0
+        divisor = sign * [weighted_total.abs, Vector::EPSILON].max
+        vec = vec.collect { |val| Math.log(val + 1) / divisor }
       end
 
       if Classifier::LSI.gsl_available

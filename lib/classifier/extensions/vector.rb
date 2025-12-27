@@ -14,7 +14,9 @@ class Array
   end
 end
 
-module VectorExtensions
+class Vector
+  EPSILON = 1e-10
+
   def magnitude
     sum_of_squares = 0.to_r
     size.times do |i|
@@ -24,17 +26,15 @@ module VectorExtensions
   end
 
   def normalize
+    magnitude_value = magnitude
+    return Vector[*Array.new(size, 0.0)] if magnitude_value <= 0.0
+
     normalized_values = []
-    magnitude_value = magnitude.to_r
     size.times do |i|
       normalized_values << (self[i] / magnitude_value)
     end
     Vector[*normalized_values]
   end
-end
-
-class Vector
-  include VectorExtensions
 end
 
 class Matrix
@@ -62,10 +62,15 @@ class Matrix
         (1..(q_rotation_matrix.row_size - 1)).each do |col|
           next if row == col
 
-          angle = Math.atan((2.to_r * q_rotation_matrix[row,
-                                                        col]) / (q_rotation_matrix[row,
-                                                                                   row] - q_rotation_matrix[col,
-                                                                                                            col])) / 2.0
+          numerator = 2.0 * q_rotation_matrix[row, col]
+          denominator = q_rotation_matrix[row, row] - q_rotation_matrix[col, col]
+
+          angle = if denominator.abs < Vector::EPSILON
+                    numerator >= 0 ? Math::PI / 4.0 : -Math::PI / 4.0
+                  else
+                    Math.atan(numerator / denominator) / 2.0
+                  end
+
           cosine = Math.cos(angle)
           sine = Math.sin(angle)
           rotation_matrix = Matrix.identity(q_rotation_matrix.row_size)
@@ -89,11 +94,12 @@ class Matrix
       break if (sum_of_differences <= 0.001 && iteration_count > 1) || iteration_count >= max_sweeps
     end
 
-    singular_values = []
-    q_rotation_matrix.row_size.times do |r|
-      singular_values << Math.sqrt(q_rotation_matrix[r, r].to_f)
+    singular_values = q_rotation_matrix.row_size.times.map do |r|
+      Math.sqrt([q_rotation_matrix[r, r].to_f, 0.0].max)
     end
-    u_matrix = (row_size >= column_size ? self : trans) * v_matrix * Matrix.diagonal(*singular_values).inverse
+
+    safe_singular_values = singular_values.map { |v| [v, Vector::EPSILON].max }
+    u_matrix = (row_size >= column_size ? self : trans) * v_matrix * Matrix.diagonal(*safe_singular_values).inverse
     [u_matrix, v_matrix, singular_values]
   end
 
