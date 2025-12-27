@@ -10,15 +10,27 @@ Classifier is a general module to allow Bayesian and other types of classificati
 
 ## Dependencies
 
-If you install Classifier from source, you'll need to install Roman Shterenzon's fast-stemmer gem with RubyGems as follows:
+The `fast-stemmer` gem is required:
 
     gem install fast-stemmer
 
-If you would like to speed up LSI classification by at least 10x, please install the following libraries:
-GNU GSL:: http://www.gnu.org/software/gsl
-rb-gsl:: https://github.com/SciRuby/rb-gsl
+### Optional: GSL for Faster LSI
 
-Notice that LSI will work without these libraries, but as soon as they are installed, Classifier will make use of them. No configuration changes are needed, we like to keep things ridiculously easy for you.
+For 10x faster LSI classification, install the GNU Scientific Library and its Ruby bindings:
+
+    # macOS
+    brew install gsl
+    gem install gsl
+
+    # Ubuntu/Debian
+    apt-get install libgsl-dev
+    gem install gsl
+
+LSI works without GSL using a pure Ruby implementation. When GSL is installed, Classifier automatically uses it with no configuration needed.
+
+To suppress the GSL notice when not using it:
+
+    SUPPRESS_GSL_WARNING=true ruby your_script.rb
 
 ## Bayes
 
