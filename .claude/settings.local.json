@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rbs -I sig validate:*)",
+      "Skill(git-commit)",
+      "Bash(gh issue create --repo cardmagic/classifier --title \"Add tests for Bayes#untrain method\" --body \"$\\(cat <<''EOF''\n## Summary\nThe `untrain` method in `Classifier::Bayes` has **zero test coverage**. This is a critical gap as it''s a public API method.\n\n## Current State\n- Line coverage: 0% for lines 44-60\n- No tests exist for `untrain` or dynamic `untrain_*` methods\n\n## Required Tests\n- [ ] Basic untrain functionality\n- [ ] Untrain via dynamic method \\(`untrain_category_name`\\)\n- [ ] Verify untrain affects classification results\n- [ ] Edge case: untrain more words than were trained\n- [ ] Edge case: untrain non-existent words\n\n## Related\nPart of #48 coverage audit\nEOF\n\\)\")",
+      "Bash(gh pr comment:*)"
+    ]
+  }
+}

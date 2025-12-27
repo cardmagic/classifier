@@ -158,16 +158,16 @@ class MatrixExtensionsTest < Minitest::Test
 
   def test_svd_basic
     matrix = Matrix[[1, 0], [0, 1], [0, 0]]
-    u, v, s = matrix.SV_decomp
+    _u, _v, s = matrix.SV_decomp
 
     assert_equal 2, s.size
-    assert s.all? { |val| val >= 0 }
+    assert(s.all? { |val| val >= 0 })
   end
 
   def test_svd_with_zero_rows
     # Matrix with linearly dependent rows that could cause zero singular values
     matrix = Matrix[[1, 1], [1, 1], [0, 0]]
-    u, v, s = matrix.SV_decomp
+    _u, _v, s = matrix.SV_decomp
 
     # Should not raise an error
     assert_equal 2, s.size
@@ -178,7 +178,8 @@ class MatrixExtensionsTest < Minitest::Test
     matrix = Matrix[[1e-10, 0], [0, 1e-10]]
 
     # Should not raise an error
-    u, v, s = matrix.SV_decomp
+    _u, _v, s = matrix.SV_decomp
+
     assert_equal 2, s.size
   end
 end

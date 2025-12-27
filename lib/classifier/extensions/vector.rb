@@ -102,11 +102,11 @@ class Matrix
     q_rotation_matrix.row_size.times do |r|
       # Guard against negative values due to floating point errors
       val = q_rotation_matrix[r, r].to_f
-      singular_values << Math.sqrt(val < 0 ? 0.0 : val)
+      singular_values << Math.sqrt(val.negative? ? 0.0 : val)
     end
 
     # Replace near-zero singular values with EPSILON to prevent division by zero
-    safe_singular_values = singular_values.map { |v| v < EPSILON ? EPSILON : v }
+    safe_singular_values = singular_values.map { |v| [v, EPSILON].max }
     u_matrix = (row_size >= column_size ? self : trans) * v_matrix * Matrix.diagonal(*safe_singular_values).inverse
     [u_matrix, v_matrix, singular_values]
   end

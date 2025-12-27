@@ -290,6 +290,7 @@ class LSITest < Minitest::Test
 
     # Should handle gracefully
     lsi.build_index
+
     refute_predicate lsi, :needs_rebuild?
   end
 
@@ -303,6 +304,7 @@ class LSITest < Minitest::Test
 
     # Should handle gracefully
     lsi.build_index
+
     refute_predicate lsi, :needs_rebuild?
   end
 end
