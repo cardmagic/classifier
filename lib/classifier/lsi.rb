@@ -144,7 +144,7 @@ module Classifier
         tdm = Matrix.rows(tda).trans
         ntdm = build_reduced_matrix(tdm, cutoff)
 
-        ntdm.row_size.times do |col|
+        ntdm.column_size.times do |col|
           next unless doc_list[col]
 
           column = ntdm.column(col)
@@ -332,7 +332,13 @@ module Classifier
         s[ord] = 0.0 if s[ord] < s_cutoff
       end
       # Reconstruct the term document matrix, only with reduced rank
-      u * (self.class.gsl_available ? GSL::Matrix : ::Matrix).diag(s) * v.trans
+      result = u * (self.class.gsl_available ? GSL::Matrix : ::Matrix).diag(s) * v.trans
+
+      # Native Ruby SVD returns transposed dimensions when row_size < column_size
+      # Ensure result matches input dimensions
+      result = result.trans if !self.class.gsl_available && result.row_size != matrix.row_size
+
+      result
     end
 
     def node_for_content(item, &block)
