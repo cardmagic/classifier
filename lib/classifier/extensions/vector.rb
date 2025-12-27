@@ -5,9 +5,6 @@
 
 require 'matrix'
 
-# Small value to prevent division by zero in numerical operations
-EPSILON = 1e-10
-
 class Array
   def sum_with_identity(identity = 0.0, &)
     return identity unless size.to_i.positive?
@@ -18,6 +15,9 @@ class Array
 end
 
 class Vector
+  # Small value to prevent division by zero in numerical operations
+  EPSILON = 1e-10
+
   # Override the standard library's normalize to handle zero vectors safely
   def magnitude
     sum_of_squares = 0.to_r
@@ -69,7 +69,7 @@ class Matrix
           denominator = q_rotation_matrix[row, row] - q_rotation_matrix[col, col]
 
           # Guard against division by zero when diagonal elements are equal
-          angle = if denominator.abs < EPSILON
+          angle = if denominator.abs < Vector::EPSILON
                     numerator >= 0 ? Math::PI / 4.0 : -Math::PI / 4.0
                   else
                     Math.atan(numerator / denominator) / 2.0
@@ -106,7 +106,7 @@ class Matrix
     end
 
     # Replace near-zero singular values with EPSILON to prevent division by zero
-    safe_singular_values = singular_values.map { |v| [v, EPSILON].max }
+    safe_singular_values = singular_values.map { |v| [v, Vector::EPSILON].max }
     u_matrix = (row_size >= column_size ? self : trans) * v_matrix * Matrix.diagonal(*safe_singular_values).inverse
     [u_matrix, v_matrix, singular_values]
   end

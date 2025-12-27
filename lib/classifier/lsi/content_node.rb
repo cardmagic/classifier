@@ -62,7 +62,7 @@ module Classifier
         end
 
         # Guard against division by zero - use small epsilon if weighted_total is zero
-        divisor = weighted_total.abs < 1e-10 ? -1e-10 : -weighted_total
+        divisor = weighted_total.abs < Vector::EPSILON ? -Vector::EPSILON : -weighted_total
         vec = vec.collect { |val| Math.log(val + 1) / divisor }
       end
 
