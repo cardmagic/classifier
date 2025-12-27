@@ -5,6 +5,9 @@
 
 require 'matrix'
 
+# Small value to prevent division by zero in numerical operations
+EPSILON = 1e-10
+
 class Array
   def sum_with_identity(identity = 0.0, &)
     return identity unless size.to_i.positive?
@@ -14,7 +17,8 @@ class Array
   end
 end
 
-module VectorExtensions
+class Vector
+  # Override the standard library's normalize to handle zero vectors safely
   def magnitude
     sum_of_squares = 0.to_r
     size.times do |i|
@@ -24,17 +28,16 @@ module VectorExtensions
   end
 
   def normalize
+    magnitude_value = magnitude
+    # Return zero vector if magnitude is too small to safely divide
+    return Vector[*Array.new(size, 0.0)] if magnitude_value < EPSILON
+
     normalized_values = []
-    magnitude_value = magnitude.to_r
     size.times do |i|
       normalized_values << (self[i] / magnitude_value)
     end
     Vector[*normalized_values]
   end
-end
-
-class Vector
-  include VectorExtensions
 end
 
 class Matrix
@@ -62,10 +65,16 @@ class Matrix
         (1..(q_rotation_matrix.row_size - 1)).each do |col|
           next if row == col
 
-          angle = Math.atan((2.to_r * q_rotation_matrix[row,
-                                                        col]) / (q_rotation_matrix[row,
-                                                                                   row] - q_rotation_matrix[col,
-                                                                                                            col])) / 2.0
+          numerator = 2.0 * q_rotation_matrix[row, col]
+          denominator = q_rotation_matrix[row, row] - q_rotation_matrix[col, col]
+
+          # Guard against division by zero when diagonal elements are equal
+          angle = if denominator.abs < EPSILON
+                    numerator >= 0 ? Math::PI / 4.0 : -Math::PI / 4.0
+                  else
+                    Math.atan(numerator / denominator) / 2.0
+                  end
+
           cosine = Math.cos(angle)
           sine = Math.sin(angle)
           rotation_matrix = Matrix.identity(q_rotation_matrix.row_size)
@@ -91,9 +100,14 @@ class Matrix
 
     singular_values = []
     q_rotation_matrix.row_size.times do |r|
-      singular_values << Math.sqrt(q_rotation_matrix[r, r].to_f)
+      # Guard against negative values due to floating point errors
+      val = q_rotation_matrix[r, r].to_f
+      singular_values << Math.sqrt(val < 0 ? 0.0 : val)
     end
-    u_matrix = (row_size >= column_size ? self : trans) * v_matrix * Matrix.diagonal(*singular_values).inverse
+
+    # Replace near-zero singular values with EPSILON to prevent division by zero
+    safe_singular_values = singular_values.map { |v| v < EPSILON ? EPSILON : v }
+    u_matrix = (row_size >= column_size ? self : trans) * v_matrix * Matrix.diagonal(*safe_singular_values).inverse
     [u_matrix, v_matrix, singular_values]
   end
 

@@ -143,8 +143,13 @@ module Classifier
         ntdm = build_reduced_matrix(tdm, cutoff)
 
         ntdm.row_size.times do |col|
-          doc_list[col].lsi_vector = ntdm.column(col) if doc_list[col]
-          doc_list[col].lsi_norm = ntdm.column(col).normalize if doc_list[col]
+          next unless doc_list[col]
+
+          column = ntdm.column(col)
+          next unless column
+
+          doc_list[col].lsi_vector = column
+          doc_list[col].lsi_norm = column.normalize
         end
       end
 

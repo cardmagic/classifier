@@ -115,6 +115,24 @@ class VectorExtensionsTest < Minitest::Test
     assert_in_delta 1.0, normalized[0], 0.001
     assert_in_delta 0.0, normalized[1], 0.001
   end
+
+  def test_normalize_zero_vector_returns_zero_vector
+    vec = Vector[0, 0, 0]
+    normalized = vec.normalize
+
+    assert_in_delta 0.0, normalized[0], 0.001
+    assert_in_delta 0.0, normalized[1], 0.001
+    assert_in_delta 0.0, normalized[2], 0.001
+  end
+
+  def test_normalize_near_zero_vector_returns_zero_vector
+    vec = Vector[1e-15, 1e-15, 1e-15]
+    normalized = vec.normalize
+
+    assert_in_delta 0.0, normalized[0], 0.001
+    assert_in_delta 0.0, normalized[1], 0.001
+    assert_in_delta 0.0, normalized[2], 0.001
+  end
 end
 
 class MatrixExtensionsTest < Minitest::Test
@@ -136,5 +154,31 @@ class MatrixExtensionsTest < Minitest::Test
     matrix[0, 1] = 99
 
     assert_equal 99, matrix[0, 1]
+  end
+
+  def test_svd_basic
+    matrix = Matrix[[1, 0], [0, 1], [0, 0]]
+    u, v, s = matrix.SV_decomp
+
+    assert_equal 2, s.size
+    assert s.all? { |val| val >= 0 }
+  end
+
+  def test_svd_with_zero_rows
+    # Matrix with linearly dependent rows that could cause zero singular values
+    matrix = Matrix[[1, 1], [1, 1], [0, 0]]
+    u, v, s = matrix.SV_decomp
+
+    # Should not raise an error
+    assert_equal 2, s.size
+  end
+
+  def test_svd_handles_near_singular_matrix
+    # Near-singular matrix that previously caused Math::DomainError
+    matrix = Matrix[[1e-10, 0], [0, 1e-10]]
+
+    # Should not raise an error
+    u, v, s = matrix.SV_decomp
+    assert_equal 2, s.size
   end
 end
