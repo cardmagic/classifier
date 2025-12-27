@@ -1,0 +1,26 @@
+# Type stubs for matrix gem
+class Vector[T]
+  EPSILON: Float
+
+  def self.[]: [T] (*T) -> Vector[T]
+  def size: () -> Integer
+  def []: (Integer) -> T
+  def magnitude: () -> Float
+  def normalize: () -> Vector[T]
+  def each: () { (T) -> void } -> void
+  def collect: [U] () { (T) -> U } -> Vector[U]
+  def to_a: () -> Array[T]
+  def *: (untyped) -> untyped
+end
+
+class Matrix[T]
+  def self.rows: [T] (Array[Array[T]]) -> Matrix[T]
+  def self.[]: [T] (*Array[T]) -> Matrix[T]
+  def self.diag: (untyped) -> Matrix[untyped]
+  def trans: () -> Matrix[T]
+  def *: (untyped) -> untyped
+  def row_size: () -> Integer
+  def column_size: () -> Integer
+  def column: (Integer) -> Vector[T]
+  def SV_decomp: () -> [Matrix[T], Matrix[T], untyped]
+end

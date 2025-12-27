@@ -1,0 +1,9 @@
+# Type stubs for fast-stemmer gem and classifier extensions
+class String
+  def stem: () -> String
+  def prepare_category_name: () -> Symbol
+end
+
+class Symbol
+  def prepare_category_name: () -> Symbol
+end

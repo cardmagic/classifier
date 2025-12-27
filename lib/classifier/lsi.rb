@@ -1,12 +1,16 @@
+# rbs_inline: enabled
+
 # Author::    David Fayram  (mailto:dfayram@lensmen.net)
 # Copyright:: Copyright (c) 2005 David Fayram II
 # License::   LGPL
 
 module Classifier
   class LSI
+    # @rbs @gsl_available: bool
     @gsl_available = false
 
     class << self
+      # @rbs @gsl_available: bool
       attr_accessor :gsl_available
     end
   end
@@ -37,6 +41,12 @@ module Classifier
   # data based on underlying semantic relations. For more information on the algorithms used,
   # please consult Wikipedia[http://en.wikipedia.org/wiki/Latent_Semantic_Indexing].
   class LSI
+    # @rbs @auto_rebuild: bool
+    # @rbs @word_list: WordList
+    # @rbs @items: Hash[untyped, ContentNode]
+    # @rbs @version: Integer
+    # @rbs @built_at_version: Integer
+
     attr_reader :word_list
     attr_accessor :auto_rebuild
 
@@ -44,6 +54,7 @@ module Classifier
     # If you want to call #build_index manually, use
     #      Classifier::LSI.new auto_rebuild: false
     #
+    # @rbs (?Hash[Symbol, untyped]) -> void
     def initialize(options = {})
       @auto_rebuild = true unless options[:auto_rebuild] == false
       @word_list = WordList.new
@@ -55,6 +66,8 @@ module Classifier
     # Returns true if the index needs to be rebuilt.  The index needs
     # to be built after all informaton is added, but before you start
     # using it for search, classification and cluster detection.
+    #
+    # @rbs () -> bool
     def needs_rebuild?
       (@items.keys.size > 1) && (@version != @built_at_version)
     end
@@ -72,6 +85,7 @@ module Classifier
     #   ar = ActiveRecordObject.find( :all )
     #   lsi.add_item ar, *ar.categories { |x| ar.content }
     #
+    # @rbs (String, *String | Symbol) ?{ (String) -> String } -> void
     def add_item(item, *categories, &block)
       clean_word_hash = block ? block.call(item).clean_word_hash : item.to_s.clean_word_hash
       @items[item] = ContentNode.new(clean_word_hash, *categories)
@@ -83,12 +97,15 @@ module Classifier
     # you are passing in a string with no categorries. item
     # will be duck typed via to_s .
     #
+    # @rbs (String) -> void
     def <<(item)
       add_item(item)
     end
 
     # Returns the categories for a given indexed items. You are free to add and remove
     # items from this as you see fit. It does not invalide an index to change its categories.
+    #
+    # @rbs (String) -> Array[String | Symbol]
     def categories_for(item)
       return [] unless @items[item]
 
@@ -97,6 +114,7 @@ module Classifier
 
     # Removes an item from the database, if it is indexed.
     #
+    # @rbs (String) -> void
     def remove_item(item)
       return unless @items.key?(item)
 
@@ -105,6 +123,7 @@ module Classifier
     end
 
     # Returns an array of items that are indexed.
+    # @rbs () -> Array[untyped]
     def items
       @items.keys
     end
@@ -123,6 +142,8 @@ module Classifier
     # cutoff parameter tells the indexer how many of these values to keep.
     # A value of 1 for cutoff means that no semantic analysis will take place,
     # turning the LSI class into a simple vector search engine.
+    #
+    # @rbs (?Float) -> void
     def build_index(cutoff = 0.75)
       return unless needs_rebuild?
 
@@ -166,6 +187,8 @@ module Classifier
     # your dataset's general content. For example, if you were to use categorize on the
     # results of this data, you could gather information on what your dataset is generally
     # about.
+    #
+    # @rbs (?Integer) -> Array[String]
     def highest_relative_content(max_chunks = 10)
       return [] if needs_rebuild?
 
@@ -187,6 +210,8 @@ module Classifier
     # The parameter doc is the content to compare. If that content is not
     # indexed, you can pass an optional block to define how to create the
     # text data. See add_item for examples of how this works.
+    #
+    # @rbs (String) ?{ (String) -> String } -> Array[[String, Float]]
     def proximity_array_for_content(doc, &)
       return [] if needs_rebuild?
 
@@ -208,6 +233,8 @@ module Classifier
     # calculated vectors instead of their full versions. This is useful when
     # you're trying to perform operations on content that is much smaller than
     # the text you're working with. search uses this primitive.
+    #
+    # @rbs (String) ?{ (String) -> String } -> Array[[String, Float]]
     def proximity_norms_for_content(doc, &)
       return [] if needs_rebuild?
 
@@ -231,6 +258,8 @@ module Classifier
     #
     # While this may seem backwards compared to the other functions that LSI supports,
     # it is actually the same algorithm, just applied on a smaller document.
+    #
+    # @rbs (String, ?Integer) -> Array[String]
     def search(string, max_nearest = 3)
       return [] if needs_rebuild?
 
@@ -248,6 +277,8 @@ module Classifier
     # This is particularly useful for identifing clusters in your document space.
     # For example you may want to identify several "What's Related" items for weblog
     # articles, or find paragraphs that relate to each other in an essay.
+    #
+    # @rbs (String, ?Integer) ?{ (String) -> String } -> Array[String]
     def find_related(doc, max_nearest = 3, &block)
       carry =
         proximity_array_for_content(doc, &block).reject { |pair| pair[0] == doc }
@@ -264,6 +295,7 @@ module Classifier
     # text. A cutoff of 1 means that every document in the index votes on
     # what category the document is in. This may not always make sense.
     #
+    # @rbs (String, ?Float) ?{ (String) -> String } -> String | Symbol
     def classify(doc, cutoff = 0.30, &)
       votes = vote(doc, cutoff, &)
 
@@ -271,6 +303,7 @@ module Classifier
       ranking[-1]
     end
 
+    # @rbs (String, ?Float) ?{ (String) -> String } -> Hash[String | Symbol, Float]
     def vote(doc, cutoff = 0.30, &)
       icutoff = (@items.size * cutoff).round
       carry = proximity_array_for_content(doc, &)
@@ -296,8 +329,8 @@ module Classifier
     #   category = nil
     # end
     #
-    #
     # See classify() for argument docs
+    # @rbs (String, ?Float) ?{ (String) -> String } -> [String | Symbol | nil, Float?]
     def classify_with_confidence(doc, cutoff = 0.30, &)
       votes = vote(doc, cutoff, &)
       votes_sum = votes.values.sum
@@ -312,6 +345,7 @@ module Classifier
     # Prototype, only works on indexed documents.
     # I have no clue if this is going to work, but in theory
     # it's supposed to.
+    # @rbs (String, ?Integer) -> Array[Symbol]
     def highest_ranked_stems(doc, count = 3)
       raise 'Requested stem ranking on non-indexed content!' unless @items[doc]
 
@@ -322,6 +356,7 @@ module Classifier
 
     private
 
+    # @rbs (untyped, ?Float) -> untyped
     def build_reduced_matrix(matrix, cutoff = 0.75)
       # TODO: Check that M>=N on these dimensions! Transpose helps assure this
       u, v, s = matrix.SV_decomp
@@ -341,6 +376,7 @@ module Classifier
       result
     end
 
+    # @rbs (String) ?{ (String) -> String } -> ContentNode
     def node_for_content(item, &block)
       return @items[item] if @items[item]
 
@@ -350,6 +386,7 @@ module Classifier
       cn
     end
 
+    # @rbs () -> void
     def make_word_list
       @word_list = WordList.new
       @items.each_value do |node|

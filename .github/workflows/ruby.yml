@@ -25,7 +25,7 @@ jobs:
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.3'
+        ruby-version: '3.4'
         bundler-cache: true
     - name: Run RuboCop
       run: bundle exec rubocop
@@ -45,7 +45,10 @@ jobs:
         bundler-cache: true # runs 'bundle install' and caches installed gems automatically
     - name: Run tests
       run: bundle exec rake test
-    - name: Install RBS
-      run: gem install rbs
+    - name: Generate RBS from inline annotations
+      run: bundle exec rbs-inline --output sig lib/
     - name: Validate RBS types
-      run: rbs -I sig validate
+      run: bundle exec rbs -I sig validate
+    - name: Type check with Steep
+      if: matrix.ruby-version != '4.0'
+      run: bundle exec steep check

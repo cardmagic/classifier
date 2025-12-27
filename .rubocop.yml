@@ -1,6 +1,10 @@
 plugins:
   - rubocop-minitest
 
+# Allow rbs-inline #: comments without space after #
+Layout/LeadingCommentSpace:
+  AllowRBSInlineAnnotation: true
+
 AllCops:
   TargetRubyVersion: 3.1
   NewCops: enable

@@ -16,3 +16,4 @@ pkg/
 
 # Claude Code local settings
 .claude/
+sig/generated/

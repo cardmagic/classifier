@@ -1,3 +1,0 @@
-class Object
-  def prepare_category_name: () -> Symbol
-end

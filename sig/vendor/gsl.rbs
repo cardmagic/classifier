@@ -1,0 +1,27 @@
+# Type stubs for optional GSL gem
+module GSL
+  class Vector
+    def self.alloc: (untyped) -> Vector
+    def to_a: () -> Array[Float]
+    def normalize: () -> Vector
+    def sum: () -> Float
+    def each: () { (Float) -> void } -> void
+    def []: (Integer) -> Float
+    def []=: (Integer, Float) -> Float
+    def size: () -> Integer
+    def row: () -> Vector
+    def col: () -> Vector
+    def *: (untyped) -> untyped
+    def collect: () { (Float) -> Float } -> Vector
+  end
+
+  class Matrix
+    def self.alloc: (*untyped) -> Matrix
+    def self.diag: (untyped) -> Matrix
+    def trans: () -> Matrix
+    def *: (untyped) -> Matrix
+    def size: () -> [Integer, Integer]
+    def column: (Integer) -> Vector
+    def SV_decomp: () -> [Matrix, Matrix, Vector]
+  end
+end

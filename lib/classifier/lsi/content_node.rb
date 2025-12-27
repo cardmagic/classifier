@@ -1,3 +1,5 @@
+# rbs_inline: enabled
+
 # Author::    David Fayram  (mailto:dfayram@lensmen.net)
 # Copyright:: Copyright (c) 2005 David Fayram II
 # License::   LGPL
@@ -7,31 +9,46 @@ module Classifier
   # raw_vector_with, it should be fairly straightforward to understand.
   # You should never have to use it directly.
   class ContentNode
-    attr_accessor :raw_vector, :raw_norm,
-                  :lsi_vector, :lsi_norm,
-                  :categories
+    # @rbs @word_hash: Hash[Symbol, Integer]
+
+    # @rbs @raw_vector: untyped
+    # @rbs @raw_norm: untyped
+    # @rbs @lsi_vector: untyped
+    # @rbs @lsi_norm: untyped
+    attr_accessor :raw_vector, :raw_norm, :lsi_vector, :lsi_norm
+
+    # @rbs @categories: Array[String | Symbol]
+    attr_accessor :categories
 
     attr_reader :word_hash
 
     # If text_proc is not specified, the source will be duck-typed
     # via source.to_s
+    #
+    # @rbs (Hash[Symbol, Integer], *String | Symbol) -> void
     def initialize(word_frequencies, *categories)
       @categories = categories || []
       @word_hash = word_frequencies
     end
 
     # Use this to fetch the appropriate search vector.
+    #
+    # @rbs () -> untyped
     def search_vector
       @lsi_vector || @raw_vector
     end
 
     # Use this to fetch the appropriate search vector in normalized form.
+    #
+    # @rbs () -> untyped
     def search_norm
       @lsi_norm || @raw_norm
     end
 
     # Creates the raw vector out of word_hash using word_list as the
     # key for mapping the vector space.
+    #
+    # @rbs (WordList) -> untyped
     def raw_vector_with(word_list)
       vec = if Classifier::LSI.gsl_available
               GSL::Vector.alloc(word_list.size)
