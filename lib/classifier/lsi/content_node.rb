@@ -61,8 +61,13 @@ module Classifier
           weighted_total += val unless val.nan?
         end
 
-        # Guard against division by zero - use small epsilon if weighted_total is zero
-        divisor = weighted_total.abs < Vector::EPSILON ? -Vector::EPSILON : -weighted_total
+        # Guard against division by zero - use small epsilon if weighted_total is near zero,
+        # while preserving the sign relationship with -weighted_total.
+        divisor = if weighted_total.abs < Vector::EPSILON
+                    weighted_total.negative? ? Vector::EPSILON : -Vector::EPSILON
+                  else
+                    -weighted_total
+                  end
         vec = vec.collect { |val| Math.log(val + 1) / divisor }
       end
 

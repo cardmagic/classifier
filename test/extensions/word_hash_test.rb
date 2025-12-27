@@ -125,7 +125,7 @@ class VectorExtensionsTest < Minitest::Test
     assert_in_delta 0.0, normalized[2], 0.001
   end
 
-  def test_normalize_near_zero_vector_returns_unit_vector
+  def test_normalize_near_zero_vector_normalizes_correctly
     # Near-zero vectors should still normalize to unit vectors
     # Only actual zero vectors return zero
     vec = Vector[1e-15, 1e-15, 1e-15]
