@@ -61,11 +61,8 @@ module Classifier
           weighted_total += val unless val.nan?
         end
 
-        divisor = if weighted_total.abs < Vector::EPSILON
-                    weighted_total.negative? ? Vector::EPSILON : -Vector::EPSILON
-                  else
-                    -weighted_total
-                  end
+        sign = weighted_total.negative? ? 1.0 : -1.0
+        divisor = sign * [weighted_total.abs, Vector::EPSILON].max
         vec = vec.collect { |val| Math.log(val + 1) / divisor }
       end
 
