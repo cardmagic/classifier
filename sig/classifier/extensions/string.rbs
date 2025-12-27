@@ -1,0 +1,25 @@
+class String
+  CORPUS_SKIP_WORDS: Set[String]
+
+  def without_punctuation: () -> String
+
+  def word_hash: () -> Hash[Symbol, Integer]
+
+  def clean_word_hash: () -> Hash[Symbol, Integer]
+
+  def summary: (?Integer count, ?String separator) -> String
+
+  def paragraph_summary: (?Integer count, ?String separator) -> String
+
+  def split_sentences: () -> Array[String]
+
+  def split_paragraphs: () -> Array[String]
+
+  private
+
+  def word_hash_for_words: (Array[String] words) -> Hash[Symbol, Integer]
+
+  def word_hash_for_symbols: (Array[String] words) -> Hash[Symbol, Integer]
+
+  def perform_lsi: (Array[String] chunks, Integer count, String separator) -> String
+end

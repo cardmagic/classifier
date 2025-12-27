@@ -1,0 +1,23 @@
+class Array[unchecked out Elem]
+  def sum_with_identity: (?Float identity) ?{ (Elem) -> Numeric } -> Float
+end
+
+module VectorExtensions
+  def magnitude: () -> Float
+
+  def normalize: () -> Vector[Rational]
+end
+
+class Vector[out Elem]
+  include VectorExtensions
+end
+
+class Matrix[out Elem]
+  def self.diag: (Array[Numeric] diagonal_elements) -> Matrix[Numeric]
+
+  def trans: () -> Matrix[Elem]
+
+  def SV_decomp: (?Integer max_sweeps) -> [Matrix[Numeric], Matrix[Numeric], Array[Float]]
+
+  def []=: (Integer row_index, Integer col_index, Numeric value) -> Numeric
+end
