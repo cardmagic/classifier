@@ -118,4 +118,116 @@ class BayesianTest < Minitest::Test
       @classifier.remove_category('Nonexistent Category')
     end
   end
+
+  # Untrain tests
+
+  def test_untrain_basic
+    @classifier.train_interesting 'good words'
+    initial_total = @classifier.instance_variable_get(:@total_words)
+
+    @classifier.untrain_interesting 'good words'
+
+    new_total = @classifier.instance_variable_get(:@total_words)
+    assert new_total < initial_total, 'Total words should decrease after untrain'
+  end
+
+  def test_untrain_with_train_method
+    @classifier.train :interesting, 'hello world'
+    @classifier.untrain :interesting, 'hello world'
+
+    category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+    assert_empty category_words, 'Category should have no words after untraining same text'
+  end
+
+  def test_untrain_dynamic_method
+    @classifier.train_interesting 'dynamic method test'
+    @classifier.untrain_interesting 'dynamic method test'
+
+    category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+    assert_empty category_words, 'Dynamic untrain should remove trained words'
+  end
+
+  def test_untrain_affects_classification
+    # Train both categories with distinct words
+    @classifier.train_interesting 'cats cats cats pets pets great'
+    @classifier.train_uninteresting 'dogs dogs dogs animals bad'
+
+    assert_equal 'Interesting', @classifier.classify('cats pets')
+
+    # Untrain some of the interesting words, but keep category viable
+    @classifier.untrain_interesting 'cats cats pets'
+
+    # Now train more uninteresting with cats
+    @classifier.train_uninteresting 'cats cats cats'
+
+    # Classification should now favor uninteresting for 'cats'
+    assert_equal 'Uninteresting', @classifier.classify('cats')
+  end
+
+  def test_untrain_decrements_category_count
+    @classifier.train_interesting 'first document'
+    @classifier.train_interesting 'second document'
+
+    initial_count = @classifier.instance_variable_get(:@category_counts)[:Interesting]
+    assert_equal 2, initial_count
+
+    @classifier.untrain_interesting 'first document'
+
+    new_count = @classifier.instance_variable_get(:@category_counts)[:Interesting]
+    assert_equal 1, new_count
+  end
+
+  def test_untrain_removes_word_when_count_zero
+    @classifier.train_interesting 'unique'
+
+    category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+    assert category_words.key?(:uniqu), 'Word should exist after training'
+
+    @classifier.untrain_interesting 'unique'
+
+    refute category_words.key?(:uniqu), 'Word should be removed when count reaches zero'
+  end
+
+  def test_untrain_partial_word_removal
+    @classifier.train_interesting 'apple apple apple'
+    @classifier.untrain_interesting 'apple'
+
+    category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+    assert_equal 2, category_words[:appl], 'Should have 2 remaining after untraining 1'
+  end
+
+  def test_untrain_more_than_trained
+    @classifier.train_interesting 'word'
+    @classifier.untrain_interesting 'word word word word word'
+
+    category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+    refute category_words.key?(:word), 'Word should be deleted, not go negative'
+
+    total_words = @classifier.instance_variable_get(:@total_words)
+    assert total_words >= 0, 'Total words should not go negative'
+  end
+
+  def test_untrain_nonexistent_words
+    @classifier.train_interesting 'existing words'
+    initial_total = @classifier.instance_variable_get(:@total_words)
+
+    @classifier.untrain_interesting 'completely different text'
+
+    new_total = @classifier.instance_variable_get(:@total_words)
+    assert new_total <= initial_total, 'Should handle non-existent words gracefully'
+  end
+
+  def test_untrain_invalid_category
+    assert_raises(StandardError) { @classifier.untrain_nonexistent 'words' }
+  end
+
+  def test_untrain_decrements_category_word_count
+    @classifier.train_interesting 'hello world testing'
+    initial_word_count = @classifier.instance_variable_get(:@category_word_count)[:Interesting]
+
+    @classifier.untrain_interesting 'hello'
+
+    new_word_count = @classifier.instance_variable_get(:@category_word_count)[:Interesting]
+    assert new_word_count < initial_word_count, 'Category word count should decrease'
+  end
 end
