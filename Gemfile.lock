@@ -17,8 +17,10 @@ GEM
     language_server-protocol (3.17.0.5)
     lint_roller (1.1.0)
     matrix (0.4.2)
-    minitest (5.18.1)
+    minitest (6.0.1)
+      prism (~> 1.5)
     mutex_m (0.2.0)
+    ostruct (0.6.3)
     parallel (1.27.0)
     parser (3.3.10.0)
       ast (~> 2.4.1)
@@ -28,7 +30,7 @@ GEM
       stringio
     racc (1.8.1)
     rainbow (3.1.1)
-    rake (13.0.6)
+    rake (13.3.1)
     rdoc (6.5.1.1)
       psych (>= 4.0.0)
     regexp_parser (2.11.3)
@@ -74,6 +76,7 @@ DEPENDENCIES
   matrix
   minitest
   mutex_m
+  ostruct
   rdoc
   rubocop
   rubocop-minitest
