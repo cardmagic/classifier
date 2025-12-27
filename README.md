@@ -87,7 +87,7 @@ SUPPRESS_GSL_WARNING=true ruby your_script.rb
 | 3.4          | Supported |
 | 3.3          | Supported |
 | 3.2          | Supported |
-| 3.1          | Supported |
+| 3.1          | EOL (unsupported) |
 
 ## Bayesian Classifier
 
