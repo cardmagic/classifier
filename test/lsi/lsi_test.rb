@@ -305,4 +305,24 @@ class LSITest < Minitest::Test
 
     refute_predicate lsi, :needs_rebuild?
   end
+
+  def test_large_similar_document_sets
+    # Regression test for issue #72
+    # When many similar documents create few unique terms (M < N),
+    # native Ruby SVD returns transposed dimensions causing ErrDimensionMismatch
+    lsi = Classifier::LSI.new auto_rebuild: false
+
+    10.times do |i|
+      lsi.add_item "This text deals with dogs. Dogs number #{i}.", 'Dog'
+    end
+    10.times do |i|
+      lsi.add_item "This text deals with cats. Cats number #{i}.", 'Cat'
+    end
+
+    lsi.build_index
+
+    result = lsi.classify('Dogs are great pets')
+
+    assert_equal 'Dog', result
+  end
 end
