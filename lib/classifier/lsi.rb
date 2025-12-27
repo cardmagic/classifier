@@ -332,13 +332,8 @@ module Classifier
       return @items[item] if @items[item]
 
       clean_word_hash = block ? block.call(item).clean_word_hash : item.to_s.clean_word_hash
-
-      cn = ContentNode.new(clean_word_hash, &block) # make the node and extract the data
-
-      unless needs_rebuild?
-        cn.raw_vector_with(@word_list) # make the lsi raw and norm vectors
-      end
-
+      cn = ContentNode.new(clean_word_hash, &block)
+      cn.raw_vector_with(@word_list) unless needs_rebuild?
       cn
     end
 

@@ -8,12 +8,9 @@ require 'matrix'
 class Array
   def sum_with_identity(identity = 0.0, &block)
     return identity unless size.to_i.positive?
+    return map(&block).sum_with_identity(identity) if block_given?
 
-    if block_given?
-      map(&block).sum_with_identity(identity)
-    else
-      compact.reduce(:+).to_f || identity.to_f
-    end
+    compact.reduce(:+).to_f || identity.to_f
   end
 end
 
