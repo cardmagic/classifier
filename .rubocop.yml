@@ -10,6 +10,7 @@ AllCops:
     - '*.gemspec'
     - 'bin/**/*'
     - 'install.rb'
+    - 'benchmark/**/*'
 
 # Existing code lacks documentation, can add incrementally
 Style/Documentation:

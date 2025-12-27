@@ -24,8 +24,19 @@ desc 'Create documentation'
 Rake::RDocTask.new('doc') do |rdoc|
   rdoc.title = 'Ruby Classifier - Bayesian and LSI classification library'
   rdoc.rdoc_dir = 'html'
-  rdoc.rdoc_files.include('README.markdown')
+  rdoc.rdoc_files.include('README.md')
   rdoc.rdoc_files.include('lib/**/*.rb')
+end
+
+# Benchmarks
+desc 'Run LSI benchmark with current configuration'
+task :benchmark do
+  ruby 'benchmark/lsi_benchmark.rb'
+end
+
+desc 'Run LSI benchmark comparing GSL vs Native Ruby'
+task 'benchmark:compare' do
+  ruby 'benchmark/lsi_benchmark.rb --compare'
 end
 
 desc 'Report code statistics (KLOCs, etc) from the application'

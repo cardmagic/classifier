@@ -45,7 +45,8 @@ module Classifier
 
       # Perform the scaling transform
       total_words = Classifier::LSI.gsl_available ? vec.sum : vec.sum_with_identity
-      total_unique_words = vec.count { |word| word != 0 }
+      vec_array = Classifier::LSI.gsl_available ? vec.to_a : vec
+      total_unique_words = vec_array.count { |word| word != 0 }
 
       # Perform first-order association transform if this vector has more
       # than one word in it.

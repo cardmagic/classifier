@@ -10,15 +10,44 @@ Classifier is a general module to allow Bayesian and other types of classificati
 
 ## Dependencies
 
-If you install Classifier from source, you'll need to install Roman Shterenzon's fast-stemmer gem with RubyGems as follows:
+The `fast-stemmer` gem is required:
 
     gem install fast-stemmer
 
-If you would like to speed up LSI classification by at least 10x, please install the following libraries:
-GNU GSL:: http://www.gnu.org/software/gsl
-rb-gsl:: https://github.com/SciRuby/rb-gsl
+### Optional: GSL for Faster LSI
 
-Notice that LSI will work without these libraries, but as soon as they are installed, Classifier will make use of them. No configuration changes are needed, we like to keep things ridiculously easy for you.
+For faster LSI classification, install the GNU Scientific Library and its Ruby bindings.
+
+#### Ruby 3.4+
+
+The released `gsl` gem doesn't support Ruby 3.4+. Install from source with the compatibility fix:
+
+    # Install GSL library
+    brew install gsl        # macOS
+    apt-get install libgsl-dev  # Ubuntu/Debian
+
+    # Build and install the gem from the compatibility branch
+    git clone https://github.com/cardmagic/rb-gsl.git
+    cd rb-gsl
+    git checkout fix/ruby-3.4-compatibility
+    gem build gsl.gemspec
+    gem install gsl-*.gem
+
+#### Ruby 3.3 and earlier
+
+    # macOS
+    brew install gsl
+    gem install gsl
+
+    # Ubuntu/Debian
+    apt-get install libgsl-dev
+    gem install gsl
+
+LSI works without GSL using a pure Ruby implementation. When GSL is installed, Classifier automatically uses it with no configuration needed.
+
+To suppress the GSL notice when not using it:
+
+    SUPPRESS_GSL_WARNING=true ruby your_script.rb
 
 ## Bayes
 
@@ -88,6 +117,34 @@ with more than just simple strings.
 * http://www.c2.com/cgi/wiki?LatentSemanticIndexing
 * http://www.chadfowler.com/index.cgi/Computing/LatentSemanticIndexing.rdoc
 * http://en.wikipedia.org/wiki/Latent_semantic_analysis
+
+## Benchmarks
+
+Run benchmarks to compare LSI performance:
+
+    rake benchmark              # Run with current configuration
+    rake benchmark:compare      # Compare GSL vs native Ruby
+
+### GSL vs Native Ruby Comparison
+
+| Documents | build_index | Overall Speedup |
+|-----------|-------------|-----------------|
+| 5         | 4x          | 2.5x            |
+| 10        | 24x         | 5.5x            |
+| 15        | 116x        | 17x             |
+
+Sample comparison (15 documents):
+
+    Operation              Native          GSL      Speedup
+    ----------------------------------------------------------
+    build_index            0.1412       0.0012       116.2x
+    classify               0.0142       0.0049         2.9x
+    search                 0.0102       0.0026         3.9x
+    find_related           0.0069       0.0016         4.2x
+    ----------------------------------------------------------
+    TOTAL                  0.1725       0.0104        16.6x
+
+The `build_index` operation (SVD computation) dominates total time and benefits most from GSL. Install GSL for production use with larger document sets.
 
 ## Authors
 

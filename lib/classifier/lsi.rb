@@ -17,11 +17,13 @@ begin
   raise LoadError if ENV['NATIVE_VECTOR'] == 'true'
   raise LoadError unless Gem::Specification.find_all_by_name('gsl').any?
 
-  require 'gsl' # requires https://github.com/SciRuby/rb-gsl/
+  require 'gsl'
   require 'classifier/extensions/vector_serialize'
   Classifier::LSI.gsl_available = true
 rescue LoadError
-  warn 'Notice: for 10x faster LSI support in the classifier gem, please install the gsl gem'
+  unless ENV['SUPPRESS_GSL_WARNING'] == 'true'
+    warn 'Notice: for 10x faster LSI, run `gem install gsl`. Set SUPPRESS_GSL_WARNING=true to hide this.'
+  end
   Classifier::LSI.gsl_available = false
   require 'classifier/extensions/vector'
 end
