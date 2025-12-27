@@ -29,9 +29,7 @@ jobs:
       run: gem build classifier.gemspec
 
     - name: Push to RubyGems
-      env:
-        GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
-      run: gem push classifier-*.gem
+      uses: rubygems/release-gem@v1
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
