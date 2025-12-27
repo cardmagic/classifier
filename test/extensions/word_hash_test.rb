@@ -125,13 +125,17 @@ class VectorExtensionsTest < Minitest::Test
     assert_in_delta 0.0, normalized[2], 0.001
   end
 
-  def test_normalize_near_zero_vector_returns_zero_vector
+  def test_normalize_near_zero_vector_returns_unit_vector
+    # Near-zero vectors should still normalize to unit vectors
+    # Only actual zero vectors return zero
     vec = Vector[1e-15, 1e-15, 1e-15]
     normalized = vec.normalize
 
-    assert_in_delta 0.0, normalized[0], 0.001
-    assert_in_delta 0.0, normalized[1], 0.001
-    assert_in_delta 0.0, normalized[2], 0.001
+    # Should normalize to [1/sqrt(3), 1/sqrt(3), 1/sqrt(3)]
+    expected = 1.0 / Math.sqrt(3)
+    assert_in_delta expected, normalized[0], 0.001
+    assert_in_delta expected, normalized[1], 0.001
+    assert_in_delta expected, normalized[2], 0.001
   end
 end
 

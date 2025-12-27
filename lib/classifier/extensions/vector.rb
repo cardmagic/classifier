@@ -29,8 +29,8 @@ class Vector
 
   def normalize
     magnitude_value = magnitude
-    # Return zero vector if magnitude is too small to safely divide
-    return Vector[*Array.new(size, 0.0)] if magnitude_value < EPSILON
+    # Return zero vector only if magnitude is zero or numerically negative
+    return Vector[*Array.new(size, 0.0)] if magnitude_value <= 0.0
 
     normalized_values = []
     size.times do |i|
@@ -102,7 +102,7 @@ class Matrix
     q_rotation_matrix.row_size.times do |r|
       # Guard against negative values due to floating point errors
       val = q_rotation_matrix[r, r].to_f
-      singular_values << Math.sqrt(val.negative? ? 0.0 : val)
+      singular_values << Math.sqrt(val < -Vector::EPSILON ? 0.0 : val.abs)
     end
 
     # Replace near-zero singular values with EPSILON to prevent division by zero
