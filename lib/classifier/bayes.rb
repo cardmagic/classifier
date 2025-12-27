@@ -65,21 +65,19 @@ module Classifier
     #    =>  {"Uninteresting"=>-12.6997928013932, "Interesting"=>-18.4206807439524}
     # The largest of these scores (the one closest to 0) is the one picked out by #classify
     def classifications(text)
-      score = {}
-      word_hash = text.word_hash
-      training_count = @category_counts.values.inject { |x, y| x + y }.to_f
-      @categories.each do |category, category_words|
-        score[category.to_s] = 0
-        total = (@category_word_count[category] || 1).to_f
-        word_hash.each_key do |word|
-          s = category_words.key?(word) ? category_words[word] : 0.1
-          score[category.to_s] += Math.log(s / total)
-        end
-        # now add prior probability for the category
-        s = @category_counts.key?(category) ? @category_counts[category] : 0.1
-        score[category.to_s] += Math.log(s / training_count)
+      words = text.word_hash.keys
+      training_count = @category_counts.values.sum.to_f
+      vocab_size = [@categories.values.flat_map(&:keys).uniq.size, 1].max
+
+      @categories.to_h do |category, category_words|
+        smoothed_total = ((@category_word_count[category] || 0) + vocab_size).to_f
+
+        # Laplace smoothing: P(word|category) = (count + α) / (total + α * V)
+        word_score = words.sum { |w| Math.log(((category_words[w] || 0) + 1) / smoothed_total) }
+        prior_score = Math.log((@category_counts[category] || 0.1) / training_count)
+
+        [category.to_s, word_score + prior_score]
       end
-      score
     end
 
     #

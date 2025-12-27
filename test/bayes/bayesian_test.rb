@@ -337,4 +337,102 @@ class BayesianTest < Minitest::Test
 
     assert_equal 'Interesting', result, 'Should handle numbers in text'
   end
+
+  # Laplace smoothing tests
+
+  def test_laplace_smoothing_unseen_words
+    # Train with some words, then classify with unseen word
+    # Laplace smoothing should give unseen words a non-zero probability
+    # that scales with vocabulary size
+    @classifier.train_interesting 'apple banana cherry'
+    @classifier.train_uninteresting 'dog elephant fox'
+
+    # "zebra" is unseen - should still get valid scores
+    scores = @classifier.classifications('zebra')
+
+    scores.each_value do |score|
+      assert_predicate score, :finite?, 'Score should be finite with Laplace smoothing'
+      refute_predicate score, :zero?, 'Score should be non-zero with Laplace smoothing'
+    end
+  end
+
+  def test_laplace_smoothing_consistency
+    # With proper Laplace smoothing, the probability of an unseen word
+    # should be α / (total + α * vocab_size)
+    # This should be consistent across categories with same training size
+    classifier = Classifier::Bayes.new 'A', 'B'
+    classifier.train_a 'word1 word2 word3'
+    classifier.train_b 'word4 word5 word6'
+
+    scores = classifier.classifications('unseenword')
+
+    # Both categories have same word count, so unseen word scores should be equal
+    assert_in_delta scores['A'], scores['B'], 0.01,
+                    'Equal-sized categories should give equal scores for unseen words'
+  end
+
+  def test_laplace_smoothing_vocabulary_scaling
+    # The smoothing should account for vocabulary size
+    # Larger vocabulary = smaller probability for each unseen word
+    small_vocab = Classifier::Bayes.new 'Cat', 'Dog'
+    small_vocab.train_cat 'meow purr'
+    small_vocab.train_dog 'bark woof'
+
+    large_vocab = Classifier::Bayes.new 'Cat', 'Dog'
+    large_vocab.train_cat 'meow purr hiss scratch climb jump pounce stalk hunt sleep'
+    large_vocab.train_dog 'bark woof growl fetch run play chase guard protect howl'
+
+    small_scores = small_vocab.classifications('unknown')
+    large_scores = large_vocab.classifications('unknown')
+
+    # With proper smoothing, larger vocabulary should give lower (more negative) scores
+    # for unseen words because probability mass is spread across more terms
+    assert_operator small_scores['Cat'], :>, large_scores['Cat'],
+                    'Larger vocabulary should give lower scores for unseen words'
+  end
+
+  def test_laplace_smoothing_seen_words_also_smoothed
+    # Proper Laplace smoothing applies to ALL words, not just unseen ones
+    # P(word|cat) = (count + α) / (total + α * V), not count / total
+    classifier = Classifier::Bayes.new 'A', 'B'
+    classifier.train_a 'test'
+    classifier.train_b 'other'
+
+    # With proper smoothing, seen word probability should include α adjustment
+    # The word "test" appears once in A with total=1, vocab=2
+    # Proper: (1 + 1) / (1 + 1*2) = 2/3
+    # Current: 1 / 1 = 1.0 (no smoothing applied to seen words)
+
+    scores = classifier.classifications('test')
+
+    # Score for A should reflect smoothed probability, not raw count
+    # log(2/3) ≈ -0.405, not log(1) = 0
+    # The word score plus prior should not equal just the prior
+    prior_only_score = Math.log(0.5) # equal priors
+
+    refute_in_delta scores['A'], prior_only_score, 0.01,
+                    'Seen word score should include smoothing adjustment, not raw probability'
+  end
+
+  def test_laplace_smoothing_denominator_includes_vocabulary
+    # The denominator should be (total + α * vocab_size), not just total
+    # This test verifies that adding more vocabulary affects all probabilities
+    classifier1 = Classifier::Bayes.new 'Spam', 'Ham'
+    classifier1.train_spam 'buy now'
+    classifier1.train_ham 'hello friend'
+
+    classifier2 = Classifier::Bayes.new 'Spam', 'Ham'
+    classifier2.train_spam 'buy now'
+    classifier2.train_ham 'hello friend goodbye see you later take care'
+
+    # Same query word "buy" - should have different probabilities
+    # because vocabulary size differs (affecting denominator)
+    scores1 = classifier1.classifications('buy')
+    scores2 = classifier2.classifications('buy')
+
+    # With proper smoothing, larger vocab in classifier2 means
+    # the probability of "buy" in Spam is lower (spread across more terms)
+    refute_in_delta scores1['Spam'], scores2['Spam'], 0.1,
+                    'Vocabulary size should affect word probabilities in denominator'
+  end
 end
