@@ -165,7 +165,7 @@ module Classifier
       avg_density = {}
       @items.each_key { |x| avg_density[x] = proximity_array_for_content(x).inject(0.0) { |i, j| i + j[1] } }
 
-      avg_density.keys.sort_by { |x| avg_density[x] }.reverse[0..max_chunks - 1].map
+      avg_density.keys.sort_by { |x| avg_density[x] }.reverse[0..(max_chunks - 1)].map
     end
 
     # This function is the primitive that find_related and classify
@@ -180,10 +180,10 @@ module Classifier
     # The parameter doc is the content to compare. If that content is not
     # indexed, you can pass an optional block to define how to create the
     # text data. See add_item for examples of how this works.
-    def proximity_array_for_content(doc, &block)
+    def proximity_array_for_content(doc, &)
       return [] if needs_rebuild?
 
-      content_node = node_for_content(doc, &block)
+      content_node = node_for_content(doc, &)
       result =
         @items.keys.collect do |item|
           val = if self.class.gsl_available
@@ -201,10 +201,10 @@ module Classifier
     # calculated vectors instead of their full versions. This is useful when
     # you're trying to perform operations on content that is much smaller than
     # the text you're working with. search uses this primitive.
-    def proximity_norms_for_content(doc, &block)
+    def proximity_norms_for_content(doc, &)
       return [] if needs_rebuild?
 
-      content_node = node_for_content(doc, &block)
+      content_node = node_for_content(doc, &)
       result =
         @items.keys.collect do |item|
           val = if self.class.gsl_available
@@ -229,7 +229,7 @@ module Classifier
 
       carry = proximity_norms_for_content(string)
       result = carry.collect { |x| x[0] }
-      result[0..max_nearest - 1]
+      result[0..(max_nearest - 1)]
     end
 
     # This function takes content and finds other documents
@@ -245,7 +245,7 @@ module Classifier
       carry =
         proximity_array_for_content(doc, &block).reject { |pair| pair[0] == doc }
       result = carry.collect { |x| x[0] }
-      result[0..max_nearest - 1]
+      result[0..(max_nearest - 1)]
     end
 
     # This function uses a voting system to categorize documents, based on
@@ -257,17 +257,17 @@ module Classifier
     # text. A cutoff of 1 means that every document in the index votes on
     # what category the document is in. This may not always make sense.
     #
-    def classify(doc, cutoff = 0.30, &block)
-      votes = vote(doc, cutoff, &block)
+    def classify(doc, cutoff = 0.30, &)
+      votes = vote(doc, cutoff, &)
 
       ranking = votes.keys.sort_by { |x| votes[x] }
       ranking[-1]
     end
 
-    def vote(doc, cutoff = 0.30, &block)
+    def vote(doc, cutoff = 0.30, &)
       icutoff = (@items.size * cutoff).round
-      carry = proximity_array_for_content(doc, &block)
-      carry = carry[0..icutoff - 1]
+      carry = proximity_array_for_content(doc, &)
+      carry = carry[0..(icutoff - 1)]
       votes = {}
       carry.each do |pair|
         categories = @items[pair[0]].categories
@@ -291,8 +291,8 @@ module Classifier
     #
     #
     # See classify() for argument docs
-    def classify_with_confidence(doc, cutoff = 0.30, &block)
-      votes = vote(doc, cutoff, &block)
+    def classify_with_confidence(doc, cutoff = 0.30, &)
+      votes = vote(doc, cutoff, &)
       votes_sum = votes.values.inject(0.0) { |sum, v| sum + v }
       return [nil, nil] if votes_sum.zero?
 
@@ -309,7 +309,7 @@ module Classifier
       raise 'Requested stem ranking on non-indexed content!' unless @items[doc]
 
       arr = node_for_content(doc).lsi_vector.to_a
-      top_n = arr.sort.reverse[0..count - 1]
+      top_n = arr.sort.reverse[0..(count - 1)]
       top_n.collect { |x| @word_list.word_for_index(arr.index(x)) }
     end
 

@@ -6,11 +6,11 @@
 require 'matrix'
 
 class Array
-  def sum_with_identity(identity = 0.0, &block)
+  def sum_with_identity(identity = 0.0, &)
     return identity unless size.to_i.positive?
-    return map(&block).sum_with_identity(identity) if block_given?
+    return map(&).sum_with_identity(identity) if block_given?
 
-    compact.reduce(:+).to_f || identity.to_f
+    compact.reduce(identity, :+).to_f
   end
 end
 
@@ -58,8 +58,8 @@ class Matrix
 
     loop do
       iteration_count += 1
-      (0...q_rotation_matrix.row_size - 1).each do |row|
-        (1..q_rotation_matrix.row_size - 1).each do |col|
+      (0...(q_rotation_matrix.row_size - 1)).each do |row|
+        (1..(q_rotation_matrix.row_size - 1)).each do |col|
           next if row == col
 
           angle = Math.atan((2.to_r * q_rotation_matrix[row,

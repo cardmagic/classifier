@@ -14,7 +14,8 @@ class LSITest < Minitest::Test
   def test_basic_indexing
     lsi = Classifier::LSI.new
     [@str1, @str2, @str3, @str4, @str5].each { |x| lsi << x }
-    assert !lsi.needs_rebuild?
+
+    refute_predicate lsi, :needs_rebuild?
 
     # NOTE: that the closest match to str1 is str2, even though it is not
     # the closest text match.
@@ -25,9 +26,11 @@ class LSITest < Minitest::Test
     lsi = Classifier::LSI.new auto_rebuild: false
     lsi.add_item @str1, 'Dog'
     lsi.add_item @str2, 'Dog'
-    assert lsi.needs_rebuild?
+
+    assert_predicate lsi, :needs_rebuild?
     lsi.build_index
-    assert !lsi.needs_rebuild?
+
+    refute_predicate lsi, :needs_rebuild?
   end
 
   def test_basic_categorizing
@@ -61,6 +64,7 @@ class LSITest < Minitest::Test
     # cats better.  Dogs have more semantic weight than cats. So bayes
     # will fail here, but the LSI recognizes content.
     tricky_case = 'This text revolves around dogs.'
+
     assert_equal 'Dog', lsi.classify(tricky_case)
     assert_equal 'Cat', bayes.classify(tricky_case)
   end
@@ -74,13 +78,14 @@ class LSITest < Minitest::Test
     lsi.add_item @str5, 'Bird'
 
     tricky_case = 'This text revolves around dogs.'
+
     assert_equal 'Dog', lsi.classify(tricky_case)
 
     # Recategorize as needed.
     lsi.categories_for(@str1).clear.push 'Cow'
     lsi.categories_for(@str2).clear.push 'Cow'
 
-    assert !lsi.needs_rebuild?
+    refute_predicate lsi, :needs_rebuild?
     assert_equal 'Cow', lsi.classify(tricky_case)
   end
 
@@ -92,21 +97,25 @@ class LSITest < Minitest::Test
     lsi.add_item @str5, 'Bird'
 
     category, confidence = lsi.classify_with_confidence(@str1)
+
     assert_equal 'Dog', category
-    assert confidence > 0.5, "Confidence should be greater than 0.5, but was #{confidence}"
+    assert_operator confidence, :>, 0.5, "Confidence should be greater than 0.5, but was #{confidence}"
 
     category, confidence = lsi.classify_with_confidence(@str3)
+
     assert_equal 'Cat', category
-    assert confidence > 0.5, "Confidence should be greater than 0.5, but was #{confidence}"
+    assert_operator confidence, :>, 0.5, "Confidence should be greater than 0.5, but was #{confidence}"
 
     category, confidence = lsi.classify_with_confidence(@str5)
+
     assert_equal 'Bird', category
-    assert confidence > 0.5, "Confidence should be greater than 0.5, but was #{confidence}"
+    assert_operator confidence, :>, 0.5, "Confidence should be greater than 0.5, but was #{confidence}"
 
     tricky_case = 'This text revolves around dogs.'
     category, confidence = lsi.classify_with_confidence(tricky_case)
+
     assert_equal 'Dog', category
-    assert confidence > 0.3, "Confidence should be greater than 0.3, but was #{confidence}"
+    assert_operator confidence, :>, 0.3, "Confidence should be greater than 0.3, but was #{confidence}"
   end
 
   def test_search
@@ -157,13 +166,15 @@ class LSITest < Minitest::Test
 
   def test_empty_index_needs_rebuild
     lsi = Classifier::LSI.new
-    refute lsi.needs_rebuild?, 'Empty index should not need rebuild'
+
+    refute_predicate lsi, :needs_rebuild?, 'Empty index should not need rebuild'
   end
 
   def test_single_item_needs_rebuild
     lsi = Classifier::LSI.new auto_rebuild: false
     lsi.add_item 'Single document', 'Category'
-    refute lsi.needs_rebuild?, 'Single item index should not need rebuild'
+
+    refute_predicate lsi, :needs_rebuild?, 'Single item index should not need rebuild'
   end
 
   def test_remove_item
@@ -195,11 +206,11 @@ class LSITest < Minitest::Test
     lsi.add_item @str3, 'Cat'
     lsi.build_index
 
-    refute lsi.needs_rebuild?, 'Index should be current after build'
+    refute_predicate lsi, :needs_rebuild?, 'Index should be current after build'
 
     lsi.remove_item @str1
 
-    assert lsi.needs_rebuild?, 'Index should need rebuild after removing item'
+    assert_predicate lsi, :needs_rebuild?, 'Index should need rebuild after removing item'
   end
 
   def test_items_method
@@ -208,6 +219,7 @@ class LSITest < Minitest::Test
     lsi.add_item @str2, 'Cat'
 
     items = lsi.items
+
     assert_equal 2, items.size
     assert_includes items, @str1
     assert_includes items, @str2
@@ -220,6 +232,7 @@ class LSITest < Minitest::Test
     lsi.add_item @str3, 'Cat'
 
     result = lsi.find_related(@str1, 3)
+
     refute_includes result, @str1, 'Should not include the source document in related results'
   end
 
@@ -230,6 +243,7 @@ class LSITest < Minitest::Test
     lsi.add_item 'French words bonjour merci', 'French'
 
     result = lsi.classify('english content')
+
     assert_equal 'English', result
   end
 
@@ -238,7 +252,7 @@ class LSITest < Minitest::Test
     lsi.add_item @str1, 'Dog'
     lsi.add_item @str2, 'Dog'
 
-    refute lsi.needs_rebuild?, 'Auto-rebuild should keep index current'
+    refute_predicate lsi, :needs_rebuild?, 'Auto-rebuild should keep index current'
   end
 
   def test_categories_for_nonexistent_item
@@ -246,6 +260,7 @@ class LSITest < Minitest::Test
     lsi.add_item @str1, 'Dog'
 
     result = lsi.categories_for('nonexistent')
+
     assert_empty result, 'Should return empty array for nonexistent item'
   end
 end

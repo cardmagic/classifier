@@ -19,12 +19,14 @@ class BayesianTest < Minitest::Test
 
   def test_add_category
     @classifier.add_category 'Test'
+
     assert_equal %w[Test Interesting Uninteresting].sort, @classifier.categories.sort
   end
 
   def test_classification
     @classifier.train_interesting 'here are some good words. I hope you love them'
     @classifier.train_uninteresting 'here are some bad words, I hate you'
+
     assert_equal 'Uninteresting', @classifier.classify('I hate bad words and you')
   end
 
@@ -96,10 +98,11 @@ class BayesianTest < Minitest::Test
     @classifier.remove_category('Interesting')
 
     assert_nil @classifier.instance_variable_get(:@categories)['Interesting']
-    assert_equal @classifier.instance_variable_get(:@category_counts)['Interesting'], 0
-    assert_equal @classifier.instance_variable_get(:@category_word_count)['Interesting'], 0
+    assert_equal 0, @classifier.instance_variable_get(:@category_counts)['Interesting']
+    assert_equal 0, @classifier.instance_variable_get(:@category_word_count)['Interesting']
 
     new_total_words = @classifier.instance_variable_get(:@total_words)
+
     assert_equal initial_total_words - category_word_count, new_total_words
   end
 
@@ -110,6 +113,7 @@ class BayesianTest < Minitest::Test
     @classifier.remove_category('Interesting')
 
     new_total_words = @classifier.instance_variable_get(:@total_words)
+
     assert_equal initial_total_words - category_word_count, new_total_words
   end
 
@@ -128,7 +132,8 @@ class BayesianTest < Minitest::Test
     @classifier.untrain_interesting 'good words'
 
     new_total = @classifier.instance_variable_get(:@total_words)
-    assert new_total < initial_total, 'Total words should decrease after untrain'
+
+    assert_operator new_total, :<, initial_total, 'Total words should decrease after untrain'
   end
 
   def test_untrain_with_train_method
@@ -136,6 +141,7 @@ class BayesianTest < Minitest::Test
     @classifier.untrain :interesting, 'hello world'
 
     category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+
     assert_empty category_words, 'Category should have no words after untraining same text'
   end
 
@@ -144,6 +150,7 @@ class BayesianTest < Minitest::Test
     @classifier.untrain_interesting 'dynamic method test'
 
     category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+
     assert_empty category_words, 'Dynamic untrain should remove trained words'
   end
 
@@ -169,11 +176,13 @@ class BayesianTest < Minitest::Test
     @classifier.train_interesting 'second document'
 
     initial_count = @classifier.instance_variable_get(:@category_counts)[:Interesting]
+
     assert_equal 2, initial_count
 
     @classifier.untrain_interesting 'first document'
 
     new_count = @classifier.instance_variable_get(:@category_counts)[:Interesting]
+
     assert_equal 1, new_count
   end
 
@@ -181,6 +190,7 @@ class BayesianTest < Minitest::Test
     @classifier.train_interesting 'unique'
 
     category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+
     assert category_words.key?(:uniqu), 'Word should exist after training'
 
     @classifier.untrain_interesting 'unique'
@@ -193,6 +203,7 @@ class BayesianTest < Minitest::Test
     @classifier.untrain_interesting 'apple'
 
     category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+
     assert_equal 2, category_words[:appl], 'Should have 2 remaining after untraining 1'
   end
 
@@ -201,10 +212,12 @@ class BayesianTest < Minitest::Test
     @classifier.untrain_interesting 'word word word word word'
 
     category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+
     refute category_words.key?(:word), 'Word should be deleted, not go negative'
 
     total_words = @classifier.instance_variable_get(:@total_words)
-    assert total_words >= 0, 'Total words should not go negative'
+
+    assert_operator total_words, :>=, 0, 'Total words should not go negative'
   end
 
   def test_untrain_nonexistent_words
@@ -214,7 +227,8 @@ class BayesianTest < Minitest::Test
     @classifier.untrain_interesting 'completely different text'
 
     new_total = @classifier.instance_variable_get(:@total_words)
-    assert new_total <= initial_total, 'Should handle non-existent words gracefully'
+
+    assert_operator new_total, :<=, initial_total, 'Should handle non-existent words gracefully'
   end
 
   def test_untrain_invalid_category
@@ -228,7 +242,8 @@ class BayesianTest < Minitest::Test
     @classifier.untrain_interesting 'hello'
 
     new_word_count = @classifier.instance_variable_get(:@category_word_count)[:Interesting]
-    assert new_word_count < initial_word_count, 'Category word count should decrease'
+
+    assert_operator new_word_count, :<, initial_word_count, 'Category word count should decrease'
   end
 
   # Edge case tests
@@ -236,6 +251,7 @@ class BayesianTest < Minitest::Test
   def test_empty_string_training
     @classifier.train_interesting ''
     category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+
     assert_empty category_words, 'Empty string should not add any words'
   end
 
@@ -244,6 +260,7 @@ class BayesianTest < Minitest::Test
     @classifier.train_uninteresting 'bad words here'
 
     result = @classifier.classify('')
+
     assert_includes %w[Interesting Uninteresting], result, 'Should return a category even for empty string'
   end
 
@@ -253,7 +270,8 @@ class BayesianTest < Minitest::Test
 
     # Unicode characters are treated as words if long enough
     category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
-    assert category_words.size > 0, 'Should store unicode words'
+
+    assert_predicate category_words.size, :positive?, 'Should store unicode words'
   end
 
   def test_emoji_training
@@ -261,6 +279,7 @@ class BayesianTest < Minitest::Test
     @classifier.train_uninteresting 'sad 😢 crying 💔 heartbreak'
 
     result = @classifier.classify('happy celebration')
+
     assert_equal 'Interesting', result, 'Should handle emoji in text'
   end
 
@@ -277,9 +296,11 @@ class BayesianTest < Minitest::Test
     @classifier.train_uninteresting 'boring text'
 
     total_words = @classifier.instance_variable_get(:@total_words)
-    assert total_words > 0, 'Should handle very long text'
+
+    assert_predicate total_words, :positive?, 'Should handle very long text'
 
     result = @classifier.classify('interesting')
+
     assert_equal 'Interesting', result
   end
 
@@ -294,6 +315,7 @@ class BayesianTest < Minitest::Test
   def test_whitespace_only
     @classifier.train_interesting "   \t\n   "
     category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+
     assert_empty category_words, 'Whitespace-only should not add words'
   end
 
@@ -303,6 +325,7 @@ class BayesianTest < Minitest::Test
 
     # Words are downcased during training, so uppercase query should match
     result = @classifier.classify('uppercase lowercase')
+
     assert_equal 'Interesting', result, 'Should handle mixed case'
   end
 
@@ -311,6 +334,7 @@ class BayesianTest < Minitest::Test
     @classifier.train_uninteresting 'abc def ghi'
 
     result = @classifier.classify('test123')
+
     assert_equal 'Interesting', result, 'Should handle numbers in text'
   end
 end

@@ -12,7 +12,7 @@ class String
   #   "Hello (greeting's), with {braces} < >...?".without_punctuation
   #   => "Hello  greetings   with  braces         "
   def without_punctuation
-    tr(',?.!;:"@#$%^&*()_=+[]{}\|<>/`~', ' ').tr("'\-", '')
+    tr(',?.!;:"@#$%^&*()_=+[]{}|<>/`~', ' ').tr("'-", '')
   end
 
   # Return a Hash of strings => ints. Each word in the string is stemmed,

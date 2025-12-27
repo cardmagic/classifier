@@ -8,7 +8,7 @@ SimpleCov.start do
   enable_coverage :branch
 end
 
-$:.unshift(File.dirname(__FILE__) + '/../lib')
+$LOAD_PATH.unshift("#{File.dirname(__FILE__)}/../lib")
 
 require 'minitest'
 require 'minitest/autorun'
