@@ -8,3 +8,8 @@ gem 'mutex_m'
 group :test do
   gem 'simplecov', require: false
 end
+
+group :development do
+  gem 'rubocop', require: false
+  gem 'rubocop-minitest', require: false
+end

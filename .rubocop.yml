@@ -1,0 +1,96 @@
+plugins:
+  - rubocop-minitest
+
+AllCops:
+  TargetRubyVersion: 3.1
+  NewCops: enable
+  Exclude:
+    - 'vendor/**/*'
+    - 'coverage/**/*'
+    - '*.gemspec'
+    - 'bin/**/*'
+    - 'install.rb'
+
+# Existing code lacks documentation, can add incrementally
+Style/Documentation:
+  Enabled: false
+
+# Test files often have long blocks
+Metrics/BlockLength:
+  Exclude:
+    - 'test/**/*'
+    - 'lib/classifier/extensions/vector.rb'
+
+# Allow longer methods in complex algorithms (SVD, etc.)
+Metrics/MethodLength:
+  Max: 25
+  Exclude:
+    - 'test/**/*'
+    - 'lib/classifier/extensions/vector.rb'
+    - 'lib/classifier/lsi/content_node.rb'
+
+# Allow higher complexity for mathematical algorithms
+Metrics/AbcSize:
+  Max: 30
+  Exclude:
+    - 'test/**/*'
+    - 'lib/classifier/extensions/vector.rb'
+    - 'lib/classifier/lsi.rb'
+    - 'lib/classifier/lsi/content_node.rb'
+
+Metrics/CyclomaticComplexity:
+  Max: 10
+  Exclude:
+    - 'lib/classifier/extensions/vector.rb'
+    - 'lib/classifier/lsi/content_node.rb'
+
+Metrics/PerceivedComplexity:
+  Max: 10
+  Exclude:
+    - 'lib/classifier/extensions/vector.rb'
+    - 'lib/classifier/lsi/content_node.rb'
+
+# Class length limits - algorithms and tests can be longer
+Metrics/ClassLength:
+  Max: 250
+  Exclude:
+    - 'test/**/*'
+
+# SV_decomp is a standard algorithm name
+Naming/MethodName:
+  Exclude:
+    - 'lib/classifier/extensions/vector.rb'
+
+# Short parameter names are acceptable for serialization
+Naming/MethodParameterName:
+  Exclude:
+    - 'lib/classifier/extensions/vector_serialize.rb'
+
+# Marshal.load is intentional for deserialization
+Security/MarshalLoad:
+  Exclude:
+    - 'lib/classifier/extensions/vector_serialize.rb'
+    - 'test/**/*'
+
+# CORPUS_SKIP_WORDS is a public constant used externally
+Lint/UselessConstantScoping:
+  Enabled: false
+
+# Frozen string literal is optional for this gem
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+# Allow compact class/module child definitions
+Style/ClassAndModuleChildren:
+  Enabled: false
+
+# Allow both styles of string literals
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: single_quotes
+
+# Minitest assertions
+Minitest/MultipleAssertions:
+  Max: 10

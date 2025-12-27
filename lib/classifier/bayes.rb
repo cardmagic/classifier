@@ -88,7 +88,7 @@ module Classifier
     #    b.classify "I hate bad words and you"
     #    =>  'Uninteresting'
     def classify(text)
-      (classifications(text).sort_by { |a| -a[1] })[0][0]
+      classifications(text).min_by { |a| -a[1] }[0]
     end
 
     #
@@ -107,6 +107,10 @@ module Classifier
 
       method = name.to_s.start_with?('untrain_') ? :untrain : :train
       args.each { |text| send(method, category, text) }
+    end
+
+    def respond_to_missing?(name, include_private = false)
+      name.to_s =~ /(un)?train_(\w+)/ || super
     end
 
     #
