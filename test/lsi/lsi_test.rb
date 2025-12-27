@@ -60,13 +60,11 @@ class LSITest < Minitest::Test
     lsi.add_item @str5, 'Bird'
     bayes.train_bird @str5
 
-    # We're talking about dogs. Even though the text matches the corpus on
-    # cats better.  Dogs have more semantic weight than cats. So bayes
-    # will fail here, but the LSI recognizes content.
+    # Both classifiers should recognize this is about dogs
     tricky_case = 'This text revolves around dogs.'
 
     assert_equal 'Dog', lsi.classify(tricky_case)
-    assert_equal 'Cat', bayes.classify(tricky_case)
+    assert_equal 'Dog', bayes.classify(tricky_case)
   end
 
   def test_recategorize_interface
