@@ -3,7 +3,6 @@ PATH
   specs:
     classifier (1.4.4)
       fast-stemmer (~> 1.0)
-      matrix
       mutex_m (~> 0.2)
       rake
 
@@ -24,7 +23,7 @@ GEM
 PLATFORMS
   arm64-darwin-22
   arm64-darwin-23
-  arm64-darwin-24
+  arm64-darwin-25
   x86_64-linux
 
 DEPENDENCIES

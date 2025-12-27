@@ -100,20 +100,13 @@ module Classifier
     #     b.untrain_that "That text"
     #     b.train_the_other "The other text"
     def method_missing(name, *args)
+      return super unless name.to_s =~ /(un)?train_(\w+)/
+
       category = name.to_s.gsub(/(un)?train_(\w+)/, '\2').prepare_category_name
-      if @categories.key?(category)
-        args.each do |text|
-          if name.to_s.start_with?('untrain_')
-            untrain(category, text)
-          else
-            train(category, text)
-          end
-        end
-      elsif name.to_s =~ /(un)?train_(\w+)/
-        raise StandardError, "No such category: #{category}"
-      else
-        super
-      end
+      raise StandardError, "No such category: #{category}" unless @categories.key?(category)
+
+      method = name.to_s.start_with?('untrain_') ? :untrain : :train
+      args.each { |text| send(method, category, text) }
     end
 
     #
