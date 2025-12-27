@@ -133,6 +133,7 @@ class VectorExtensionsTest < Minitest::Test
 
     # Should normalize to [1/sqrt(3), 1/sqrt(3), 1/sqrt(3)]
     expected = 1.0 / Math.sqrt(3)
+
     assert_in_delta expected, normalized[0], 0.001
     assert_in_delta expected, normalized[1], 0.001
     assert_in_delta expected, normalized[2], 0.001
