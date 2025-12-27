@@ -170,7 +170,7 @@ module Classifier
       return [] if needs_rebuild?
 
       avg_density = {}
-      @items.each_key { |x| avg_density[x] = proximity_array_for_content(x).inject(0.0) { |i, j| i + j[1] } }
+      @items.each_key { |x| avg_density[x] = proximity_array_for_content(x).sum { |pair| pair[1] } }
 
       avg_density.keys.sort_by { |x| avg_density[x] }.reverse[0..(max_chunks - 1)].map
     end
@@ -300,7 +300,7 @@ module Classifier
     # See classify() for argument docs
     def classify_with_confidence(doc, cutoff = 0.30, &)
       votes = vote(doc, cutoff, &)
-      votes_sum = votes.values.inject(0.0) { |sum, v| sum + v }
+      votes_sum = votes.values.sum
       return [nil, nil] if votes_sum.zero?
 
       ranking = votes.keys.sort_by { |x| votes[x] }
