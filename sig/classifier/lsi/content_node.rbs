@@ -1,0 +1,22 @@
+module Classifier
+  class ContentNode
+    @word_hash: Hash[Symbol, Integer]
+    @categories: Array[untyped]
+
+    attr_accessor raw_vector: untyped
+    attr_accessor raw_norm: untyped
+    attr_accessor lsi_vector: untyped
+    attr_accessor lsi_norm: untyped
+    attr_accessor categories: Array[untyped]
+
+    attr_reader word_hash: Hash[Symbol, Integer]
+
+    def initialize: (Hash[Symbol, Integer] word_frequencies, *untyped categories) -> void
+
+    def search_vector: () -> untyped
+
+    def search_norm: () -> untyped
+
+    def raw_vector_with: (WordList word_list) -> untyped
+  end
+end
