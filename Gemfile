@@ -14,5 +14,7 @@ group :development do
   gem 'rubocop', require: false
   gem 'rubocop-minitest', require: false
   # steep's ffi dependency doesn't support Ruby 4.0 yet
-  gem 'steep', require: false if RUBY_VERSION < '4.0'
+  install_if -> { RUBY_VERSION < '4.0' } do
+    gem 'steep', require: false
+  end
 end
