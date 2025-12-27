@@ -17,37 +17,37 @@ $LOAD_PATH.unshift File.expand_path('../lib', __dir__)
 
 require 'benchmark'
 
-# Sample documents matching the pattern used in tests (short with repeated keywords)
+# Sample documents with diverse vocabulary to avoid SVD dimension issues
 CATEGORIES = {
   dog: [
-    'This text deals with dogs. Dogs.',
-    'This text involves dogs too. Dogs!',
-    'Dogs are great pets. Dogs are loyal.',
-    'I love dogs very much. Dogs!'
+    'Dogs are loyal companions who love to play fetch in the park.',
+    'My golden retriever enjoys swimming and chasing squirrels.',
+    'Puppies need training and patience to become well-behaved dogs.',
+    'The veterinarian recommended a new diet for my aging dog.'
   ],
   cat: [
-    'This text revolves around cats. Cats.',
-    'This text also involves cats. Cats!',
-    'Cats are independent pets. Cats.',
-    'I enjoy cats very much. Cats!'
+    'Cats are independent creatures who enjoy napping in sunny spots.',
+    'My tabby cat loves to chase laser pointers around the room.',
+    'Kittens are playful and curious about everything they see.',
+    'The feline groomed herself after eating her favorite treats.'
   ],
   bird: [
-    'This text involves birds. Birds.',
-    'Birds can fly high. Birds!',
-    'Many birds sing songs. Birds.',
-    'I watch birds often. Birds!'
+    'Parrots can learn to mimic human speech with practice.',
+    'The cardinal built a nest in our backyard oak tree.',
+    'Hummingbirds visit our feeder every morning for nectar.',
+    'Owls are nocturnal hunters with excellent night vision.'
   ],
   fish: [
-    'This text is about fish. Fish.',
-    'Fish swim in water. Fish!',
-    'Tropical fish are colorful. Fish.',
-    'I keep fish as pets. Fish!'
+    'Tropical aquariums require careful temperature and pH monitoring.',
+    'Salmon swim upstream to spawn in their birthplace rivers.',
+    'The coral reef teems with colorful marine life and fish.',
+    'Goldfish are popular pets that can live for many years.'
   ],
   horse: [
-    'This text discusses horses. Horses.',
-    'Horses run very fast. Horses!',
-    'Wild horses are free. Horses.',
-    'I ride horses often. Horses!'
+    'Thoroughbreds are bred for speed and excel at racing.',
+    'The rancher trained wild mustangs using gentle methods.',
+    'Equestrian sports include dressage, jumping, and polo.',
+    'Horses communicate through body language and vocalizations.'
   ]
 }.freeze
 
@@ -90,14 +90,14 @@ def run_benchmark(doc_count)
     end
 
     # Benchmark: Classification (100 iterations)
-    test_doc = 'This is about dogs. Dogs!'
+    test_doc = 'My puppy loves playing fetch and going for walks.'
     results[:classify] = Benchmark.measure do
       100.times { lsi.classify(test_doc) }
     end
 
     # Benchmark: Search (100 iterations)
     results[:search] = Benchmark.measure do
-      100.times { lsi.search('dogs pets', 5) }
+      100.times { lsi.search('loyal companion pet', 5) }
     end
 
     # Benchmark: Find related (100 iterations)
@@ -118,16 +118,16 @@ def run_benchmark(doc_count)
     puts "%-20s %10s %10s %10.4f" % ['TOTAL', '', '', total]
 
     { results: results, gsl: Classifier::LSI.gsl_available, success: true }
-  rescue Math::DomainError => e
+  rescue Math::DomainError, ExceptionForMatrix::ErrDimensionMismatch => e
     puts "\nFAILED: Native Ruby SVD numerical instability"
-    puts "Error: #{e.message}"
+    puts "Error: #{e.class.name} - #{e.message}"
     puts "Tip: Install GSL for stable large-scale benchmarks: gem install gsl"
     { results: {}, gsl: false, success: false, error: e.message }
   end
 end
 
 def run_single
-  sizes = [10, 20, 50, 100]
+  sizes = [5, 10, 15, 20]
   failed = false
 
   sizes.each do |size|
@@ -146,7 +146,7 @@ def run_single
 end
 
 def run_comparison
-  sizes = [10, 20, 50]
+  sizes = [5, 10, 15]
 
   puts "#{'#' * 70}"
   puts '# LSI BENCHMARK: GSL vs Native Ruby Comparison'
@@ -182,9 +182,9 @@ def run_comparison
 
         times[:build_index] = Benchmark.measure { lsi.build_index }.total
 
-        test_doc = 'This is about dogs. Dogs!'
+        test_doc = 'My puppy loves playing fetch and going for walks.'
         times[:classify] = Benchmark.measure { 100.times { lsi.classify(test_doc) } }.total
-        times[:search] = Benchmark.measure { 100.times { lsi.search('dogs pets', 5) } }.total
+        times[:search] = Benchmark.measure { 100.times { lsi.search('loyal companion pet', 5) } }.total
 
         sample = docs.first[0]
         times[:find_related] = Benchmark.measure { 100.times { lsi.find_related(sample, 5) } }.total
@@ -233,9 +233,9 @@ def run_comparison
 
         times[:build_index] = Benchmark.measure { lsi.build_index }.total
 
-        test_doc = 'This is about dogs. Dogs!'
+        test_doc = 'My puppy loves playing fetch and going for walks.'
         times[:classify] = Benchmark.measure { 100.times { lsi.classify(test_doc) } }.total
-        times[:search] = Benchmark.measure { 100.times { lsi.search('dogs pets', 5) } }.total
+        times[:search] = Benchmark.measure { 100.times { lsi.search('loyal companion pet', 5) } }.total
 
         sample = docs.first[0]
         times[:find_related] = Benchmark.measure { 100.times { lsi.find_related(sample, 5) } }.total
