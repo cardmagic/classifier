@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
   s.author = 'Lucas Carlson'
   s.email = 'lucas@rufy.com'
   s.homepage = 'https://github.com/cardmagic/classifier'
-  s.files = Dir['{lib}/**/*.rb', 'bin/*', 'LICENSE', '*.md', 'test/*']
+  s.files = Dir['{lib,sig}/**/*.{rb,rbs}', 'bin/*', 'LICENSE', '*.md', 'test/*']
   s.license = 'LGPL'
 
   s.add_dependency 'fast-stemmer', '~> 1.0'

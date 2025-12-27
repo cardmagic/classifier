@@ -1,0 +1,15 @@
+# Coverage reports
+coverage/
+
+# Gem build artifacts
+*.gem
+pkg/
+
+# IDE/editor files
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
