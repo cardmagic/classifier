@@ -16,7 +16,24 @@ The `fast-stemmer` gem is required:
 
 ### Optional: GSL for Faster LSI
 
-For 10x faster LSI classification, install the GNU Scientific Library and its Ruby bindings:
+For faster LSI classification, install the GNU Scientific Library and its Ruby bindings.
+
+#### Ruby 3.4+
+
+The released `gsl` gem doesn't support Ruby 3.4+. Install from source with the compatibility fix:
+
+    # Install GSL library
+    brew install gsl        # macOS
+    apt-get install libgsl-dev  # Ubuntu/Debian
+
+    # Build and install the gem from the compatibility branch
+    git clone https://github.com/cardmagic/rb-gsl.git
+    cd rb-gsl
+    git checkout fix/ruby-3.4-compatibility
+    gem build gsl.gemspec
+    gem install gsl-*.gem
+
+#### Ruby 3.3 and earlier
 
     # macOS
     brew install gsl
@@ -108,19 +125,26 @@ Run benchmarks to compare LSI performance:
     rake benchmark              # Run with current configuration
     rake benchmark:compare      # Compare GSL vs native Ruby
 
-Sample results (Native Ruby, 20 documents):
+### GSL vs Native Ruby Comparison
 
-    Operation                  User     System      Total
-    ----------------------------------------------------
-    add_items                0.0001     0.0000     0.0001
-    build_index              0.5458     0.0020     0.5477
-    classify                 0.0139     0.0001     0.0140
-    search                   0.0133     0.0001     0.0134
-    find_related             0.0093     0.0001     0.0093
-    ----------------------------------------------------
-    TOTAL                                          0.5846
+| Documents | build_index | Overall Speedup |
+|-----------|-------------|-----------------|
+| 5         | 4x          | 2.5x            |
+| 10        | 24x         | 5.5x            |
+| 15        | 116x        | 17x             |
 
-GSL provides ~10x faster performance for the `build_index` operation, which dominates the total time.
+Sample comparison (15 documents):
+
+    Operation              Native          GSL      Speedup
+    ----------------------------------------------------------
+    build_index            0.1412       0.0012       116.2x
+    classify               0.0142       0.0049         2.9x
+    search                 0.0102       0.0026         3.9x
+    find_related           0.0069       0.0016         4.2x
+    ----------------------------------------------------------
+    TOTAL                  0.1725       0.0104        16.6x
+
+The `build_index` operation (SVD computation) dominates total time and benefits most from GSL. Install GSL for production use with larger document sets.
 
 ## Authors
 

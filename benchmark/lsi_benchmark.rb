@@ -16,6 +16,7 @@
 $LOAD_PATH.unshift File.expand_path('../lib', __dir__)
 
 require 'benchmark'
+require 'json'
 
 # Sample documents with diverse vocabulary to avoid SVD dimension issues
 CATEGORIES = {
@@ -107,15 +108,15 @@ def run_benchmark(doc_count)
     end
 
     # Print results
-    puts "\n%-20s %10s %10s %10s" % ['Operation', 'User', 'System', 'Total']
+    puts format("\n%-20s %10s %10s %10s", 'Operation', 'User', 'System', 'Total')
     puts '-' * 52
     results.each do |name, bm|
-      puts "%-20s %10.4f %10.4f %10.4f" % [name, bm.utime, bm.stime, bm.total]
+      puts format("%-20s %10.4f %10.4f %10.4f", name, bm.utime, bm.stime, bm.total)
     end
 
     total = results.values.sum(&:total)
     puts '-' * 52
-    puts "%-20s %10s %10s %10.4f" % ['TOTAL', '', '', total]
+    puts format("%-20s %10s %10s %10.4f", 'TOTAL', '', '', total)
 
     { results: results, gsl: Classifier::LSI.gsl_available, success: true }
   rescue Math::DomainError, ExceptionForMatrix::ErrDimensionMismatch => e
@@ -145,6 +146,66 @@ def run_single
   end
 end
 
+def run_subprocess(docs_json, env_vars = {})
+  lib_path = File.expand_path('../lib', __dir__)
+
+  # Build environment hash
+  env = env_vars.transform_keys(&:to_s)
+
+  # Use Bundler.with_unbundled_env if available to access system gems (like GSL)
+  popen_block = lambda do
+    IO.popen([env, RbConfig.ruby, '-I', lib_path, '-W0', '-e', <<~'RUBY'], 'r+')
+      require 'benchmark'
+      require 'json'
+      require 'classifier'
+
+      unless ENV['NATIVE_VECTOR'] || Classifier::LSI.gsl_available
+        print "GSL_NOT_AVAILABLE"
+        exit 0
+      end
+
+      docs = JSON.parse($stdin.read)
+      lsi = Classifier::LSI.new(auto_rebuild: false)
+      docs.each { |doc, cat| lsi.add_item(doc, cat.to_sym) }
+
+      times = {}
+      times[:add_items] = 0
+
+      times[:build_index] = Benchmark.measure { lsi.build_index }.total
+
+      test_doc = 'My puppy loves playing fetch and going for walks.'
+      times[:classify] = Benchmark.measure { 100.times { lsi.classify(test_doc) } }.total
+      times[:search] = Benchmark.measure { 100.times { lsi.search('loyal companion pet', 5) } }.total
+
+      sample = docs.first[0]
+      times[:find_related] = Benchmark.measure { 100.times { lsi.find_related(sample, 5) } }.total
+
+      print Marshal.dump(times)
+    RUBY
+  end
+
+  io = if defined?(Bundler)
+         Bundler.with_unbundled_env(&popen_block)
+       else
+         popen_block.call
+       end
+
+  begin
+    io.write(docs_json)
+    io.close_write
+    output = io.read
+    if output == 'GSL_NOT_AVAILABLE'
+      { available: false }
+    else
+      { available: true, times: Marshal.load(output) }
+    end
+  rescue StandardError => e
+    { available: false, error: e }
+  ensure
+    io.close
+  end
+end
+
 def run_comparison
   sizes = [5, 10, 15]
 
@@ -161,103 +222,33 @@ def run_comparison
   # Run native benchmarks in subprocess
   puts "\n>>> Running Native Ruby benchmarks..."
   sizes.each do |size|
-    docs = doc_sets[size]
-    docs_literal = docs.map { |d, c| "[#{d.inspect}, #{c.inspect}]" }.join(', ')
+    docs_json = JSON.generate(doc_sets[size])
+    result = run_subprocess(docs_json, NATIVE_VECTOR: 'true', SUPPRESS_GSL_WARNING: 'true')
 
-    io = IO.popen([
-      RbConfig.ruby,
-      '-I', File.expand_path('../lib', __dir__),
-      '-e', <<~RUBY
-        ENV['NATIVE_VECTOR'] = 'true'
-        ENV['SUPPRESS_GSL_WARNING'] = 'true'
-        require 'benchmark'
-        require 'classifier'
-
-        docs = [#{docs_literal}]
-        lsi = Classifier::LSI.new(auto_rebuild: false)
-        docs.each { |doc, cat| lsi.add_item(doc, cat) }
-
-        times = {}
-        times[:add_items] = 0
-
-        times[:build_index] = Benchmark.measure { lsi.build_index }.total
-
-        test_doc = 'My puppy loves playing fetch and going for walks.'
-        times[:classify] = Benchmark.measure { 100.times { lsi.classify(test_doc) } }.total
-        times[:search] = Benchmark.measure { 100.times { lsi.search('loyal companion pet', 5) } }.total
-
-        sample = docs.first[0]
-        times[:find_related] = Benchmark.measure { 100.times { lsi.find_related(sample, 5) } }.total
-
-        print Marshal.dump(times)
-      RUBY
-    ], err: [:child, :out])
-
-    begin
-      output = io.read
-      native_results[size] = Marshal.load(output)
-      puts "  #{size} docs: OK"
-    rescue StandardError => e
-      puts "  #{size} docs: FAILED (#{e.class.name.split('::').last})"
+    if result[:error]
+      puts "  #{size} docs: FAILED (#{result[:error].class.name.split('::').last})"
       native_results[size] = nil
-    ensure
-      io.close
+    else
+      native_results[size] = result[:times]
+      puts "  #{size} docs: OK"
     end
   end
 
   # Run GSL benchmarks in subprocess
   puts "\n>>> Running GSL benchmarks..."
   sizes.each do |size|
-    docs = doc_sets[size]
-    docs_literal = docs.map { |d, c| "[#{d.inspect}, #{c.inspect}]" }.join(', ')
+    docs_json = JSON.generate(doc_sets[size])
+    result = run_subprocess(docs_json, SUPPRESS_GSL_WARNING: 'true')
 
-    io = IO.popen([
-      RbConfig.ruby,
-      '-I', File.expand_path('../lib', __dir__),
-      '-e', <<~RUBY
-        ENV['SUPPRESS_GSL_WARNING'] = 'true'
-        require 'benchmark'
-        require 'classifier'
-
-        unless Classifier::LSI.gsl_available
-          print "GSL_NOT_AVAILABLE"
-          exit 0
-        end
-
-        docs = [#{docs_literal}]
-        lsi = Classifier::LSI.new(auto_rebuild: false)
-        docs.each { |doc, cat| lsi.add_item(doc, cat) }
-
-        times = {}
-        times[:add_items] = 0
-
-        times[:build_index] = Benchmark.measure { lsi.build_index }.total
-
-        test_doc = 'My puppy loves playing fetch and going for walks.'
-        times[:classify] = Benchmark.measure { 100.times { lsi.classify(test_doc) } }.total
-        times[:search] = Benchmark.measure { 100.times { lsi.search('loyal companion pet', 5) } }.total
-
-        sample = docs.first[0]
-        times[:find_related] = Benchmark.measure { 100.times { lsi.find_related(sample, 5) } }.total
-
-        print Marshal.dump(times)
-      RUBY
-    ], err: [:child, :out])
-
-    begin
-      output = io.read
-      if output == 'GSL_NOT_AVAILABLE'
-        puts "  #{size} docs: SKIPPED (GSL not installed)"
-        gsl_results[size] = nil
-      else
-        gsl_results[size] = Marshal.load(output)
-        puts "  #{size} docs: OK"
-      end
-    rescue StandardError => e
-      puts "  #{size} docs: FAILED (#{e.class.name.split('::').last})"
+    if result[:error]
+      puts "  #{size} docs: FAILED (#{result[:error].class.name.split('::').last})"
       gsl_results[size] = nil
-    ensure
-      io.close
+    elsif !result[:available]
+      puts "  #{size} docs: SKIPPED (GSL not installed)"
+      gsl_results[size] = nil
+    else
+      gsl_results[size] = result[:times]
+      puts "  #{size} docs: OK"
     end
   end
 
@@ -275,7 +266,7 @@ def run_comparison
     next unless native || gsl
 
     puts "\n--- #{size} Documents ---"
-    puts "%-20s %12s %12s %12s" % ['Operation', 'Native', 'GSL', 'Speedup']
+    puts format("%-20s %12s %12s %12s", 'Operation', 'Native', 'GSL', 'Speedup')
     puts '-' * 58
 
     operations.each do |op|
@@ -291,7 +282,7 @@ def run_comparison
                   'N/A'
                 end
 
-      puts "%-20s %12s %12s %12s" % [op, native_str, gsl_str, speedup]
+      puts format("%-20s %12s %12s %12s", op, native_str, gsl_str, speedup)
     end
 
     if native && gsl
@@ -299,7 +290,7 @@ def run_comparison
       gsl_total = operations.sum { |op| gsl[op] }
       speedup = gsl_total > 0 ? native_total / gsl_total : 0
       puts '-' * 58
-      puts "%-20s %12.4f %12.4f %11.1fx" % ['TOTAL', native_total, gsl_total, speedup]
+      puts format("%-20s %12.4f %12.4f %11.1fx", 'TOTAL', native_total, gsl_total, speedup)
     end
   end
 
