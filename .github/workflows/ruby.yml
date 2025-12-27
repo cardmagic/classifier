@@ -50,4 +50,5 @@ jobs:
     - name: Validate RBS types
       run: bundle exec rbs -I sig validate
     - name: Type check with Steep
+      if: matrix.ruby-version != '4.0'
       run: bundle exec steep check
