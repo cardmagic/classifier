@@ -188,6 +188,20 @@ class LSITest < Minitest::Test
     assert_equal 1, lsi.items.size, 'Should not affect index when removing nonexistent item'
   end
 
+  def test_remove_item_triggers_needs_rebuild
+    lsi = Classifier::LSI.new auto_rebuild: false
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+    lsi.build_index
+
+    refute lsi.needs_rebuild?, 'Index should be current after build'
+
+    lsi.remove_item @str1
+
+    assert lsi.needs_rebuild?, 'Index should need rebuild after removing item'
+  end
+
   def test_items_method
     lsi = Classifier::LSI.new
     lsi.add_item @str1, 'Dog'
