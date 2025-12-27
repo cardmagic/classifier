@@ -128,7 +128,8 @@ class VectorExtensionsTest < Minitest::Test
   def test_normalize_near_zero_vector_normalizes_correctly
     # Near-zero vectors should still normalize to unit vectors
     # Only actual zero vectors return zero
-    vec = Vector[1e-15, 1e-15, 1e-15]
+    small = Vector::EPSILON * 10
+    vec = Vector[small, small, small]
     normalized = vec.normalize
 
     # Should normalize to [1/sqrt(3), 1/sqrt(3), 1/sqrt(3)]
