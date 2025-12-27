@@ -1,3 +1,5 @@
+# rbs_inline: enabled
+
 # Author::    Ernest Ellingson
 # Copyright:: Copyright (c) 2005
 
@@ -5,6 +7,7 @@
 
 require 'matrix'
 
+# @rbs skip
 class Array
   def sum_with_identity(identity = 0.0, &)
     return identity unless size.to_i.positive?
@@ -14,6 +17,7 @@ class Array
   end
 end
 
+# @rbs skip
 class Vector
   EPSILON = 1e-10
 
@@ -37,6 +41,7 @@ class Vector
   end
 end
 
+# @rbs skip
 class Matrix
   def self.diag(diagonal_elements)
     Matrix.diagonal(*diagonal_elements)

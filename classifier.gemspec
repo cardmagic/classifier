@@ -14,5 +14,6 @@ Gem::Specification.new do |s|
   s.add_dependency 'rake'
   s.add_dependency 'matrix'
   s.add_development_dependency 'minitest'
+  s.add_development_dependency 'rbs-inline'
   s.add_development_dependency 'rdoc'
 end
