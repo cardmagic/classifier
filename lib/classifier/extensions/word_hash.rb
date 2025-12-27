@@ -35,7 +35,7 @@ class String
 
   private
 
-  # @rbs () -> Hash[Symbol, Integer]
+  # @rbs (Array[String]) -> Hash[Symbol, Integer]
   def word_hash_for_words(words)
     d = Hash.new(0)
     words.each do |word|
@@ -45,7 +45,7 @@ class String
     d
   end
 
-  # @rbs () -> Hash[Symbol, Integer]
+  # @rbs (Array[String]) -> Hash[Symbol, Integer]
   def word_hash_for_symbols(words)
     d = Hash.new(0)
     words.each do |word|
