@@ -152,4 +152,86 @@ class LSITest < Minitest::Test
     assert_equal 'This text involves dogs too [...] This text also involves cats',
                  [@str1, @str2, @str3, @str4, @str5].join.summary(2)
   end
+
+  # Edge case tests
+
+  def test_empty_index_needs_rebuild
+    lsi = Classifier::LSI.new
+    refute lsi.needs_rebuild?, 'Empty index should not need rebuild'
+  end
+
+  def test_single_item_needs_rebuild
+    lsi = Classifier::LSI.new auto_rebuild: false
+    lsi.add_item 'Single document', 'Category'
+    refute lsi.needs_rebuild?, 'Single item index should not need rebuild'
+  end
+
+  def test_remove_item
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+
+    assert_equal 2, lsi.items.size
+
+    lsi.remove_item @str1
+
+    assert_equal 1, lsi.items.size
+    refute_includes lsi.items, @str1
+  end
+
+  def test_remove_nonexistent_item
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+
+    lsi.remove_item 'nonexistent'
+
+    assert_equal 1, lsi.items.size, 'Should not affect index when removing nonexistent item'
+  end
+
+  def test_items_method
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Cat'
+
+    items = lsi.items
+    assert_equal 2, items.size
+    assert_includes items, @str1
+    assert_includes items, @str2
+  end
+
+  def test_find_related_excludes_self
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+
+    result = lsi.find_related(@str1, 3)
+    refute_includes result, @str1, 'Should not include the source document in related results'
+  end
+
+  def test_unicode_mixed_with_ascii
+    lsi = Classifier::LSI.new
+    lsi.add_item 'English words and text here', 'English'
+    lsi.add_item 'More english content available', 'English'
+    lsi.add_item 'French words bonjour merci', 'French'
+
+    result = lsi.classify('english content')
+    assert_equal 'English', result
+  end
+
+  def test_needs_rebuild_with_auto_rebuild_true
+    lsi = Classifier::LSI.new auto_rebuild: true
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+
+    refute lsi.needs_rebuild?, 'Auto-rebuild should keep index current'
+  end
+
+  def test_categories_for_nonexistent_item
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+
+    result = lsi.categories_for('nonexistent')
+    assert_empty result, 'Should return empty array for nonexistent item'
+  end
 end

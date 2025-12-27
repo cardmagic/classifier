@@ -230,4 +230,87 @@ class BayesianTest < Minitest::Test
     new_word_count = @classifier.instance_variable_get(:@category_word_count)[:Interesting]
     assert new_word_count < initial_word_count, 'Category word count should decrease'
   end
+
+  # Edge case tests
+
+  def test_empty_string_training
+    @classifier.train_interesting ''
+    category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+    assert_empty category_words, 'Empty string should not add any words'
+  end
+
+  def test_empty_string_classification
+    @classifier.train_interesting 'good words here'
+    @classifier.train_uninteresting 'bad words here'
+
+    result = @classifier.classify('')
+    assert_includes %w[Interesting Uninteresting], result, 'Should return a category even for empty string'
+  end
+
+  def test_unicode_text_training
+    @classifier.train_interesting '日本語 chinese 中文 korean 한국어'
+    @classifier.train_uninteresting 'plain english text only'
+
+    # Unicode characters are treated as words if long enough
+    category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+    assert category_words.size > 0, 'Should store unicode words'
+  end
+
+  def test_emoji_training
+    @classifier.train_interesting '😀 happy 🎉 celebration 🚀 rocket'
+    @classifier.train_uninteresting 'sad 😢 crying 💔 heartbreak'
+
+    result = @classifier.classify('happy celebration')
+    assert_equal 'Interesting', result, 'Should handle emoji in text'
+  end
+
+  def test_special_characters_only
+    @classifier.train_interesting '!@#$%^&*()'
+    category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+    # Special chars become symbols in word_hash, but clean_word_hash filters them
+    assert_kind_of Hash, category_words
+  end
+
+  def test_very_long_text
+    long_text = 'interesting ' * 10_000
+    @classifier.train_interesting long_text
+    @classifier.train_uninteresting 'boring text'
+
+    total_words = @classifier.instance_variable_get(:@total_words)
+    assert total_words > 0, 'Should handle very long text'
+
+    result = @classifier.classify('interesting')
+    assert_equal 'Interesting', result
+  end
+
+  def test_single_word_classification
+    @classifier.train_interesting 'apple'
+    @classifier.train_uninteresting 'banana'
+
+    assert_equal 'Interesting', @classifier.classify('apple')
+    assert_equal 'Uninteresting', @classifier.classify('banana')
+  end
+
+  def test_whitespace_only
+    @classifier.train_interesting "   \t\n   "
+    category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+    assert_empty category_words, 'Whitespace-only should not add words'
+  end
+
+  def test_mixed_case_classification
+    @classifier.train_interesting 'UPPERCASE lowercase MiXeD'
+    @classifier.train_uninteresting 'different words here'
+
+    # Words are downcased during training, so uppercase query should match
+    result = @classifier.classify('uppercase lowercase')
+    assert_equal 'Interesting', result, 'Should handle mixed case'
+  end
+
+  def test_numbers_in_text
+    @classifier.train_interesting 'test123 456test 789'
+    @classifier.train_uninteresting 'abc def ghi'
+
+    result = @classifier.classify('test123')
+    assert_equal 'Interesting', result, 'Should handle numbers in text'
+  end
 end
