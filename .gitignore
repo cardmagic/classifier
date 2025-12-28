@@ -5,6 +5,15 @@ coverage/
 *.gem
 pkg/
 
+# Native extension build artifacts
+*.bundle
+*.so
+*.o
+tmp/
+lib/classifier/classifier_ext.*
+Makefile
+mkmf.log
+
 # IDE/editor files
 .idea/
 *.swp
