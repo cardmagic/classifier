@@ -9,6 +9,8 @@ pkg/
 *.bundle
 *.so
 *.o
+*.gcda
+*.gcno
 tmp/
 lib/classifier/classifier_ext.*
 Makefile

@@ -52,3 +52,23 @@ jobs:
     - name: Type check with Steep
       if: matrix.ruby-version != '4.0'
       run: bundle exec steep check
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.4'
+        bundler-cache: true
+    - name: Install lcov
+      run: sudo apt-get update && sudo apt-get install -y lcov
+    - name: Run C coverage
+      run: bundle exec rake coverage:c
+    - name: Upload C coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: c-coverage-report
+        path: coverage/c/html/
+        retention-days: 30

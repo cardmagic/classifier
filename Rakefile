@@ -65,3 +65,88 @@ task :publish do
   `ssh rufy update-classifier-doc`
   Rake::RubyForgePublisher.new('classifier', 'cardmagic').upload
 end
+
+# C Code Coverage tasks
+namespace :coverage do
+  desc 'Clean C coverage data files'
+  task :clean do
+    FileUtils.rm_f(Dir.glob('ext/classifier/**/*.gcda'))
+    FileUtils.rm_f(Dir.glob('ext/classifier/**/*.gcno'))
+    FileUtils.rm_f(Dir.glob('tmp/**/classifier/**/*.gcda'))
+    FileUtils.rm_f(Dir.glob('tmp/**/classifier/**/*.gcno'))
+    FileUtils.rm_rf('coverage/c')
+  end
+
+  desc 'Compile C extension with coverage instrumentation'
+  task :compile do
+    ENV['COVERAGE'] = '1'
+    Rake::Task['clobber'].invoke if Rake::Task.task_defined?('clobber')
+    Rake::Task['compile'].reenable
+    Rake::Task['compile'].invoke
+  end
+
+  desc 'Generate C coverage report using lcov'
+  task :report do
+    project_root = File.expand_path(__dir__)
+    ext_dir = File.join(project_root, 'ext/classifier')
+    # Find the directory containing .gcda files (build directory varies by platform/Ruby version)
+    tmp_ext_dir = Dir.glob('tmp/**/classifier_ext/**/*.gcda').first&.then { |f| File.dirname(f) }
+    coverage_dir = 'coverage/c'
+
+    unless tmp_ext_dir
+      puts 'No coverage data found. Run tests with coverage first.'
+      next
+    end
+
+    FileUtils.mkdir_p(coverage_dir)
+
+    # Run gcov manually in the build directory to generate .gcov files
+    Dir.chdir(tmp_ext_dir) do
+      # Find all source files and run gcov on them
+      gcda_files = Dir.glob('*.gcda')
+      gcda_files.each do |gcda|
+        # Source file is in ext/classifier, referenced via relative path in the gcno
+        sh "gcov -o . #{gcda} 2>/dev/null || true"
+      end
+    end
+
+    # Capture coverage data with base directory for source resolution
+    sh "lcov --capture --directory #{tmp_ext_dir} --base-directory #{ext_dir} " \
+       "--output-file #{coverage_dir}/coverage.info " \
+       '--ignore-errors inconsistent,gcov,source 2>&1 || true'
+
+    if File.exist?("#{coverage_dir}/coverage.info") && File.size("#{coverage_dir}/coverage.info").positive?
+      # Filter out system headers
+      sh "lcov --remove #{coverage_dir}/coverage.info '/usr/*' '*/ruby/*' " \
+         "--output-file #{coverage_dir}/coverage.info --ignore-errors unused 2>/dev/null || true"
+
+      # Fix source paths: the gcov relative paths resolve incorrectly
+      # Substitute wrong paths with correct absolute paths
+      info_content = File.read("#{coverage_dir}/coverage.info")
+      info_content.gsub!(%r{SF:.*/ext/classifier/}, "SF:#{ext_dir}/")
+      File.write("#{coverage_dir}/coverage.info", info_content)
+
+      # Generate HTML report
+      sh "genhtml #{coverage_dir}/coverage.info --output-directory #{coverage_dir}/html " \
+         "--prefix #{project_root} --ignore-errors unmapped,source 2>&1 || true"
+
+      puts "\nC coverage report generated at: #{coverage_dir}/html/index.html"
+
+      # Print summary
+      sh "lcov --summary #{coverage_dir}/coverage.info 2>/dev/null || true"
+    else
+      puts 'Coverage data capture failed. Check that tests exercise the C extension.'
+    end
+  end
+
+  desc 'Run tests and generate C coverage report'
+  task :run do
+    Rake::Task['coverage:clean'].invoke
+    Rake::Task['coverage:compile'].invoke
+    Rake::Task['test'].invoke
+    Rake::Task['coverage:report'].invoke
+  end
+end
+
+desc 'Run C code coverage (alias for coverage:run)'
+task 'coverage:c' => 'coverage:run'
