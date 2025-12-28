@@ -21,6 +21,11 @@ end
 class Vector
   EPSILON = 1e-10
 
+  # Cache magnitude since Vector is immutable after creation
+  # Note: We intentionally override the matrix gem's normalize method
+  # to provide a more robust implementation that handles zero vectors
+  undef_method :normalize if method_defined?(:normalize)
+
   def magnitude
     sum_of_squares = 0.to_r
     size.times do |i|
