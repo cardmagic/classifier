@@ -81,17 +81,13 @@ Fast, accurate classification with modest memory requirements. Ideal for spam fi
 ```ruby
 require 'classifier'
 
-classifier = Classifier::Bayes.new(:spam, :ham)
+classifier = Classifier::Bayes.new('Spam', 'Ham')
 
-# Train with keyword arguments
-classifier.train(spam: "Buy cheap viagra now! Limited offer!")
-classifier.train(ham: "Meeting scheduled for tomorrow at 10am")
-
-# Train multiple items at once
-classifier.train(
-  spam: ["You've won a million dollars!", "Free money!!!"],
-  ham: ["Please review the document", "Lunch tomorrow?"]
-)
+# Train the classifier
+classifier.train_spam "Buy cheap viagra now! Limited offer!"
+classifier.train_spam "You've won a million dollars! Claim now!"
+classifier.train_ham "Meeting scheduled for tomorrow at 10am"
+classifier.train_ham "Please review the attached document"
 
 # Classify new text
 classifier.classify "Congratulations! You've won a prize!"
@@ -156,9 +152,9 @@ Save and load trained classifiers with pluggable storage backends. Works with bo
 ```ruby
 require 'classifier'
 
-classifier = Classifier::Bayes.new(:spam, :ham)
-classifier.train(spam: "Buy now! Limited offer!")
-classifier.train(ham: "Meeting tomorrow at 3pm")
+classifier = Classifier::Bayes.new('Spam', 'Ham')
+classifier.train_spam "Buy now! Limited offer!"
+classifier.train_ham "Meeting tomorrow at 3pm"
 
 # Configure storage and save
 classifier.storage = Classifier::Storage::File.new(path: "spam_filter.json")
