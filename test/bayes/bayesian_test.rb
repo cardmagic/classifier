@@ -246,6 +246,75 @@ class BayesianTest < Minitest::Test
     assert_operator new_word_count, :<, initial_word_count, 'Category word count should decrease'
   end
 
+  # Keyword argument API tests
+
+  def test_train_with_keyword_argument
+    @classifier.train(interesting: 'good words here')
+    @classifier.train(uninteresting: 'bad words there')
+
+    assert_equal 'Interesting', @classifier.classify('good words')
+    assert_equal 'Uninteresting', @classifier.classify('bad words')
+  end
+
+  def test_train_with_array_value
+    @classifier.train(interesting: ['good words', 'great content', 'love this'])
+    @classifier.train(uninteresting: 'bad stuff')
+
+    assert_equal 'Interesting', @classifier.classify('good great love')
+  end
+
+  def test_train_with_multiple_categories
+    @classifier.train(
+      interesting: ['good words', 'great content'],
+      uninteresting: ['bad words', 'boring stuff']
+    )
+
+    assert_equal 'Interesting', @classifier.classify('good great')
+    assert_equal 'Uninteresting', @classifier.classify('bad boring')
+  end
+
+  def test_untrain_with_keyword_argument
+    @classifier.train(interesting: 'hello world')
+    @classifier.untrain(interesting: 'hello world')
+
+    category_words = @classifier.instance_variable_get(:@categories)[:Interesting]
+
+    assert_empty category_words
+  end
+
+  def test_untrain_with_array_value
+    @classifier.train(interesting: %w[apple banana cherry])
+    @classifier.untrain(interesting: %w[apple banana])
+
+    result = @classifier.classify('cherry')
+
+    assert_equal 'Interesting', result
+  end
+
+  def test_keyword_and_positional_produce_same_result
+    classifier1 = Classifier::Bayes.new 'Spam', 'Ham'
+    classifier1.train :spam, 'buy now'
+    classifier1.train :ham, 'hello friend'
+
+    classifier2 = Classifier::Bayes.new 'Spam', 'Ham'
+    classifier2.train(spam: 'buy now')
+    classifier2.train(ham: 'hello friend')
+
+    assert_equal classifier1.classify('buy'), classifier2.classify('buy')
+    assert_equal classifier1.classify('hello'), classifier2.classify('hello')
+  end
+
+  def test_keyword_and_dynamic_method_produce_same_result
+    classifier1 = Classifier::Bayes.new 'Spam', 'Ham'
+    classifier1.train_spam 'buy now'
+    classifier1.train_ham 'hello friend'
+
+    classifier2 = Classifier::Bayes.new 'Spam', 'Ham'
+    classifier2.train(spam: 'buy now', ham: 'hello friend')
+
+    assert_equal classifier1.classifications('buy'), classifier2.classifications('buy')
+  end
+
   # Edge case tests
 
   def test_empty_string_training

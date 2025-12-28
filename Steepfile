@@ -5,6 +5,9 @@ target :lib do
 
   check 'lib'
 
+  # Strict mode: report methods without type annotations
+  configure_code_diagnostics(D::Ruby.strict)
+
   # Ignore files that patch stdlib classes (these cause conflicts)
   ignore 'lib/classifier/extensions/vector.rb'
   ignore 'lib/classifier/extensions/vector_serialize.rb'
