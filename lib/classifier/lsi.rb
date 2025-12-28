@@ -71,8 +71,9 @@ module Classifier
     # @rbs @items: Hash[untyped, ContentNode]
     # @rbs @version: Integer
     # @rbs @built_at_version: Integer
+    # @rbs @singular_values: Array[Float]?
 
-    attr_reader :word_list
+    attr_reader :word_list, :singular_values
     attr_accessor :auto_rebuild
 
     # Create a fresh index.
@@ -96,6 +97,43 @@ module Classifier
     # @rbs () -> bool
     def needs_rebuild?
       synchronize { (@items.keys.size > 1) && (@version != @built_at_version) }
+    end
+
+    # Returns the singular value spectrum for informed cutoff selection.
+    # This helps users understand how much variance each dimension captures
+    # and make informed decisions about the cutoff parameter.
+    #
+    # Returns nil if the index hasn't been built yet.
+    #
+    # Each entry in the returned array contains:
+    # - :dimension - The dimension index (0-based)
+    # - :value - The singular value
+    # - :percentage - What percentage of total variance this dimension captures
+    # - :cumulative_percentage - Cumulative variance captured up to this dimension
+    #
+    # Example usage for tuning:
+    #   spectrum = lsi.singular_value_spectrum
+    #   # Find how many dimensions capture 90% of variance
+    #   dims_for_90 = spectrum.find_index { |e| e[:cumulative_percentage] >= 0.90 }
+    #   optimal_cutoff = (dims_for_90 + 1).to_f / spectrum.size
+    #
+    # @rbs () -> Array[Hash[Symbol, untyped]]?
+    def singular_value_spectrum
+      return nil unless @singular_values
+
+      total = @singular_values.sum
+      return nil if total.zero?
+
+      cumulative = 0.0
+      @singular_values.map.with_index do |value, i|
+        cumulative += value
+        {
+          dimension: i,
+          value: value,
+          percentage: value / total,
+          cumulative_percentage: cumulative / total
+        }
+      end
     end
 
     # Adds an item to the index. item is assumed to be a string, but
@@ -175,8 +213,18 @@ module Classifier
     # A value of 1 for cutoff means that no semantic analysis will take place,
     # turning the LSI class into a simple vector search engine.
     #
+    # Cutoff tuning guide:
+    # - Higher cutoff (0.9): Preserves more semantic dimensions, better for large diverse corpora
+    # - Lower cutoff (0.5): More aggressive dimensionality reduction, better for noisy data
+    # - Default (0.75): Reasonable middle ground for most use cases
+    #
+    # Use #singular_value_spectrum after building to analyze variance distribution
+    # and make informed decisions about cutoff tuning.
+    #
     # @rbs (?Float) -> void
     def build_index(cutoff = 0.75)
+      validate_cutoff!(cutoff)
+
       synchronize do
         return unless needs_rebuild_unlocked?
 
@@ -295,12 +343,19 @@ module Classifier
     # find_related function to find related documents, then returns the
     # most obvious category from this list.
     #
-    # cutoff signifies the number of documents to consider when clasifying
-    # text. A cutoff of 1 means that every document in the index votes on
-    # what category the document is in. This may not always make sense.
+    # cutoff signifies the proportion of documents to consider when classifying
+    # text. Must be between 0 and 1 (exclusive). A cutoff of 0.99 means nearly
+    # every document in the index votes on what category the document is in.
+    #
+    # Cutoff tuning guide:
+    # - Higher cutoff (0.5-0.9): More documents vote, smoother but slower classification
+    # - Lower cutoff (0.1-0.3): Fewer documents vote, faster but may be noisier
+    # - Default (0.30): Good balance for most classification tasks
     #
     # @rbs (String, ?Float) ?{ (String) -> String } -> String | Symbol
     def classify(doc, cutoff = 0.30, &block)
+      validate_cutoff!(cutoff)
+
       synchronize do
         votes = vote_unlocked(doc, cutoff, &block)
 
@@ -311,6 +366,8 @@ module Classifier
 
     # @rbs (String, ?Float) ?{ (String) -> String } -> Hash[String | Symbol, Float]
     def vote(doc, cutoff = 0.30, &block)
+      validate_cutoff!(cutoff)
+
       synchronize { vote_unlocked(doc, cutoff, &block) }
     end
 
@@ -327,6 +384,8 @@ module Classifier
     # See classify() for argument docs
     # @rbs (String, ?Float) ?{ (String) -> String } -> [String | Symbol | nil, Float?]
     def classify_with_confidence(doc, cutoff = 0.30, &block)
+      validate_cutoff!(cutoff)
+
       synchronize do
         votes = vote_unlocked(doc, cutoff, &block)
         votes_sum = votes.values.sum
@@ -437,6 +496,14 @@ module Classifier
 
     private
 
+    # Validates that cutoff is within the valid range (0, 1) exclusive.
+    # @rbs (Float) -> void
+    def validate_cutoff!(cutoff)
+      return if cutoff > 0 && cutoff < 1
+
+      raise ArgumentError, "cutoff must be between 0 and 1 (exclusive), got #{cutoff}"
+    end
+
     # Assigns LSI vectors using native C extension
     # @rbs (untyped, Array[ContentNode]) -> void
     def assign_native_ext_lsi_vectors(ntdm, doc_list)
@@ -536,8 +603,10 @@ module Classifier
       # TODO: Check that M>=N on these dimensions! Transpose helps assure this
       u, v, s = matrix.SV_decomp
 
-      # TODO: Better than 75% term, please. :\
-      s_cutoff = s.sort.reverse[(s.size * cutoff).round - 1]
+      # Store singular values (sorted descending) for introspection
+      @singular_values = s.sort.reverse
+
+      s_cutoff = @singular_values[(s.size * cutoff).round - 1]
       s.size.times do |ord|
         s[ord] = 0.0 if s[ord] < s_cutoff
       end
