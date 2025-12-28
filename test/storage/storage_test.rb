@@ -26,30 +26,35 @@ class StorageTest < Minitest::Test
   def test_memory_storage_write_and_read
     storage = Classifier::Storage::Memory.new
     storage.write('test data')
+
     assert_equal 'test data', storage.read
   end
 
   def test_memory_storage_exists_false_initially
     storage = Classifier::Storage::Memory.new
-    refute storage.exists?
+
+    refute_predicate storage, :exists?
   end
 
   def test_memory_storage_exists_true_after_write
     storage = Classifier::Storage::Memory.new
     storage.write('test data')
-    assert storage.exists?
+
+    assert_predicate storage, :exists?
   end
 
   def test_memory_storage_delete
     storage = Classifier::Storage::Memory.new
     storage.write('test data')
     storage.delete
-    refute storage.exists?
+
+    refute_predicate storage, :exists?
     assert_nil storage.read
   end
 
   def test_memory_storage_returns_nil_when_empty
     storage = Classifier::Storage::Memory.new
+
     assert_nil storage.read
   end
 
@@ -59,6 +64,7 @@ class StorageTest < Minitest::Test
       path = File.join(dir, 'test.json')
       storage = Classifier::Storage::File.new(path: path)
       storage.write('{"test": "data"}')
+
       assert_equal '{"test": "data"}', storage.read
     end
   end
@@ -67,7 +73,8 @@ class StorageTest < Minitest::Test
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'nonexistent.json')
       storage = Classifier::Storage::File.new(path: path)
-      refute storage.exists?
+
+      refute_predicate storage, :exists?
     end
   end
 
@@ -76,7 +83,8 @@ class StorageTest < Minitest::Test
       path = File.join(dir, 'test.json')
       storage = Classifier::Storage::File.new(path: path)
       storage.write('test data')
-      assert storage.exists?
+
+      assert_predicate storage, :exists?
     end
   end
 
@@ -86,7 +94,8 @@ class StorageTest < Minitest::Test
       storage = Classifier::Storage::File.new(path: path)
       storage.write('test data')
       storage.delete
-      refute storage.exists?
+
+      refute_predicate storage, :exists?
     end
   end
 
@@ -94,12 +103,14 @@ class StorageTest < Minitest::Test
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'nonexistent.json')
       storage = Classifier::Storage::File.new(path: path)
+
       assert_nil storage.read
     end
   end
 
   def test_file_storage_exposes_path
     storage = Classifier::Storage::File.new(path: '/some/path.json')
+
     assert_equal '/some/path.json', storage.path
   end
 end
@@ -111,12 +122,13 @@ class BayesStorageTest < Minitest::Test
 
   # Dirty tracking tests
   def test_new_classifier_is_not_dirty
-    refute @classifier.dirty?
+    refute_predicate @classifier, :dirty?
   end
 
   def test_training_makes_classifier_dirty
     @classifier.train_spam 'buy now'
-    assert @classifier.dirty?
+
+    assert_predicate @classifier, :dirty?
   end
 
   def test_untraining_makes_classifier_dirty
@@ -124,36 +136,43 @@ class BayesStorageTest < Minitest::Test
     storage = Classifier::Storage::Memory.new
     @classifier.storage = storage
     @classifier.save
-    refute @classifier.dirty?
+
+    refute_predicate @classifier, :dirty?
 
     @classifier.untrain_spam 'buy now'
-    assert @classifier.dirty?
+
+    assert_predicate @classifier, :dirty?
   end
 
   def test_add_category_makes_classifier_dirty
     storage = Classifier::Storage::Memory.new
     @classifier.storage = storage
     @classifier.save
-    refute @classifier.dirty?
+
+    refute_predicate @classifier, :dirty?
 
     @classifier.add_category 'Phishing'
-    assert @classifier.dirty?
+
+    assert_predicate @classifier, :dirty?
   end
 
   def test_remove_category_makes_classifier_dirty
     storage = Classifier::Storage::Memory.new
     @classifier.storage = storage
     @classifier.save
-    refute @classifier.dirty?
+
+    refute_predicate @classifier, :dirty?
 
     @classifier.remove_category 'Spam'
-    assert @classifier.dirty?
+
+    assert_predicate @classifier, :dirty?
   end
 
   # Storage accessor tests
   def test_storage_accessor
     storage = Classifier::Storage::Memory.new
     @classifier.storage = storage
+
     assert_equal storage, @classifier.storage
   end
 
@@ -172,27 +191,31 @@ class BayesStorageTest < Minitest::Test
     @classifier.train_spam 'buy now'
     @classifier.save
 
-    assert storage.exists?
+    assert_predicate storage, :exists?
   end
 
   def test_save_clears_dirty_flag
     storage = Classifier::Storage::Memory.new
     @classifier.storage = storage
     @classifier.train_spam 'buy now'
-    assert @classifier.dirty?
+
+    assert_predicate @classifier, :dirty?
 
     @classifier.save
-    refute @classifier.dirty?
+
+    refute_predicate @classifier, :dirty?
   end
 
   def test_save_to_file_clears_dirty_flag
     @classifier.train_spam 'buy now'
-    assert @classifier.dirty?
+
+    assert_predicate @classifier, :dirty?
 
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'classifier.json')
       @classifier.save_to_file(path)
-      refute @classifier.dirty?
+
+      refute_predicate @classifier, :dirty?
     end
   end
 
@@ -208,7 +231,8 @@ class BayesStorageTest < Minitest::Test
     @classifier.save
 
     @classifier.train_ham 'hello friend'
-    assert @classifier.dirty?
+
+    assert_predicate @classifier, :dirty?
 
     assert_raises(Classifier::UnsavedChangesError) { @classifier.reload }
   end
@@ -231,6 +255,7 @@ class BayesStorageTest < Minitest::Test
     @classifier.instance_variable_set(:@dirty, false)
 
     result = @classifier.reload
+
     assert_equal @classifier, result
     assert_equal original_classification, @classifier.classify('buy now')
   end
@@ -242,10 +267,12 @@ class BayesStorageTest < Minitest::Test
     @classifier.save
 
     @classifier.train_ham 'hello friend'
-    assert @classifier.dirty?
+
+    assert_predicate @classifier, :dirty?
 
     @classifier.reload!
-    refute @classifier.dirty?
+
+    refute_predicate @classifier, :dirty?
   end
 
   def test_reload_bang_raises_when_no_saved_state
@@ -263,6 +290,7 @@ class BayesStorageTest < Minitest::Test
     @classifier.save
 
     loaded = Classifier::Bayes.load(storage: storage)
+
     assert_equal storage, loaded.storage
     assert_equal @classifier.classify('buy now'), loaded.classify('buy now')
     assert_equal @classifier.classify('hello friend'), loaded.classify('hello friend')
@@ -284,17 +312,20 @@ class BayesStorageTest < Minitest::Test
     loaded.save # Should not raise
 
     reloaded = Classifier::Bayes.load(storage: storage)
+
     assert_equal 'Ham', reloaded.classify('hello friend')
   end
 
   # Marshal tests
   def test_marshal_preserves_dirty_flag
     @classifier.train_spam 'buy now'
-    assert @classifier.dirty?
+
+    assert_predicate @classifier, :dirty?
 
     dumped = Marshal.dump(@classifier)
     loaded = Marshal.load(dumped)
-    assert loaded.dirty?
+
+    assert_predicate loaded, :dirty?
   end
 
   def test_marshal_does_not_preserve_storage
@@ -304,6 +335,7 @@ class BayesStorageTest < Minitest::Test
 
     dumped = Marshal.dump(@classifier)
     loaded = Marshal.load(dumped)
+
     assert_nil loaded.storage
   end
 end
@@ -317,12 +349,13 @@ class LSIStorageTest < Minitest::Test
 
   # Dirty tracking tests
   def test_new_lsi_is_not_dirty
-    refute @lsi.dirty?
+    refute_predicate @lsi, :dirty?
   end
 
   def test_add_item_makes_lsi_dirty
     @lsi.add_item @str1, 'Dog'
-    assert @lsi.dirty?
+
+    assert_predicate @lsi, :dirty?
   end
 
   def test_remove_item_makes_lsi_dirty
@@ -330,16 +363,19 @@ class LSIStorageTest < Minitest::Test
     storage = Classifier::Storage::Memory.new
     @lsi.storage = storage
     @lsi.save
-    refute @lsi.dirty?
+
+    refute_predicate @lsi, :dirty?
 
     @lsi.remove_item @str1
-    assert @lsi.dirty?
+
+    assert_predicate @lsi, :dirty?
   end
 
   # Storage accessor tests
   def test_storage_accessor
     storage = Classifier::Storage::Memory.new
     @lsi.storage = storage
+
     assert_equal storage, @lsi.storage
   end
 
@@ -359,29 +395,33 @@ class LSIStorageTest < Minitest::Test
     @lsi.add_item @str2, 'Cat'
     @lsi.save
 
-    assert storage.exists?
+    assert_predicate storage, :exists?
   end
 
   def test_save_clears_dirty_flag
     storage = Classifier::Storage::Memory.new
     @lsi.storage = storage
     @lsi.add_item @str1, 'Dog'
-    assert @lsi.dirty?
+
+    assert_predicate @lsi, :dirty?
 
     @lsi.add_item @str2, 'Cat'
     @lsi.save
-    refute @lsi.dirty?
+
+    refute_predicate @lsi, :dirty?
   end
 
   def test_save_to_file_clears_dirty_flag
     @lsi.add_item @str1, 'Dog'
     @lsi.add_item @str2, 'Cat'
-    assert @lsi.dirty?
+
+    assert_predicate @lsi, :dirty?
 
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'lsi.json')
       @lsi.save_to_file(path)
-      refute @lsi.dirty?
+
+      refute_predicate @lsi, :dirty?
     end
   end
 
@@ -398,7 +438,8 @@ class LSIStorageTest < Minitest::Test
     @lsi.save
 
     @lsi.add_item 'Birds fly in the sky', 'Bird'
-    assert @lsi.dirty?
+
+    assert_predicate @lsi, :dirty?
 
     assert_raises(Classifier::UnsavedChangesError) { @lsi.reload }
   end
@@ -417,10 +458,12 @@ class LSIStorageTest < Minitest::Test
     @lsi.save
 
     @lsi.add_item 'Birds fly in the sky', 'Bird'
-    assert @lsi.dirty?
+
+    assert_predicate @lsi, :dirty?
 
     @lsi.reload!
-    refute @lsi.dirty?
+
+    refute_predicate @lsi, :dirty?
     assert_equal 2, @lsi.items.size
   end
 
@@ -439,6 +482,7 @@ class LSIStorageTest < Minitest::Test
     @lsi.save
 
     loaded = Classifier::LSI.load(storage: storage)
+
     assert_equal storage, loaded.storage
     assert_equal 2, loaded.items.size
   end
@@ -460,6 +504,7 @@ class LSIStorageTest < Minitest::Test
     loaded.save # Should not raise
 
     reloaded = Classifier::LSI.load(storage: storage)
+
     assert_equal 3, reloaded.items.size
   end
 
@@ -467,11 +512,13 @@ class LSIStorageTest < Minitest::Test
   def test_marshal_preserves_dirty_flag
     @lsi.add_item @str1, 'Dog'
     @lsi.add_item @str2, 'Cat'
-    assert @lsi.dirty?
+
+    assert_predicate @lsi, :dirty?
 
     dumped = Marshal.dump(@lsi)
     loaded = Marshal.load(dumped)
-    assert loaded.dirty?
+
+    assert_predicate loaded, :dirty?
   end
 
   def test_marshal_does_not_preserve_storage
@@ -482,6 +529,7 @@ class LSIStorageTest < Minitest::Test
 
     dumped = Marshal.dump(@lsi)
     loaded = Marshal.load(dumped)
+
     assert_nil loaded.storage
   end
 end
