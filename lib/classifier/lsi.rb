@@ -101,9 +101,6 @@ module Classifier
 
     # @rbs () -> Array[Hash[Symbol, untyped]]?
     def singular_value_spectrum
-    #
-    # @rbs () -> Array[Hash[Symbol, untyped]]?
-    def singular_value_spectrum
       return nil unless @singular_values
 
       total = @singular_values.sum
@@ -197,8 +194,6 @@ module Classifier
     # cutoff parameter tells the indexer how many of these values to keep.
     # A value of 1 for cutoff means that no semantic analysis will take place,
     # turning the LSI class into a simple vector search engine.
-    #
-    #
     #
     # @rbs (?Float) -> void
     def build_index(cutoff = 0.75)
@@ -321,8 +316,6 @@ module Classifier
     # the categories of other documents. It uses the same logic as the
     # find_related function to find related documents, then returns the
     # most obvious category from this list.
-    #
-    #
     #
     # @rbs (String, ?Float) ?{ (String) -> String } -> String | Symbol
     def classify(doc, cutoff = 0.30, &block)
