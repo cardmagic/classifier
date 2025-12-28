@@ -410,11 +410,11 @@ class LSITest < Minitest::Test
 
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'lsi.json')
-      lsi.save(path)
+      lsi.save_to_file(path)
 
       assert_path_exists path, 'Save should create file'
 
-      loaded = Classifier::LSI.load(path)
+      loaded = Classifier::LSI.load_from_file(path)
 
       assert_equal lsi.items.sort, loaded.items.sort
       assert_equal 'Dog', loaded.classify(@str1)
@@ -432,8 +432,8 @@ class LSITest < Minitest::Test
 
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'lsi.json')
-      lsi.save(path)
-      loaded = Classifier::LSI.load(path)
+      lsi.save_to_file(path)
+      loaded = Classifier::LSI.load_from_file(path)
 
       # Verify classifications match
       assert_equal lsi.classify(@str1), loaded.classify(@str1)
@@ -450,8 +450,8 @@ class LSITest < Minitest::Test
 
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'lsi.json')
-      lsi.save(path)
-      loaded = Classifier::LSI.load(path)
+      lsi.save_to_file(path)
+      loaded = Classifier::LSI.load_from_file(path)
 
       refute loaded.auto_rebuild, 'Should preserve auto_rebuild: false setting'
     end
@@ -464,8 +464,8 @@ class LSITest < Minitest::Test
 
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'lsi.json')
-      lsi.save(path)
-      loaded = Classifier::LSI.load(path)
+      lsi.save_to_file(path)
+      loaded = Classifier::LSI.load_from_file(path)
 
       # Continue adding items to loaded LSI
       loaded.add_item @str3, 'Cat'
@@ -482,8 +482,8 @@ class LSITest < Minitest::Test
 
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'lsi.json')
-      lsi.save(path)
-      loaded = Classifier::LSI.load(path)
+      lsi.save_to_file(path)
+      loaded = Classifier::LSI.load_from_file(path)
 
       # Verify search works after load
       assert_equal lsi.search('dog', 3), loaded.search('dog', 3)
