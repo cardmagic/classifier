@@ -1,7 +1,7 @@
 require 'mkmf'
 
 # Optimization flags for performance
-$CFLAGS << ' -O3 -ffast-math -Wall'
+$CFLAGS << ' -O3 -ffast-math -Wall' # rubocop:disable Style/GlobalVars
 
 # Create the Makefile
 create_makefile('classifier/classifier_ext')

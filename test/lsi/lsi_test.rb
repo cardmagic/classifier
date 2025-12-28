@@ -122,12 +122,14 @@ class LSITest < Minitest::Test
 
     # Searching by content and text - top 2 should be dog-related
     results = lsi.search('dog involves', 100)
+
     assert_equal Set.new([@str2, @str1]), Set.new(results.first(2)), 'Top 2 results should be dog-related'
     assert_includes [@str3, @str4], results.last, 'Least related should be cat-only text'
     assert_equal Set.new([@str1, @str2, @str3, @str4, @str5]), Set.new(results)
 
     # Keyword search - top 2 should be dog-related
     results = lsi.search('dog', 5)
+
     assert_equal Set.new([@str1, @str2]), Set.new(results.first(2)), 'Top 2 results should be dog-related'
     assert_includes [@str3, @str4], results.last, 'Least related should be cat-only text'
   end
@@ -159,9 +161,11 @@ class LSITest < Minitest::Test
     # Summary should contain 2 sentences separated by [...]
     assert_match(/\[\.\.\.\]/, summary, 'Summary should contain [...] separator')
     parts = summary.split('[...]').map(&:strip)
+
     assert_equal 2, parts.size, 'Summary should have 2 parts'
     # Each part should be one of our test strings (stripped)
     all_texts = [@str1, @str2, @str3, @str4, @str5].map(&:strip)
+
     parts.each do |part|
       assert all_texts.any? { |t| t.include?(part.gsub('This text ', '').split.first) },
              "Summary part '#{part}' should be from test texts"

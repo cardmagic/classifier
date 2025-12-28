@@ -15,7 +15,7 @@ rescue LoadError
 end
 
 desc 'Default Task'
-task default: HAVE_EXTENSION ? [:compile, :test] : [:test]
+task default: HAVE_EXTENSION ? %i[compile test] : [:test]
 
 # Run the unit tests
 desc 'Run all unit tests'
