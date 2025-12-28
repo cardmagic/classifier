@@ -115,7 +115,7 @@ module Classifier
     #   spectrum = lsi.singular_value_spectrum
     #   # Find how many dimensions capture 90% of variance
     #   dims_for_90 = spectrum.find_index { |e| e[:cumulative_percentage] >= 0.90 }
-    #   optimal_cutoff = (dims_for_90 + 1).to_f / spectrum.size
+    #   optimal_cutoff = dims_for_90 ? (dims_for_90 + 1).to_f / spectrum.size : 0.99
     #
     # @rbs () -> Array[Hash[Symbol, untyped]]?
     def singular_value_spectrum
@@ -606,7 +606,10 @@ module Classifier
       # Store singular values (sorted descending) for introspection
       @singular_values = s.sort.reverse
 
-      s_cutoff = @singular_values[(s.size * cutoff).round - 1]
+      # Clamp index to 0 minimum to prevent negative indices with very small cutoffs
+      # (e.g., cutoff=0.01 with size=3 would give (3*0.01).round-1 = -1)
+      s_cutoff_index = [(s.size * cutoff).round - 1, 0].max
+      s_cutoff = @singular_values[s_cutoff_index]
       s.size.times do |ord|
         s[ord] = 0.0 if s[ord] < s_cutoff
       end
