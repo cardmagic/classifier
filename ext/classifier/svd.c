@@ -131,7 +131,7 @@ void jacobi_svd(CMatrix *a, CMatrix **u_out, CMatrix **v_out, CVector **s_out)
             double sum_diff = 0.0;
             for (size_t i = 0; i < size; i++) {
                 double diff = fabs(MAT_AT(q, i, i) - MAT_AT(prev_q, i, i));
-                if (diff > 0.001) {
+                if (diff > SVD_CONVERGENCE_THRESHOLD) {
                     sum_diff += diff;
                 }
             }
