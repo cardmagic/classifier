@@ -1,0 +1,16 @@
+# Type stubs for mutex_m gem
+module Mutex_m
+  def mu_initialize: () -> void
+  def mu_lock: () -> void
+  def mu_unlock: () -> void
+  def mu_synchronize: [T] () { () -> T } -> T
+  def mu_try_lock: () -> bool
+  def mu_locked?: () -> bool
+
+  # Aliases
+  alias lock mu_lock
+  alias unlock mu_unlock
+  alias synchronize mu_synchronize
+  alias try_lock mu_try_lock
+  alias locked? mu_locked?
+end
