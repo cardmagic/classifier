@@ -189,25 +189,11 @@ module Classifier
           tda_arrays = tda.map { |v| v.respond_to?(:to_a) ? v.to_a : v }
           tdm = self.class.matrix_class.alloc(*tda_arrays).trans
           ntdm = build_reduced_matrix(tdm, cutoff)
-
-          ntdm.size[1].times do |col|
-            vec = self.class.vector_class.alloc(ntdm.column(col).to_a).row
-            doc_list[col].lsi_vector = vec
-            doc_list[col].lsi_norm = vec.normalize
-          end
+          assign_native_ext_lsi_vectors(ntdm, doc_list)
         else
           tdm = Matrix.rows(tda).trans
           ntdm = build_reduced_matrix(tdm, cutoff)
-
-          ntdm.column_size.times do |col|
-            next unless doc_list[col]
-
-            column = ntdm.column(col)
-            next unless column
-
-            doc_list[col].lsi_vector = column
-            doc_list[col].lsi_norm = column.normalize
-          end
+          assign_ruby_lsi_vectors(ntdm, doc_list)
         end
 
         @built_at_version = @version
@@ -381,6 +367,30 @@ module Classifier
 
     private
 
+    # Assigns LSI vectors using native C extension
+    # @rbs (untyped, Array[ContentNode]) -> void
+    def assign_native_ext_lsi_vectors(ntdm, doc_list)
+      ntdm.size[1].times do |col|
+        vec = self.class.vector_class.alloc(ntdm.column(col).to_a).row
+        doc_list[col].lsi_vector = vec
+        doc_list[col].lsi_norm = vec.normalize
+      end
+    end
+
+    # Assigns LSI vectors using pure Ruby Matrix
+    # @rbs (untyped, Array[ContentNode]) -> void
+    def assign_ruby_lsi_vectors(ntdm, doc_list)
+      ntdm.column_size.times do |col|
+        next unless doc_list[col]
+
+        column = ntdm.column(col)
+        next unless column
+
+        doc_list[col].lsi_vector = column
+        doc_list[col].lsi_norm = column.normalize
+      end
+    end
+
     # Unlocked version of needs_rebuild? for internal use when lock is already held
     # @rbs () -> bool
     def needs_rebuild_unlocked?
@@ -389,10 +399,10 @@ module Classifier
 
     # Unlocked version of proximity_array_for_content for internal use
     # @rbs (String) ?{ (String) -> String } -> Array[[String, Float]]
-    def proximity_array_for_content_unlocked(doc, &block)
+    def proximity_array_for_content_unlocked(doc, &)
       return [] if needs_rebuild_unlocked?
 
-      content_node = node_for_content_unlocked(doc, &block)
+      content_node = node_for_content_unlocked(doc, &)
       result =
         @items.keys.collect do |item|
           val = if self.class.native_available?
@@ -407,10 +417,10 @@ module Classifier
 
     # Unlocked version of proximity_norms_for_content for internal use
     # @rbs (String) ?{ (String) -> String } -> Array[[String, Float]]
-    def proximity_norms_for_content_unlocked(doc, &block)
+    def proximity_norms_for_content_unlocked(doc, &)
       return [] if needs_rebuild_unlocked?
 
-      content_node = node_for_content_unlocked(doc, &block)
+      content_node = node_for_content_unlocked(doc, &)
       result =
         @items.keys.collect do |item|
           val = if self.class.native_available?
@@ -425,9 +435,9 @@ module Classifier
 
     # Unlocked version of vote for internal use
     # @rbs (String, ?Float) ?{ (String) -> String } -> Hash[String | Symbol, Float]
-    def vote_unlocked(doc, cutoff = 0.30, &block)
+    def vote_unlocked(doc, cutoff = 0.30, &)
       icutoff = (@items.size * cutoff).round
-      carry = proximity_array_for_content_unlocked(doc, &block)
+      carry = proximity_array_for_content_unlocked(doc, &)
       carry = carry[0..(icutoff - 1)]
       votes = {}
       carry.each do |pair|
