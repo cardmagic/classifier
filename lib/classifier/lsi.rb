@@ -366,12 +366,12 @@ module Classifier
       @auto_rebuild, @word_list, @items, @version, @built_at_version = data
     end
 
-    # Serializes the LSI index to a JSON string.
-    # Only source data (word_hash, categories) is serialized, not computed vectors.
-    # On load, the index will be rebuilt automatically.
+    # Returns a hash representation of the LSI index.
+    # Only source data (word_hash, categories) is included, not computed vectors.
+    # This can be converted to JSON or used directly.
     #
-    # @rbs () -> String
-    def to_json(*_args)
+    # @rbs () -> Hash[Symbol, untyped]
+    def as_json(*)
       items_data = @items.transform_values do |node|
         {
           word_hash: node.word_hash.transform_keys(&:to_s),
@@ -384,15 +384,24 @@ module Classifier
         type: 'lsi',
         auto_rebuild: @auto_rebuild,
         items: items_data
-      }.to_json
+      }
     end
 
-    # Loads an LSI index from a JSON string created by #to_json.
+    # Serializes the LSI index to a JSON string.
+    # Only source data (word_hash, categories) is serialized, not computed vectors.
+    # On load, the index will be rebuilt automatically.
+    #
+    # @rbs () -> String
+    def to_json(*)
+      as_json.to_json
+    end
+
+    # Loads an LSI index from a JSON string or Hash created by #to_json or #as_json.
     # The index will be rebuilt after loading.
     #
-    # @rbs (String) -> LSI
-    def self.from_json(json_string)
-      data = JSON.parse(json_string)
+    # @rbs (String | Hash[String, untyped]) -> LSI
+    def self.from_json(json)
+      data = json.is_a?(String) ? JSON.parse(json) : json
       raise ArgumentError, "Invalid classifier type: #{data['type']}" unless data['type'] == 'lsi'
 
       # Create instance with auto_rebuild disabled during loading

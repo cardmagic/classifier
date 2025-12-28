@@ -438,6 +438,19 @@ class BayesianTest < Minitest::Test
 
   # Save/Load tests
 
+  def test_as_json
+    @classifier.train_interesting 'good words here'
+    @classifier.train_uninteresting 'bad words there'
+
+    data = @classifier.as_json
+
+    assert_instance_of Hash, data
+    assert_equal 1, data[:version]
+    assert_equal 'bayes', data[:type]
+    assert_includes data[:categories].keys, 'Interesting'
+    assert_includes data[:categories].keys, 'Uninteresting'
+  end
+
   def test_to_json
     @classifier.train_interesting 'good words here'
     @classifier.train_uninteresting 'bad words there'
@@ -451,12 +464,25 @@ class BayesianTest < Minitest::Test
     assert_includes data['categories'].keys, 'Uninteresting'
   end
 
-  def test_from_json
+  def test_from_json_with_string
     @classifier.train_interesting 'good words here'
     @classifier.train_uninteresting 'bad words there'
 
     json = @classifier.to_json
     loaded = Classifier::Bayes.from_json(json)
+
+    assert_equal @classifier.categories.sort, loaded.categories.sort
+    assert_equal @classifier.classify('good words'), loaded.classify('good words')
+    assert_equal @classifier.classify('bad words'), loaded.classify('bad words')
+  end
+
+  def test_from_json_with_hash
+    @classifier.train_interesting 'good words here'
+    @classifier.train_uninteresting 'bad words there'
+
+    # Use as_json to get a hash, then convert keys to strings (as would happen from JSON.parse)
+    hash = JSON.parse(@classifier.to_json)
+    loaded = Classifier::Bayes.from_json(hash)
 
     assert_equal @classifier.categories.sort, loaded.categories.sort
     assert_equal @classifier.classify('good words'), loaded.classify('good words')

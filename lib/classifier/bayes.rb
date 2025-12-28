@@ -118,11 +118,11 @@ module Classifier
       best.first.to_s
     end
 
-    # Serializes the classifier state to a JSON string.
-    # This can be saved to a file and later loaded with Bayes.from_json.
+    # Returns a hash representation of the classifier state.
+    # This can be converted to JSON or used directly.
     #
-    # @rbs () -> String
-    def to_json(*_args)
+    # @rbs () -> Hash[Symbol, untyped]
+    def as_json(*)
       {
         version: 1,
         type: 'bayes',
@@ -130,14 +130,22 @@ module Classifier
         total_words: @total_words,
         category_counts: @category_counts.transform_keys(&:to_s),
         category_word_count: @category_word_count.transform_keys(&:to_s)
-      }.to_json
+      }
     end
 
-    # Loads a classifier from a JSON string created by #to_json.
+    # Serializes the classifier state to a JSON string.
+    # This can be saved to a file and later loaded with Bayes.from_json.
     #
-    # @rbs (String) -> Bayes
-    def self.from_json(json_string)
-      data = JSON.parse(json_string)
+    # @rbs () -> String
+    def to_json(*)
+      as_json.to_json
+    end
+
+    # Loads a classifier from a JSON string or a Hash created by #to_json or #as_json.
+    #
+    # @rbs (String | Hash[String, untyped]) -> Bayes
+    def self.from_json(json)
+      data = json.is_a?(String) ? JSON.parse(json) : json
       raise ArgumentError, "Invalid classifier type: #{data['type']}" unless data['type'] == 'bayes'
 
       # Create instance with no categories (we'll set them directly)

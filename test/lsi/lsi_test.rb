@@ -340,6 +340,21 @@ class LSITest < Minitest::Test
 
   # Save/Load tests
 
+  def test_as_json
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+
+    data = lsi.as_json
+
+    assert_instance_of Hash, data
+    assert_equal 1, data[:version]
+    assert_equal 'lsi', data[:type]
+    assert_equal 3, data[:items].size
+    assert data[:auto_rebuild]
+  end
+
   def test_to_json
     lsi = Classifier::LSI.new
     lsi.add_item @str1, 'Dog'
@@ -355,7 +370,7 @@ class LSITest < Minitest::Test
     assert data['auto_rebuild']
   end
 
-  def test_from_json
+  def test_from_json_with_string
     lsi = Classifier::LSI.new
     lsi.add_item @str1, 'Dog'
     lsi.add_item @str2, 'Dog'
@@ -363,6 +378,19 @@ class LSITest < Minitest::Test
 
     json = lsi.to_json
     loaded = Classifier::LSI.from_json(json)
+
+    assert_equal lsi.items.sort, loaded.items.sort
+    assert_equal lsi.classify(@str1), loaded.classify(@str1)
+  end
+
+  def test_from_json_with_hash
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+
+    hash = JSON.parse(lsi.to_json)
+    loaded = Classifier::LSI.from_json(hash)
 
     assert_equal lsi.items.sort, loaded.items.sort
     assert_equal lsi.classify(@str1), loaded.classify(@str1)
