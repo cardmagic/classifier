@@ -337,4 +337,156 @@ class LSITest < Minitest::Test
 
     assert_equal 'Dog', result
   end
+
+  # Save/Load tests
+
+  def test_as_json
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+
+    data = lsi.as_json
+
+    assert_instance_of Hash, data
+    assert_equal 1, data[:version]
+    assert_equal 'lsi', data[:type]
+    assert_equal 3, data[:items].size
+    assert data[:auto_rebuild]
+  end
+
+  def test_to_json
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+
+    json = lsi.to_json
+    data = JSON.parse(json)
+
+    assert_equal 1, data['version']
+    assert_equal 'lsi', data['type']
+    assert_equal 3, data['items'].size
+    assert data['auto_rebuild']
+  end
+
+  def test_from_json_with_string
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+
+    json = lsi.to_json
+    loaded = Classifier::LSI.from_json(json)
+
+    assert_equal lsi.items.sort, loaded.items.sort
+    assert_equal lsi.classify(@str1), loaded.classify(@str1)
+  end
+
+  def test_from_json_with_hash
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+
+    hash = JSON.parse(lsi.to_json)
+    loaded = Classifier::LSI.from_json(hash)
+
+    assert_equal lsi.items.sort, loaded.items.sort
+    assert_equal lsi.classify(@str1), loaded.classify(@str1)
+  end
+
+  def test_from_json_invalid_type
+    invalid_json = { version: 1, type: 'invalid' }.to_json
+
+    assert_raises(ArgumentError) { Classifier::LSI.from_json(invalid_json) }
+  end
+
+  def test_save_and_load
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'lsi.json')
+      lsi.save(path)
+
+      assert_path_exists path, 'Save should create file'
+
+      loaded = Classifier::LSI.load(path)
+
+      assert_equal lsi.items.sort, loaded.items.sort
+      assert_equal 'Dog', loaded.classify(@str1)
+      assert_equal 'Cat', loaded.classify(@str3)
+    end
+  end
+
+  def test_save_load_preserves_classification
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+    lsi.add_item @str4, 'Cat'
+    lsi.add_item @str5, 'Bird'
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'lsi.json')
+      lsi.save(path)
+      loaded = Classifier::LSI.load(path)
+
+      # Verify classifications match
+      assert_equal lsi.classify(@str1), loaded.classify(@str1)
+      assert_equal lsi.classify('Dogs are nice'), loaded.classify('Dogs are nice')
+      assert_equal lsi.classify('Cats are cute'), loaded.classify('Cats are cute')
+    end
+  end
+
+  def test_save_load_preserves_auto_rebuild_setting
+    lsi = Classifier::LSI.new auto_rebuild: false
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.build_index
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'lsi.json')
+      lsi.save(path)
+      loaded = Classifier::LSI.load(path)
+
+      refute loaded.auto_rebuild, 'Should preserve auto_rebuild: false setting'
+    end
+  end
+
+  def test_loaded_lsi_can_continue_adding_items
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'lsi.json')
+      lsi.save(path)
+      loaded = Classifier::LSI.load(path)
+
+      # Continue adding items to loaded LSI
+      loaded.add_item @str3, 'Cat'
+      loaded.add_item @str4, 'Cat'
+
+      assert_equal 4, loaded.items.size
+      assert_equal 'Cat', loaded.classify(@str3)
+    end
+  end
+
+  def test_save_load_search_functionality
+    lsi = Classifier::LSI.new
+    [@str1, @str2, @str3, @str4, @str5].each { |x| lsi << x }
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'lsi.json')
+      lsi.save(path)
+      loaded = Classifier::LSI.load(path)
+
+      # Verify search works after load
+      assert_equal lsi.search('dog', 3), loaded.search('dog', 3)
+    end
+  end
 end

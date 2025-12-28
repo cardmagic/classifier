@@ -12,4 +12,6 @@ $LOAD_PATH.unshift("#{File.dirname(__FILE__)}/../lib")
 
 require 'minitest'
 require 'minitest/autorun'
+require 'tmpdir'
+require 'json'
 require 'classifier'

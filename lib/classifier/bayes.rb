@@ -4,6 +4,7 @@
 # Copyright:: Copyright (c) 2005 Lucas Carlson
 # License::   LGPL
 
+require 'json'
 require 'mutex_m'
 
 module Classifier
@@ -117,6 +118,55 @@ module Classifier
       best.first.to_s
     end
 
+    # Returns a hash representation of the classifier state.
+    # This can be converted to JSON or used directly.
+    #
+    # @rbs () -> untyped
+    def as_json(*)
+      {
+        version: 1,
+        type: 'bayes',
+        categories: @categories.transform_keys(&:to_s).transform_values { |v| v.transform_keys(&:to_s) },
+        total_words: @total_words,
+        category_counts: @category_counts.transform_keys(&:to_s),
+        category_word_count: @category_word_count.transform_keys(&:to_s)
+      }
+    end
+
+    # Serializes the classifier state to a JSON string.
+    # This can be saved to a file and later loaded with Bayes.from_json.
+    #
+    # @rbs () -> String
+    def to_json(*)
+      as_json.to_json
+    end
+
+    # Loads a classifier from a JSON string or a Hash created by #to_json or #as_json.
+    #
+    # @rbs (String | Hash[String, untyped]) -> Bayes
+    def self.from_json(json)
+      data = json.is_a?(String) ? JSON.parse(json) : json
+      raise ArgumentError, "Invalid classifier type: #{data['type']}" unless data['type'] == 'bayes'
+
+      instance = allocate
+      instance.send(:restore_state, data)
+      instance
+    end
+
+    # Saves the classifier state to a file.
+    #
+    # @rbs (String) -> Integer
+    def save(path)
+      File.write(path, to_json)
+    end
+
+    # Loads a classifier from a file saved with #save.
+    #
+    # @rbs (String) -> Bayes
+    def self.load(path)
+      from_json(File.read(path))
+    end
+
     #
     # Provides training and untraining methods for the categories specified in Bayes#new
     # For example:
@@ -198,6 +248,30 @@ module Classifier
         @categories.delete(category)
         @category_counts.delete(category)
         @category_word_count.delete(category)
+      end
+    end
+
+    private
+
+    # Restores classifier state from a hash (used by from_json)
+    # @rbs (Hash[String, untyped]) -> void
+    def restore_state(data)
+      mu_initialize
+      @categories = {} #: Hash[Symbol, Hash[Symbol, Integer]]
+      @total_words = data['total_words']
+      @category_counts = Hash.new(0) #: Hash[Symbol, Integer]
+      @category_word_count = Hash.new(0) #: Hash[Symbol, Integer]
+
+      data['categories'].each do |cat_name, words|
+        @categories[cat_name.to_sym] = words.transform_keys(&:to_sym)
+      end
+
+      data['category_counts'].each do |cat_name, count|
+        @category_counts[cat_name.to_sym] = count
+      end
+
+      data['category_word_count'].each do |cat_name, count|
+        @category_word_count[cat_name.to_sym] = count
       end
     end
   end
