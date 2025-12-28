@@ -39,59 +39,31 @@ module Classifier
       @storage = nil
     end
 
-    # Provides a general training method for all categories specified in Bayes#new
-    # For example:
-    #     b = Classifier::Bayes.new 'This', 'That', 'the_other'
-    #     b.train :this, "This text"
-    #     b.train "that", "That text"
-    #     b.train "The other", "The other text"
+    # Trains the classifier with text for a category.
     #
-    # @rbs (String | Symbol, String) -> void
-    def train(category, text)
-      category = category.prepare_category_name
-      word_hash = text.word_hash
-      synchronize do
-        invalidate_caches
-        @dirty = true
-        @category_counts[category] += 1
-        word_hash.each do |word, count|
-          @categories[category][word] ||= 0
-          @categories[category][word] += count
-          @total_words += count
-          @category_word_count[category] += count
-        end
+    #     b.train(spam: "Buy now!", ham: ["Hello", "Meeting tomorrow"])
+    #     b.train(:spam, "legacy positional API")
+    #
+    # @rbs (?(String | Symbol)?, ?String?, **(String | Array[String])) -> void
+    def train(category = nil, text = nil, **categories)
+      return train_single(category, text) if category && text
+
+      categories.each do |cat, texts|
+        (texts.is_a?(Array) ? texts : [texts]).each { |t| train_single(cat, t) }
       end
     end
 
-    # Provides a untraining method for all categories specified in Bayes#new
-    # Be very careful with this method.
+    # Removes training data. Be careful with this method.
     #
-    # For example:
-    #     b = Classifier::Bayes.new 'This', 'That', 'the_other'
-    #     b.train :this, "This text"
-    #     b.untrain :this, "This text"
+    #     b.untrain(spam: "Buy now!")
+    #     b.untrain(:spam, "legacy positional API")
     #
-    # @rbs (String | Symbol, String) -> void
-    def untrain(category, text)
-      category = category.prepare_category_name
-      word_hash = text.word_hash
-      synchronize do
-        invalidate_caches
-        @dirty = true
-        @category_counts[category] -= 1
-        word_hash.each do |word, count|
-          next unless @total_words >= 0
+    # @rbs (?(String | Symbol)?, ?String?, **(String | Array[String])) -> void
+    def untrain(category = nil, text = nil, **categories)
+      return untrain_single(category, text) if category && text
 
-          orig = @categories[category][word] || 0
-          @categories[category][word] ||= 0
-          @categories[category][word] -= count
-          if @categories[category][word] <= 0
-            @categories[category].delete(word)
-            count = orig
-          end
-          @category_word_count[category] -= count if @category_word_count[category] >= count
-          @total_words -= count
-        end
+      categories.each do |cat, texts|
+        (texts.is_a?(Array) ? texts : [texts]).each { |t| untrain_single(cat, t) }
       end
     end
 
@@ -135,8 +107,8 @@ module Classifier
     # Returns a hash representation of the classifier state.
     # This can be converted to JSON or used directly.
     #
-    # @rbs () -> untyped
-    def as_json(*)
+    # @rbs (?untyped) -> untyped
+    def as_json(_options = nil)
       {
         version: 1,
         type: 'bayes',
@@ -150,8 +122,8 @@ module Classifier
     # Serializes the classifier state to a JSON string.
     # This can be saved to a file and later loaded with Bayes.from_json.
     #
-    # @rbs () -> String
-    def to_json(*)
+    # @rbs (?untyped) -> String
+    def to_json(_options = nil)
       as_json.to_json
     end
 
@@ -339,6 +311,49 @@ module Classifier
     end
 
     private
+
+    # Core training logic for a single category and text.
+    # @rbs (String | Symbol, String) -> void
+    def train_single(category, text)
+      category = category.prepare_category_name
+      word_hash = text.word_hash
+      synchronize do
+        invalidate_caches
+        @dirty = true
+        @category_counts[category] += 1
+        word_hash.each do |word, count|
+          @categories[category][word] ||= 0
+          @categories[category][word] += count
+          @total_words += count
+          @category_word_count[category] += count
+        end
+      end
+    end
+
+    # Core untraining logic for a single category and text.
+    # @rbs (String | Symbol, String) -> void
+    def untrain_single(category, text)
+      category = category.prepare_category_name
+      word_hash = text.word_hash
+      synchronize do
+        invalidate_caches
+        @dirty = true
+        @category_counts[category] -= 1
+        word_hash.each do |word, count|
+          next unless @total_words >= 0
+
+          orig = @categories[category][word] || 0
+          @categories[category][word] ||= 0
+          @categories[category][word] -= count
+          if @categories[category][word] <= 0
+            @categories[category].delete(word)
+            count = orig
+          end
+          @category_word_count[category] -= count if @category_word_count[category] >= count
+          @total_words -= count
+        end
+      end
+    end
 
     # Restores classifier state from a JSON string (used by reload)
     # @rbs (String) -> void
