@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    classifier (2.0.0)
+    classifier (2.1.0)
       fast-stemmer (~> 1.0)
       matrix
       mutex_m (~> 0.2)
@@ -148,4 +148,4 @@ DEPENDENCIES
   steep
 
 BUNDLED WITH
-   4.0.3
+  4.0.3
