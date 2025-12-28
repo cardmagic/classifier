@@ -142,6 +142,21 @@ lsi.search "programming", 3
 # => ["Ruby is a dynamic programming language", "Python is great for..."]
 ```
 
+### Text Summarization
+
+LSI can extract key sentences from text:
+
+```ruby
+text = "First sentence about dogs. Second about cats. Third about birds."
+text.summary(2)  # Extract 2 most relevant sentences
+```
+
+For better sentence boundary detection (handles abbreviations like "Dr.", decimals, etc.), install the optional `pragmatic_segmenter` gem:
+
+```ruby
+gem 'pragmatic_segmenter'
+```
+
 ### Learn More
 
 - [LSI Basics Guide](https://rubyclassifier.com/docs/guides/lsi/basics) - In-depth documentation
