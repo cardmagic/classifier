@@ -28,7 +28,7 @@ class Vector
 
   def magnitude
     # Cache magnitude since Vector is immutable after creation
-    @magnitude_cache ||= begin
+    @magnitude ||= begin
       sum_of_squares = 0.to_r
       size.times do |i|
         sum_of_squares += self[i]**2.to_r

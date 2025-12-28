@@ -15,8 +15,8 @@ module Classifier
     # @rbs @total_words: Integer
     # @rbs @category_counts: Hash[Symbol, Integer]
     # @rbs @category_word_count: Hash[Symbol, Integer]
-    # @rbs @training_count_cache: Float?
-    # @rbs @vocab_size_cache: Integer?
+    # @rbs @cached_training_count: Float?
+    # @rbs @cached_vocab_size: Integer?
 
     # The class can be created with one or more categories, each of which will be
     # initialized and given a training method. E.g.,
@@ -29,8 +29,8 @@ module Classifier
       @total_words = 0
       @category_counts = Hash.new(0)
       @category_word_count = Hash.new(0)
-      @training_count_cache = nil
-      @vocab_size_cache = nil
+      @cached_training_count = nil
+      @cached_vocab_size = nil
     end
 
     # Provides a general training method for all categories specified in Bayes#new
@@ -236,8 +236,8 @@ module Classifier
     def marshal_load(data)
       mu_initialize
       @categories, @total_words, @category_counts, @category_word_count = data
-      @training_count_cache = nil
-      @vocab_size_cache = nil
+      @cached_training_count = nil
+      @cached_vocab_size = nil
     end
 
     # Allows you to remove categories from the classifier.
@@ -273,8 +273,8 @@ module Classifier
       @total_words = data['total_words']
       @category_counts = Hash.new(0) #: Hash[Symbol, Integer]
       @category_word_count = Hash.new(0) #: Hash[Symbol, Integer]
-      @training_count_cache = nil
-      @vocab_size_cache = nil
+      @cached_training_count = nil
+      @cached_vocab_size = nil
 
       data['categories'].each do |cat_name, words|
         @categories[cat_name.to_sym] = words.transform_keys(&:to_sym)
@@ -291,18 +291,18 @@ module Classifier
 
     # @rbs () -> void
     def invalidate_caches
-      @training_count_cache = nil
-      @vocab_size_cache = nil
+      @cached_training_count = nil
+      @cached_vocab_size = nil
     end
 
     # @rbs () -> Float
     def cached_training_count
-      @training_count_cache ||= @category_counts.values.sum.to_f
+      @cached_training_count ||= @category_counts.values.sum.to_f
     end
 
     # @rbs () -> Integer
     def cached_vocab_size
-      @vocab_size_cache ||= [@categories.values.flat_map(&:keys).uniq.size, 1].max
+      @cached_vocab_size ||= [@categories.values.flat_map(&:keys).uniq.size, 1].max
     end
   end
 end
