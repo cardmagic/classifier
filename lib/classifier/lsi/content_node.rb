@@ -50,8 +50,8 @@ module Classifier
     #
     # @rbs (WordList) -> untyped
     def raw_vector_with(word_list)
-      vec = if Classifier::LSI.gsl_available
-              GSL::Vector.alloc(word_list.size)
+      vec = if Classifier::LSI.native_available?
+              Classifier::LSI.vector_class.alloc(word_list.size)
             else
               Array.new(word_list.size, 0)
             end
@@ -61,8 +61,8 @@ module Classifier
       end
 
       # Perform the scaling transform
-      total_words = Classifier::LSI.gsl_available ? vec.sum : vec.sum_with_identity
-      vec_array = Classifier::LSI.gsl_available ? vec.to_a : vec
+      total_words = Classifier::LSI.native_available? ? vec.sum : vec.sum_with_identity
+      vec_array = Classifier::LSI.native_available? ? vec.to_a : vec
       total_unique_words = vec_array.count { |word| word != 0 }
 
       # Perform first-order association transform if this vector has more
@@ -84,7 +84,7 @@ module Classifier
         vec = vec.collect { |val| Math.log(val + 1) / divisor }
       end
 
-      if Classifier::LSI.gsl_available
+      if Classifier::LSI.native_available?
         @raw_norm   = vec.normalize
         @raw_vector = vec
       else

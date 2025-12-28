@@ -2,8 +2,20 @@ require 'rake'
 require 'rake/testtask'
 require 'rdoc/task'
 
+# Try to load rake-compiler for native extension support
+begin
+  require 'rake/extensiontask'
+  Rake::ExtensionTask.new('classifier_ext') do |ext|
+    ext.lib_dir = 'lib/classifier'
+    ext.ext_dir = 'ext/classifier'
+  end
+  HAVE_EXTENSION = true
+rescue LoadError
+  HAVE_EXTENSION = false
+end
+
 desc 'Default Task'
-task default: [:test]
+task default: HAVE_EXTENSION ? %i[compile test] : [:test]
 
 # Run the unit tests
 desc 'Run all unit tests'

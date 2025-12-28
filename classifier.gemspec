@@ -6,7 +6,8 @@ Gem::Specification.new do |s|
   s.author = 'Lucas Carlson'
   s.email = 'lucas@rufy.com'
   s.homepage = 'https://github.com/cardmagic/classifier'
-  s.files = Dir['{lib,sig}/**/*.{rb,rbs}', 'bin/*', 'LICENSE', '*.md', 'test/*']
+  s.files = Dir['{lib,sig}/**/*.{rb,rbs}', 'ext/**/*.{c,h,rb}', 'bin/*', 'LICENSE', '*.md', 'test/*']
+  s.extensions = ['ext/classifier/extconf.rb']
   s.license = 'LGPL'
 
   s.add_dependency 'fast-stemmer', '~> 1.0'
@@ -16,4 +17,5 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'minitest'
   s.add_development_dependency 'rbs-inline'
   s.add_development_dependency 'rdoc'
+  s.add_development_dependency 'rake-compiler'
 end

@@ -11,15 +11,22 @@ Ruby gem providing text classification via two algorithms:
 ## Common Commands
 
 ```bash
-# Run all tests
+# Compile native C extension
+rake compile
+
+# Run all tests (compiles first)
 rake test
 
 # Run a single test file
 ruby -Ilib test/bayes/bayesian_test.rb
 ruby -Ilib test/lsi/lsi_test.rb
 
-# Run tests with native Ruby vector (without GSL)
+# Run tests with pure Ruby (no native extension)
 NATIVE_VECTOR=true rake test
+
+# Run benchmarks
+rake benchmark
+rake benchmark:compare
 
 # Interactive console
 rake console
@@ -39,7 +46,7 @@ rake doc
 
 **LSI Classifier** (`lib/classifier/lsi.rb`)
 - Uses Singular Value Decomposition (SVD) for semantic analysis
-- Optional GSL gem for 10x faster matrix operations; falls back to pure Ruby SVD
+- Native C extension for 5-50x faster matrix operations; falls back to pure Ruby
 - Key operations: `add_item`, `classify`, `find_related`, `search`
 - `auto_rebuild` option controls automatic index rebuilding after changes
 
@@ -49,15 +56,18 @@ rake doc
 - Uses `fast-stemmer` gem for Porter stemming
 
 **Vector Extensions** (`lib/classifier/extensions/vector.rb`)
-- Pure Ruby SVD implementation (`Matrix#SV_decomp`)
+- Pure Ruby SVD implementation (`Matrix#SV_decomp`) - used as fallback
 - Vector normalization and magnitude calculations
 
-### GSL Integration
+### Native C Extension (`ext/classifier/`)
 
-LSI checks for the `gsl` gem at load time. When available:
-- Uses `GSL::Matrix` and `GSL::Vector` for faster operations
-- Serialization handled via `vector_serialize.rb`
-- Test without GSL: `NATIVE_VECTOR=true rake test`
+LSI uses a native C extension for fast linear algebra operations:
+- `Classifier::Linalg::Vector` - Vector operations (alloc, normalize, dot product)
+- `Classifier::Linalg::Matrix` - Matrix operations (alloc, transpose, multiply)
+- Jacobi SVD implementation for singular value decomposition
+
+Check current backend: `Classifier::LSI.backend` returns `:native` or `:ruby`
+Force pure Ruby: `NATIVE_VECTOR=true rake test`
 
 ### Content Nodes (`lib/classifier/lsi/content_node.rb`)
 

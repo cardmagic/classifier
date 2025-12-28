@@ -2,16 +2,14 @@
 # frozen_string_literal: true
 
 # LSI Benchmark Script
-# Compares performance with and without GSL
+# Compares performance between native C extension and pure Ruby
 #
 # Usage:
 #   rake benchmark               # Run with current configuration
-#   rake benchmark:compare       # Run both GSL and native, show comparison
-#   NATIVE_VECTOR=true rake benchmark  # Force native Ruby mode
+#   rake benchmark:compare       # Run both native C and pure Ruby, show comparison
+#   NATIVE_VECTOR=true rake benchmark  # Force pure Ruby mode
 #
-# Note: The native Ruby SVD implementation may fail with larger document sets
-# due to numerical instability (Math::DomainError). GSL is recommended for
-# production use with large document collections.
+# The native C extension provides 5-10x speedup over pure Ruby.
 
 $LOAD_PATH.unshift File.expand_path('../lib', __dir__)
 
@@ -68,11 +66,11 @@ end
 def run_benchmark(doc_count)
   require 'classifier'
 
-  gsl_status = Classifier::LSI.gsl_available ? 'GSL' : 'Native Ruby'
+  backend_name = Classifier::LSI.backend == :native ? 'Native C Extension' : 'Pure Ruby'
   docs = generate_documents(doc_count)
 
   puts "\n#{'=' * 60}"
-  puts "LSI Benchmark: #{doc_count} documents (#{gsl_status})"
+  puts "LSI Benchmark: #{doc_count} documents (#{backend_name})"
   puts '=' * 60
 
   results = {}
@@ -118,12 +116,11 @@ def run_benchmark(doc_count)
     puts '-' * 52
     puts format("%-20s %10s %10s %10.4f", 'TOTAL', '', '', total)
 
-    { results: results, gsl: Classifier::LSI.gsl_available, success: true }
+    { results: results, backend: Classifier::LSI.backend, success: true }
   rescue Math::DomainError, ExceptionForMatrix::ErrDimensionMismatch => e
-    puts "\nFAILED: Native Ruby SVD numerical instability"
+    puts "\nFAILED: SVD numerical instability"
     puts "Error: #{e.class.name} - #{e.message}"
-    puts "Tip: Install GSL for stable large-scale benchmarks: gem install gsl"
-    { results: {}, gsl: false, success: false, error: e.message }
+    { results: {}, backend: :ruby, success: false, error: e.message }
   end
 end
 
@@ -141,8 +138,7 @@ def run_single
 
   if failed
     puts "\n" + '=' * 60
-    puts "Note: Native Ruby SVD has numerical stability limits."
-    puts "For larger benchmarks, install GSL: gem install gsl"
+    puts 'Note: SVD may have numerical stability limits with very large datasets.'
   end
 end
 
@@ -152,17 +148,11 @@ def run_subprocess(docs_json, env_vars = {})
   # Build environment hash
   env = env_vars.transform_keys(&:to_s)
 
-  # Use Bundler.with_unbundled_env if available to access system gems (like GSL)
   popen_block = lambda do
     IO.popen([env, RbConfig.ruby, '-I', lib_path, '-W0', '-e', <<~'RUBY'], 'r+')
       require 'benchmark'
       require 'json'
       require 'classifier'
-
-      unless ENV['NATIVE_VECTOR'] || Classifier::LSI.gsl_available
-        print "GSL_NOT_AVAILABLE"
-        exit 0
-      end
 
       docs = JSON.parse($stdin.read)
       lsi = Classifier::LSI.new(auto_rebuild: false)
@@ -170,6 +160,7 @@ def run_subprocess(docs_json, env_vars = {})
 
       times = {}
       times[:add_items] = 0
+      times[:backend] = Classifier::LSI.backend.to_s
 
       times[:build_index] = Benchmark.measure { lsi.build_index }.total
 
@@ -194,11 +185,7 @@ def run_subprocess(docs_json, env_vars = {})
     io.write(docs_json)
     io.close_write
     output = io.read
-    if output == 'GSL_NOT_AVAILABLE'
-      { available: false }
-    else
-      { available: true, times: Marshal.load(output) }
-    end
+    { available: true, times: Marshal.load(output) }
   rescue StandardError => e
     { available: false, error: e }
   ensure
@@ -207,48 +194,45 @@ def run_subprocess(docs_json, env_vars = {})
 end
 
 def run_comparison
-  sizes = [5, 10, 15]
+  sizes = [5, 10, 15, 20]
 
   puts "#{'#' * 70}"
-  puts '# LSI BENCHMARK: GSL vs Native Ruby Comparison'
+  puts '# LSI BENCHMARK: Native C Extension vs Pure Ruby Comparison'
   puts "#{'#' * 70}"
 
+  ruby_results = {}
   native_results = {}
-  gsl_results = {}
 
   # Generate documents once for consistency
   doc_sets = sizes.map { |s| [s, generate_documents(s)] }.to_h
 
-  # Run native benchmarks in subprocess
-  puts "\n>>> Running Native Ruby benchmarks..."
+  # Run pure Ruby benchmarks in subprocess
+  puts "\n>>> Running Pure Ruby benchmarks..."
   sizes.each do |size|
     docs_json = JSON.generate(doc_sets[size])
-    result = run_subprocess(docs_json, NATIVE_VECTOR: 'true', SUPPRESS_GSL_WARNING: 'true')
+    result = run_subprocess(docs_json, NATIVE_VECTOR: 'true', SUPPRESS_LSI_WARNING: 'true')
+
+    if result[:error]
+      puts "  #{size} docs: FAILED (#{result[:error].class.name.split('::').last})"
+      ruby_results[size] = nil
+    else
+      ruby_results[size] = result[:times]
+      puts "  #{size} docs: OK (backend: #{result[:times][:backend]})"
+    end
+  end
+
+  # Run native C extension benchmarks in subprocess
+  puts "\n>>> Running Native C Extension benchmarks..."
+  sizes.each do |size|
+    docs_json = JSON.generate(doc_sets[size])
+    result = run_subprocess(docs_json, SUPPRESS_LSI_WARNING: 'true')
 
     if result[:error]
       puts "  #{size} docs: FAILED (#{result[:error].class.name.split('::').last})"
       native_results[size] = nil
     else
       native_results[size] = result[:times]
-      puts "  #{size} docs: OK"
-    end
-  end
-
-  # Run GSL benchmarks in subprocess
-  puts "\n>>> Running GSL benchmarks..."
-  sizes.each do |size|
-    docs_json = JSON.generate(doc_sets[size])
-    result = run_subprocess(docs_json, SUPPRESS_GSL_WARNING: 'true')
-
-    if result[:error]
-      puts "  #{size} docs: FAILED (#{result[:error].class.name.split('::').last})"
-      gsl_results[size] = nil
-    elsif !result[:available]
-      puts "  #{size} docs: SKIPPED (GSL not installed)"
-      gsl_results[size] = nil
-    else
-      gsl_results[size] = result[:times]
-      puts "  #{size} docs: OK"
+      puts "  #{size} docs: OK (backend: #{result[:times][:backend]})"
     end
   end
 
@@ -260,47 +244,44 @@ def run_comparison
   operations = %i[build_index classify search find_related]
 
   sizes.each do |size|
+    ruby = ruby_results[size]
     native = native_results[size]
-    gsl = gsl_results[size]
 
-    next unless native || gsl
+    next unless ruby || native
 
     puts "\n--- #{size} Documents ---"
-    puts format("%-20s %12s %12s %12s", 'Operation', 'Native', 'GSL', 'Speedup')
+    puts format("%-20s %12s %12s %12s", 'Operation', 'Pure Ruby', 'Native C', 'Speedup')
     puts '-' * 58
 
     operations.each do |op|
+      ruby_time = ruby ? ruby[op] : nil
       native_time = native ? native[op] : nil
-      gsl_time = gsl ? gsl[op] : nil
 
+      ruby_str = ruby_time ? format('%0.4f', ruby_time) : 'N/A'
       native_str = native_time ? format('%0.4f', native_time) : 'N/A'
-      gsl_str = gsl_time ? format('%0.4f', gsl_time) : 'N/A'
 
-      speedup = if native_time && gsl_time && gsl_time > 0
-                  format('%0.1fx', native_time / gsl_time)
+      speedup = if ruby_time && native_time && native_time > 0
+                  format('%0.1fx', ruby_time / native_time)
                 else
                   'N/A'
                 end
 
-      puts format("%-20s %12s %12s %12s", op, native_str, gsl_str, speedup)
+      puts format("%-20s %12s %12s %12s", op, ruby_str, native_str, speedup)
     end
 
-    if native && gsl
+    if ruby && native
+      ruby_total = operations.sum { |op| ruby[op] }
       native_total = operations.sum { |op| native[op] }
-      gsl_total = operations.sum { |op| gsl[op] }
-      speedup = gsl_total > 0 ? native_total / gsl_total : 0
+      speedup = native_total > 0 ? ruby_total / native_total : 0
       puts '-' * 58
-      puts format("%-20s %12.4f %12.4f %11.1fx", 'TOTAL', native_total, gsl_total, speedup)
+      puts format("%-20s %12.4f %12.4f %11.1fx", 'TOTAL', ruby_total, native_total, speedup)
     end
   end
 
   puts "\n" + '=' * 70
-  if gsl_results.values.all?(&:nil?)
-    puts "Note: GSL gem not installed. Install with: gem install gsl"
-    puts "      On macOS: brew install gsl && gem install gsl"
-  end
-  if native_results.values.any?(&:nil?)
-    puts "Note: Some Native Ruby benchmarks failed due to SVD numerical limits."
+  if native_results.values.all? { |v| v.nil? || v[:backend] == 'ruby' }
+    puts 'Note: Native C extension not available. Using pure Ruby fallback.'
+    puts '      Compile with: rake compile'
   end
 end
 

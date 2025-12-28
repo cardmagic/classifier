@@ -6,29 +6,50 @@
 
 module Classifier
   class LSI
-    # @rbs @gsl_available: bool
-    @gsl_available = false
+    # Backend options: :native, :ruby
+    # @rbs @backend: Symbol
+    @backend = :ruby
 
     class << self
-      # @rbs @gsl_available: bool
-      attr_accessor :gsl_available
+      # @rbs @backend: Symbol
+      attr_accessor :backend
+
+      # Check if using native C extension
+      # @rbs () -> bool
+      def native_available?
+        backend == :native
+      end
+
+      # Get the Vector class for the current backend
+      # @rbs () -> Class
+      def vector_class
+        backend == :native ? Classifier::Linalg::Vector : ::Vector
+      end
+
+      # Get the Matrix class for the current backend
+      # @rbs () -> Class
+      def matrix_class
+        backend == :native ? Classifier::Linalg::Matrix : ::Matrix
+      end
     end
   end
 end
 
-begin
-  # to test the native vector class, try `rake test NATIVE_VECTOR=true`
-  raise LoadError if ENV['NATIVE_VECTOR'] == 'true'
-  raise LoadError unless Gem::Specification.find_all_by_name('gsl').any?
+# Backend detection: native extension > pure Ruby
+# Set NATIVE_VECTOR=true to force pure Ruby implementation
 
-  require 'gsl'
-  require 'classifier/extensions/vector_serialize'
-  Classifier::LSI.gsl_available = true
+begin
+  raise LoadError if ENV['NATIVE_VECTOR'] == 'true'
+
+  require 'classifier/classifier_ext'
+  Classifier::LSI.backend = :native
 rescue LoadError
-  unless ENV['SUPPRESS_GSL_WARNING'] == 'true'
-    warn 'Notice: for 10x faster LSI, run `gem install gsl`. Set SUPPRESS_GSL_WARNING=true to hide this.'
+  # Fall back to pure Ruby implementation
+  unless ENV['SUPPRESS_LSI_WARNING'] == 'true'
+    warn 'Notice: for 5-10x faster LSI, install the classifier gem with native extensions. ' \
+         'Set SUPPRESS_LSI_WARNING=true to hide this.'
   end
-  Classifier::LSI.gsl_available = false
+  Classifier::LSI.backend = :ruby
   require 'classifier/extensions/vector'
 end
 
@@ -152,12 +173,14 @@ module Classifier
       doc_list = @items.values
       tda = doc_list.collect { |node| node.raw_vector_with(@word_list) }
 
-      if self.class.gsl_available
-        tdm = GSL::Matrix.alloc(*tda).trans
+      if self.class.native_available?
+        # Convert vectors to arrays for matrix construction
+        tda_arrays = tda.map { |v| v.respond_to?(:to_a) ? v.to_a : v }
+        tdm = self.class.matrix_class.alloc(*tda_arrays).trans
         ntdm = build_reduced_matrix(tdm, cutoff)
 
         ntdm.size[1].times do |col|
-          vec = GSL::Vector.alloc(ntdm.column(col)).row
+          vec = self.class.vector_class.alloc(ntdm.column(col).to_a).row
           doc_list[col].lsi_vector = vec
           doc_list[col].lsi_norm = vec.normalize
         end
@@ -218,7 +241,7 @@ module Classifier
       content_node = node_for_content(doc, &)
       result =
         @items.keys.collect do |item|
-          val = if self.class.gsl_available
+          val = if self.class.native_available?
                   content_node.search_vector * @items[item].search_vector.col
                 else
                   (Matrix[content_node.search_vector] * @items[item].search_vector)[0]
@@ -241,7 +264,7 @@ module Classifier
       content_node = node_for_content(doc, &)
       result =
         @items.keys.collect do |item|
-          val = if self.class.gsl_available
+          val = if self.class.native_available?
                   content_node.search_norm * @items[item].search_norm.col
                 else
                   (Matrix[content_node.search_norm] * @items[item].search_norm)[0]
@@ -367,11 +390,11 @@ module Classifier
         s[ord] = 0.0 if s[ord] < s_cutoff
       end
       # Reconstruct the term document matrix, only with reduced rank
-      result = u * (self.class.gsl_available ? GSL::Matrix : ::Matrix).diag(s) * v.trans
+      result = u * self.class.matrix_class.diag(s) * v.trans
 
-      # Native Ruby SVD returns transposed dimensions when row_size < column_size
+      # SVD may return transposed dimensions when row_size < column_size
       # Ensure result matches input dimensions
-      result = result.trans if !self.class.gsl_available && result.row_size != matrix.row_size
+      result = result.trans if result.row_size != matrix.row_size
 
       result
     end

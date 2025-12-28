@@ -36,47 +36,27 @@ Or install directly:
 gem install classifier
 ```
 
-### Optional: GSL for Faster LSI
+### Native C Extension
 
-For significantly faster LSI operations, install the [GNU Scientific Library](https://www.gnu.org/software/gsl/).
+The gem includes a native C extension for fast LSI operations. It compiles automatically during gem installation. No external dependencies are required.
 
-<details>
-<summary><strong>Ruby 3+</strong></summary>
+To verify the native extension is active:
 
-The released `gsl` gem doesn't support Ruby 3+. Install from source:
-
-```bash
-# Install GSL library
-brew install gsl        # macOS
-apt-get install libgsl-dev  # Ubuntu/Debian
-
-# Build and install the gem
-git clone https://github.com/cardmagic/rb-gsl.git
-cd rb-gsl
-git checkout fix/ruby-3.4-compatibility
-gem build gsl.gemspec
-gem install gsl-*.gem
+```ruby
+require 'classifier'
+puts Classifier::LSI.backend  # => :native
 ```
-</details>
 
-<details>
-<summary><strong>Ruby 2.x</strong></summary>
+To force pure Ruby mode (for debugging):
 
 ```bash
-# macOS
-brew install gsl
-gem install gsl
-
-# Ubuntu/Debian
-apt-get install libgsl-dev
-gem install gsl
+NATIVE_VECTOR=true ruby your_script.rb
 ```
-</details>
 
-When GSL is installed, Classifier automatically uses it. To suppress the GSL notice:
+To suppress the warning when native extension isn't available:
 
 ```bash
-SUPPRESS_GSL_WARNING=true ruby your_script.rb
+SUPPRESS_LSI_WARNING=true ruby your_script.rb
 ```
 
 ### Compatibility
@@ -181,28 +161,29 @@ lsi.search "programming", 3
 
 ## Performance
 
-### GSL vs Native Ruby
+### Native C Extension vs Pure Ruby
 
-GSL provides dramatic speedups for LSI operations, especially `build_index` (SVD computation):
+The native C extension provides dramatic speedups for LSI operations, especially `build_index` (SVD computation):
 
 | Documents | build_index | Overall |
 |-----------|-------------|---------|
-| 5         | 4x faster   | 2.5x    |
-| 10        | 24x faster  | 5.5x    |
-| 15        | 116x faster | 17x     |
+| 5         | 7x faster   | 2.6x    |
+| 10        | 25x faster  | 4.6x    |
+| 15        | 112x faster | 14.5x   |
+| 20        | 385x faster | 48.7x   |
 
 <details>
-<summary>Detailed benchmark (15 documents)</summary>
+<summary>Detailed benchmark (20 documents)</summary>
 
 ```
-Operation              Native          GSL      Speedup
+Operation            Pure Ruby     Native C      Speedup
 ----------------------------------------------------------
-build_index            0.1412       0.0012       116.2x
-classify               0.0142       0.0049         2.9x
-search                 0.0102       0.0026         3.9x
-find_related           0.0069       0.0016         4.2x
+build_index            0.5540       0.0014       384.5x
+classify               0.0190       0.0060         3.2x
+search                 0.0145       0.0037         3.9x
+find_related           0.0098       0.0011         8.6x
 ----------------------------------------------------------
-TOTAL                  0.1725       0.0104        16.6x
+TOTAL                  0.5973       0.0123        48.7x
 ```
 </details>
 
@@ -210,7 +191,7 @@ TOTAL                  0.1725       0.0104        16.6x
 
 ```bash
 rake benchmark              # Run with current configuration
-rake benchmark:compare      # Compare GSL vs native Ruby
+rake benchmark:compare      # Compare native C vs pure Ruby
 ```
 
 ## Development
@@ -221,15 +202,16 @@ rake benchmark:compare      # Compare GSL vs native Ruby
 git clone https://github.com/cardmagic/classifier.git
 cd classifier
 bundle install
+rake compile  # Compile native C extension
 ```
 
 ### Running Tests
 
 ```bash
-rake test                        # Run all tests
+rake test                        # Run all tests (compiles first)
 ruby -Ilib test/bayes/bayesian_test.rb  # Run specific test file
 
-# Test without GSL (pure Ruby)
+# Test with pure Ruby (no native extension)
 NATIVE_VECTOR=true rake test
 ```
 
