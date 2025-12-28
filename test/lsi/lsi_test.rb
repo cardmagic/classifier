@@ -525,27 +525,14 @@ class LSITest < Minitest::Test
   end
 
   def test_build_index_very_small_cutoff_no_negative_index
-    # Regression test: with very small cutoff (e.g., 0.01) and few items,
-    # the index calculation (s.size * cutoff).round - 1 could become negative,
-    # causing Ruby to access from array end (wrong behavior)
     lsi = Classifier::LSI.new auto_rebuild: false
     lsi.add_item @str1, 'Dog'
     lsi.add_item @str2, 'Dog'
     lsi.add_item @str3, 'Cat'
 
-    # With 3 items and cutoff=0.01: (3 * 0.01).round - 1 = 0 - 1 = -1 (bug!)
-    # Without fix, -1 index accesses the smallest singular value (last in sorted array),
-    # causing ALL dimensions to be preserved instead of aggressive reduction.
-    # The fix clamps the index to 0 minimum.
     lsi.build_index(0.01)
 
-    # Verify the index is built and classification works
     assert_equal 'Dog', lsi.classify(@str1)
-
-    # With a very small cutoff, we should be doing aggressive dimensionality reduction.
-    # The cutoff threshold should be based on the LARGEST singular value (index 0),
-    # not the smallest (which would happen with negative index bug).
-    # This is verified by checking singular_values is still accessible.
     refute_nil lsi.singular_values
   end
 

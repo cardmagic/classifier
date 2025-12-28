@@ -99,23 +99,8 @@ module Classifier
       synchronize { (@items.keys.size > 1) && (@version != @built_at_version) }
     end
 
-    # Returns the singular value spectrum for informed cutoff selection.
-    # This helps users understand how much variance each dimension captures
-    # and make informed decisions about the cutoff parameter.
-    #
-    # Returns nil if the index hasn't been built yet.
-    #
-    # Each entry in the returned array contains:
-    # - :dimension - The dimension index (0-based)
-    # - :value - The singular value
-    # - :percentage - What percentage of total variance this dimension captures
-    # - :cumulative_percentage - Cumulative variance captured up to this dimension
-    #
-    # Example usage for tuning:
-    #   spectrum = lsi.singular_value_spectrum
-    #   # Find how many dimensions capture 90% of variance
-    #   dims_for_90 = spectrum.find_index { |e| e[:cumulative_percentage] >= 0.90 }
-    #   optimal_cutoff = dims_for_90 ? (dims_for_90 + 1).to_f / spectrum.size : 0.99
+    # Returns singular value spectrum showing how much variance each dimension captures.
+    # Returns nil if index not built. Use for informed cutoff tuning.
     #
     # @rbs () -> Array[Hash[Symbol, untyped]]?
     def singular_value_spectrum
@@ -213,13 +198,7 @@ module Classifier
     # A value of 1 for cutoff means that no semantic analysis will take place,
     # turning the LSI class into a simple vector search engine.
     #
-    # Cutoff tuning guide:
-    # - Higher cutoff (0.9): Preserves more semantic dimensions, better for large diverse corpora
-    # - Lower cutoff (0.5): More aggressive dimensionality reduction, better for noisy data
-    # - Default (0.75): Reasonable middle ground for most use cases
-    #
-    # Use #singular_value_spectrum after building to analyze variance distribution
-    # and make informed decisions about cutoff tuning.
+    # Use #singular_value_spectrum after building to choose optimal cutoff.
     #
     # @rbs (?Float) -> void
     def build_index(cutoff = 0.75)
@@ -343,14 +322,7 @@ module Classifier
     # find_related function to find related documents, then returns the
     # most obvious category from this list.
     #
-    # cutoff signifies the proportion of documents to consider when classifying
-    # text. Must be between 0 and 1 (exclusive). A cutoff of 0.99 means nearly
-    # every document in the index votes on what category the document is in.
-    #
-    # Cutoff tuning guide:
-    # - Higher cutoff (0.5-0.9): More documents vote, smoother but slower classification
-    # - Lower cutoff (0.1-0.3): Fewer documents vote, faster but may be noisier
-    # - Default (0.30): Good balance for most classification tasks
+    # cutoff is proportion of documents to consider (0-1 exclusive). Higher = more votes, slower.
     #
     # @rbs (String, ?Float) ?{ (String) -> String } -> String | Symbol
     def classify(doc, cutoff = 0.30, &block)
@@ -496,7 +468,6 @@ module Classifier
 
     private
 
-    # Validates that cutoff is within the valid range (0, 1) exclusive.
     # @rbs (Float) -> void
     def validate_cutoff!(cutoff)
       return if cutoff.positive? && cutoff < 1
@@ -603,11 +574,8 @@ module Classifier
       # TODO: Check that M>=N on these dimensions! Transpose helps assure this
       u, v, s = matrix.SV_decomp
 
-      # Store singular values (sorted descending) for introspection
       @singular_values = s.sort.reverse
 
-      # Clamp index to 0 minimum to prevent negative indices with very small cutoffs
-      # (e.g., cutoff=0.01 with size=3 would give (3*0.01).round-1 = -1)
       s_cutoff_index = [(s.size * cutoff).round - 1, 0].max
       s_cutoff = @singular_values[s_cutoff_index]
       s.size.times do |ord|
