@@ -99,8 +99,8 @@ module Classifier
       synchronize { (@items.keys.size > 1) && (@version != @built_at_version) }
     end
 
-    # Returns singular value spectrum showing how much variance each dimension captures.
-    # Returns nil if index not built. Use for informed cutoff tuning.
+    # @rbs () -> Array[Hash[Symbol, untyped]]?
+    def singular_value_spectrum
     #
     # @rbs () -> Array[Hash[Symbol, untyped]]?
     def singular_value_spectrum
