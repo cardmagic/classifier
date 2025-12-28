@@ -41,25 +41,22 @@ module Classifier
 
     # Provides a general training method for all categories specified in Bayes#new
     # For example:
-    #     b = Classifier::Bayes.new 'This', 'That', 'the_other'
-    #     b.train :this, "This text"
-    #     b.train "that", "That text"
-    #     b.train "The other", "The other text"
+    #     b = Classifier::Bayes.new :spam, :ham
     #
-    # @rbs (String | Symbol, String) -> void
-    def train(category, text)
-      category = category.prepare_category_name
-      word_hash = text.word_hash
-      synchronize do
-        invalidate_caches
-        @dirty = true
-        @category_counts[category] += 1
-        word_hash.each do |word, count|
-          @categories[category][word] ||= 0
-          @categories[category][word] += count
-          @total_words += count
-          @category_word_count[category] += count
-        end
+    #     # Keyword argument API (preferred)
+    #     b.train(spam: "Buy cheap viagra now!!!")
+    #     b.train(spam: ["msg1", "msg2"], ham: ["msg3", "msg4"])
+    #
+    #     # Positional argument API (legacy)
+    #     b.train :spam, "This text"
+    #     b.train "ham", "That text"
+    #
+    # @rbs (?String | Symbol, ?String, **String | Array[String]) -> void
+    def train(category = nil, text = nil, **categories)
+      return train_single(category, text) if category
+
+      categories.each do |cat, texts|
+        Array(texts).each { |t| train_single(cat, t) }
       end
     end
 
@@ -67,31 +64,22 @@ module Classifier
     # Be very careful with this method.
     #
     # For example:
-    #     b = Classifier::Bayes.new 'This', 'That', 'the_other'
-    #     b.train :this, "This text"
-    #     b.untrain :this, "This text"
+    #     b = Classifier::Bayes.new :spam, :ham
     #
-    # @rbs (String | Symbol, String) -> void
-    def untrain(category, text)
-      category = category.prepare_category_name
-      word_hash = text.word_hash
-      synchronize do
-        invalidate_caches
-        @dirty = true
-        @category_counts[category] -= 1
-        word_hash.each do |word, count|
-          next unless @total_words >= 0
+    #     # Keyword argument API (preferred)
+    #     b.train(spam: "Buy cheap viagra now!!!")
+    #     b.untrain(spam: "Buy cheap viagra now!!!")
+    #
+    #     # Positional argument API (legacy)
+    #     b.train :spam, "This text"
+    #     b.untrain :spam, "This text"
+    #
+    # @rbs (?String | Symbol, ?String, **String | Array[String]) -> void
+    def untrain(category = nil, text = nil, **categories)
+      return untrain_single(category, text) if category
 
-          orig = @categories[category][word] || 0
-          @categories[category][word] ||= 0
-          @categories[category][word] -= count
-          if @categories[category][word] <= 0
-            @categories[category].delete(word)
-            count = orig
-          end
-          @category_word_count[category] -= count if @category_word_count[category] >= count
-          @total_words -= count
-        end
+      categories.each do |cat, texts|
+        Array(texts).each { |t| untrain_single(cat, t) }
       end
     end
 
@@ -339,6 +327,49 @@ module Classifier
     end
 
     private
+
+    # Core training logic for a single category and text.
+    # @rbs (String | Symbol, String) -> void
+    def train_single(category, text)
+      category = category.prepare_category_name
+      word_hash = text.word_hash
+      synchronize do
+        invalidate_caches
+        @dirty = true
+        @category_counts[category] += 1
+        word_hash.each do |word, count|
+          @categories[category][word] ||= 0
+          @categories[category][word] += count
+          @total_words += count
+          @category_word_count[category] += count
+        end
+      end
+    end
+
+    # Core untraining logic for a single category and text.
+    # @rbs (String | Symbol, String) -> void
+    def untrain_single(category, text)
+      category = category.prepare_category_name
+      word_hash = text.word_hash
+      synchronize do
+        invalidate_caches
+        @dirty = true
+        @category_counts[category] -= 1
+        word_hash.each do |word, count|
+          next unless @total_words >= 0
+
+          orig = @categories[category][word] || 0
+          @categories[category][word] ||= 0
+          @categories[category][word] -= count
+          if @categories[category][word] <= 0
+            @categories[category].delete(word)
+            count = orig
+          end
+          @category_word_count[category] -= count if @category_word_count[category] >= count
+          @total_words -= count
+        end
+      end
+    end
 
     # Restores classifier state from a JSON string (used by reload)
     # @rbs (String) -> void
