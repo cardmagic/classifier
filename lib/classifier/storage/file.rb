@@ -23,6 +23,7 @@ module Classifier
 
       # @rbs (path: String) -> void
       def initialize(path:)
+        super()
         @path = path
       end
 

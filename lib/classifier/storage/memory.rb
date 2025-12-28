@@ -21,6 +21,7 @@ module Classifier
 
       # @rbs () -> void
       def initialize
+        super
         @data = nil
       end
 
