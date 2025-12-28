@@ -13,6 +13,7 @@ A Ruby library for text classification using Bayesian and Latent Semantic Indexi
 - [Installation](#installation)
 - [Bayesian Classifier](#bayesian-classifier)
 - [LSI (Latent Semantic Indexing)](#lsi-latent-semantic-indexing)
+- [Persistence](#persistence)
 - [Performance](#performance)
 - [Development](#development)
 - [Contributing](#contributing)
@@ -93,25 +94,6 @@ classifier.classify "Congratulations! You've won a prize!"
 # => "Spam"
 ```
 
-### Persistence with Madeleine
-
-```ruby
-require 'classifier'
-require 'madeleine'
-
-m = SnapshotMadeleine.new("classifier_data") {
-  Classifier::Bayes.new('Interesting', 'Uninteresting')
-}
-
-m.system.train_interesting "fascinating article about science"
-m.system.train_uninteresting "boring repetitive content"
-m.take_snapshot
-
-# Later, restore and use:
-m.system.classify "new scientific discovery"
-# => "Interesting"
-```
-
 ### Learn More
 
 - [Bayes Basics Guide](https://rubyclassifier.com/docs/guides/bayes/basics) - In-depth documentation
@@ -160,6 +142,55 @@ lsi.search "programming", 3
 
 - [LSI Basics Guide](https://rubyclassifier.com/docs/guides/lsi/basics) - In-depth documentation
 - [Wikipedia: Latent Semantic Analysis](http://en.wikipedia.org/wiki/Latent_semantic_analysis)
+
+## Persistence
+
+Save and load trained classifiers with pluggable storage backends. Works with both Bayes and LSI classifiers.
+
+### File Storage
+
+```ruby
+require 'classifier'
+
+classifier = Classifier::Bayes.new('Spam', 'Ham')
+classifier.train_spam "Buy now! Limited offer!"
+classifier.train_ham "Meeting tomorrow at 3pm"
+
+# Configure storage and save
+classifier.storage = Classifier::Storage::File.new(path: "spam_filter.json")
+classifier.save
+
+# Load later
+loaded = Classifier::Bayes.load(storage: classifier.storage)
+loaded.classify "Claim your prize now!"
+# => "Spam"
+```
+
+### Custom Storage Backends
+
+Create backends for Redis, PostgreSQL, S3, or any storage system:
+
+```ruby
+class RedisStorage < Classifier::Storage::Base
+  def initialize(redis:, key:)
+    super()
+    @redis, @key = redis, key
+  end
+
+  def write(data) = @redis.set(@key, data)
+  def read = @redis.get(@key)
+  def delete = @redis.del(@key)
+  def exists? = @redis.exists?(@key)
+end
+
+# Use it
+classifier.storage = RedisStorage.new(redis: Redis.new, key: "classifier:spam")
+classifier.save
+```
+
+### Learn More
+
+- [Persistence Guide](https://rubyclassifier.com/docs/guides/persistence/basics) - Full documentation with examples
 
 ## Performance
 
