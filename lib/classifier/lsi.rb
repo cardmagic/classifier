@@ -53,6 +53,7 @@ rescue LoadError
   require 'classifier/extensions/vector'
 end
 
+require 'json'
 require 'mutex_m'
 require 'classifier/lsi/word_list'
 require 'classifier/lsi/content_node'
@@ -363,6 +364,66 @@ module Classifier
     def marshal_load(data)
       mu_initialize
       @auto_rebuild, @word_list, @items, @version, @built_at_version = data
+    end
+
+    # Serializes the LSI index to a JSON string.
+    # Only source data (word_hash, categories) is serialized, not computed vectors.
+    # On load, the index will be rebuilt automatically.
+    #
+    # @rbs () -> String
+    def to_json(*_args)
+      items_data = @items.transform_values do |node|
+        {
+          word_hash: node.word_hash.transform_keys(&:to_s),
+          categories: node.categories.map(&:to_s)
+        }
+      end
+
+      {
+        version: 1,
+        type: 'lsi',
+        auto_rebuild: @auto_rebuild,
+        items: items_data
+      }.to_json
+    end
+
+    # Loads an LSI index from a JSON string created by #to_json.
+    # The index will be rebuilt after loading.
+    #
+    # @rbs (String) -> LSI
+    def self.from_json(json_string)
+      data = JSON.parse(json_string)
+      raise ArgumentError, "Invalid classifier type: #{data['type']}" unless data['type'] == 'lsi'
+
+      # Create instance with auto_rebuild disabled during loading
+      instance = new(auto_rebuild: false)
+
+      # Restore items (categories stay as strings, matching original storage)
+      data['items'].each do |item_key, item_data|
+        word_hash = item_data['word_hash'].transform_keys(&:to_sym)
+        categories = item_data['categories']
+        instance.instance_variable_get(:@items)[item_key] = ContentNode.new(word_hash, *categories)
+        instance.instance_variable_set(:@version, instance.instance_variable_get(:@version) + 1)
+      end
+
+      # Restore auto_rebuild setting and rebuild index
+      instance.auto_rebuild = data['auto_rebuild']
+      instance.build_index
+      instance
+    end
+
+    # Saves the LSI index to a file.
+    #
+    # @rbs (String) -> Integer
+    def save(path)
+      File.write(path, to_json)
+    end
+
+    # Loads an LSI index from a file saved with #save.
+    #
+    # @rbs (String) -> LSI
+    def self.load(path)
+      from_json(File.read(path))
     end
 
     private

@@ -435,4 +435,86 @@ class BayesianTest < Minitest::Test
     refute_in_delta scores1['Spam'], scores2['Spam'], 0.1,
                     'Vocabulary size should affect word probabilities in denominator'
   end
+
+  # Save/Load tests
+
+  def test_to_json
+    @classifier.train_interesting 'good words here'
+    @classifier.train_uninteresting 'bad words there'
+
+    json = @classifier.to_json
+    data = JSON.parse(json)
+
+    assert_equal 1, data['version']
+    assert_equal 'bayes', data['type']
+    assert_includes data['categories'].keys, 'Interesting'
+    assert_includes data['categories'].keys, 'Uninteresting'
+  end
+
+  def test_from_json
+    @classifier.train_interesting 'good words here'
+    @classifier.train_uninteresting 'bad words there'
+
+    json = @classifier.to_json
+    loaded = Classifier::Bayes.from_json(json)
+
+    assert_equal @classifier.categories.sort, loaded.categories.sort
+    assert_equal @classifier.classify('good words'), loaded.classify('good words')
+    assert_equal @classifier.classify('bad words'), loaded.classify('bad words')
+  end
+
+  def test_from_json_invalid_type
+    invalid_json = { version: 1, type: 'invalid' }.to_json
+
+    assert_raises(ArgumentError) { Classifier::Bayes.from_json(invalid_json) }
+  end
+
+  def test_save_and_load
+    @classifier.train_interesting 'good words here'
+    @classifier.train_uninteresting 'bad words there'
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'classifier.json')
+      @classifier.save(path)
+
+      assert File.exist?(path), 'Save should create file'
+
+      loaded = Classifier::Bayes.load(path)
+
+      assert_equal @classifier.categories.sort, loaded.categories.sort
+      assert_equal @classifier.classify('good'), loaded.classify('good')
+    end
+  end
+
+  def test_save_load_preserves_training_state
+    @classifier.train_interesting 'apple banana cherry'
+    @classifier.train_uninteresting 'dog elephant fox'
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'classifier.json')
+      @classifier.save(path)
+      loaded = Classifier::Bayes.load(path)
+
+      # Verify classifications match
+      assert_equal @classifier.classifications('apple'), loaded.classifications('apple')
+      assert_equal @classifier.classifications('dog'), loaded.classifications('dog')
+    end
+  end
+
+  def test_loaded_classifier_can_continue_training
+    @classifier.train_interesting 'initial training'
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'classifier.json')
+      @classifier.save(path)
+      loaded = Classifier::Bayes.load(path)
+
+      # Continue training on loaded classifier
+      loaded.train_interesting 'more interesting content'
+      loaded.train_uninteresting 'boring content here'
+
+      assert_equal 'Interesting', loaded.classify('interesting content')
+      assert_equal 'Uninteresting', loaded.classify('boring content')
+    end
+  end
 end

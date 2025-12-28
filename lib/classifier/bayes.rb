@@ -4,6 +4,7 @@
 # Copyright:: Copyright (c) 2005 Lucas Carlson
 # License::   LGPL
 
+require 'json'
 require 'mutex_m'
 
 module Classifier
@@ -115,6 +116,67 @@ module Classifier
       raise StandardError, 'No classifications available' unless best
 
       best.first.to_s
+    end
+
+    # Serializes the classifier state to a JSON string.
+    # This can be saved to a file and later loaded with Bayes.from_json.
+    #
+    # @rbs () -> String
+    def to_json(*_args)
+      {
+        version: 1,
+        type: 'bayes',
+        categories: @categories.transform_keys(&:to_s).transform_values { |v| v.transform_keys(&:to_s) },
+        total_words: @total_words,
+        category_counts: @category_counts.transform_keys(&:to_s),
+        category_word_count: @category_word_count.transform_keys(&:to_s)
+      }.to_json
+    end
+
+    # Loads a classifier from a JSON string created by #to_json.
+    #
+    # @rbs (String) -> Bayes
+    def self.from_json(json_string)
+      data = JSON.parse(json_string)
+      raise ArgumentError, "Invalid classifier type: #{data['type']}" unless data['type'] == 'bayes'
+
+      # Create instance with no categories (we'll set them directly)
+      instance = allocate
+      instance.instance_variable_set(:@categories, {})
+      instance.instance_variable_set(:@total_words, data['total_words'])
+      instance.instance_variable_set(:@category_counts, Hash.new(0))
+      instance.instance_variable_set(:@category_word_count, Hash.new(0))
+
+      # Restore categories with symbol keys
+      data['categories'].each do |cat_name, words|
+        cat_sym = cat_name.to_sym
+        instance.instance_variable_get(:@categories)[cat_sym] = words.transform_keys(&:to_sym)
+      end
+
+      # Restore counts with symbol keys
+      data['category_counts'].each do |cat_name, count|
+        instance.instance_variable_get(:@category_counts)[cat_name.to_sym] = count
+      end
+
+      data['category_word_count'].each do |cat_name, count|
+        instance.instance_variable_get(:@category_word_count)[cat_name.to_sym] = count
+      end
+
+      instance
+    end
+
+    # Saves the classifier state to a file.
+    #
+    # @rbs (String) -> Integer
+    def save(path)
+      File.write(path, to_json)
+    end
+
+    # Loads a classifier from a file saved with #save.
+    #
+    # @rbs (String) -> Bayes
+    def self.load(path)
+      from_json(File.read(path))
     end
 
     #
