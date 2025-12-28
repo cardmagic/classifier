@@ -600,8 +600,8 @@ class LSITest < Minitest::Test
 
     refute_nil lsi.singular_values
     assert_instance_of Array, lsi.singular_values
-    assert lsi.singular_values.all? { |v| v.is_a?(Numeric) }
-    assert lsi.singular_values.size.positive?
+    assert(lsi.singular_values.all? { |v| v.is_a?(Numeric) })
+    assert_predicate lsi.singular_values.size, :positive?
   end
 
   def test_singular_values_sorted_descending
@@ -663,6 +663,7 @@ class LSITest < Minitest::Test
 
     # Individual percentages should sum to 1
     total_pct = spectrum.sum { |e| e[:percentage] }
+
     assert_in_delta 1.0, total_pct, 0.001
 
     # Cumulative should reach 1.0 at the end
@@ -686,10 +687,10 @@ class LSITest < Minitest::Test
     spectrum = lsi.singular_value_spectrum
 
     # Find how many dimensions capture 75% of variance (the default cutoff)
-    dims_for_75 = spectrum.find_index { |e| e[:cumulative_percentage] >= 0.75 }
+    dims_for_threshold = spectrum.find_index { |e| e[:cumulative_percentage] >= 0.75 }
 
     # This should be usable for tuning decisions
-    refute_nil dims_for_75, 'Should be able to find dimensions for 75% variance'
-    assert dims_for_75 < spectrum.size, 'Some dimensions should be below 75% threshold'
+    refute_nil dims_for_threshold, 'Should be able to find dimensions for 75% variance'
+    assert_operator dims_for_threshold, :<, spectrum.size, 'Some dimensions should be below 75% threshold'
   end
 end

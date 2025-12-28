@@ -499,7 +499,7 @@ module Classifier
     # Validates that cutoff is within the valid range (0, 1) exclusive.
     # @rbs (Float) -> void
     def validate_cutoff!(cutoff)
-      return if cutoff > 0 && cutoff < 1
+      return if cutoff.positive? && cutoff < 1
 
       raise ArgumentError, "cutoff must be between 0 and 1 (exclusive), got #{cutoff}"
     end
