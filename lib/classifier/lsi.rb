@@ -322,7 +322,7 @@ module Classifier
     # find_related function to find related documents, then returns the
     # most obvious category from this list.
     #
-    # cutoff is proportion of documents to consider (0-1 exclusive). Higher = more votes, slower.
+    #
     #
     # @rbs (String, ?Float) ?{ (String) -> String } -> String | Symbol
     def classify(doc, cutoff = 0.30, &block)
