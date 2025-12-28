@@ -503,7 +503,7 @@ class BayesianTest < Minitest::Test
       path = File.join(dir, 'classifier.json')
       @classifier.save(path)
 
-      assert File.exist?(path), 'Save should create file'
+      assert_path_exists path, 'Save should create file'
 
       loaded = Classifier::Bayes.load(path)
 

@@ -370,7 +370,7 @@ module Classifier
     # Only source data (word_hash, categories) is included, not computed vectors.
     # This can be converted to JSON or used directly.
     #
-    # @rbs () -> Hash[Symbol, untyped]
+    # @rbs () -> untyped
     def as_json(*)
       items_data = @items.transform_values do |node|
         {

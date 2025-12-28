@@ -121,7 +121,7 @@ module Classifier
     # Returns a hash representation of the classifier state.
     # This can be converted to JSON or used directly.
     #
-    # @rbs () -> Hash[Symbol, untyped]
+    # @rbs () -> untyped
     def as_json(*)
       {
         version: 1,
@@ -148,28 +148,8 @@ module Classifier
       data = json.is_a?(String) ? JSON.parse(json) : json
       raise ArgumentError, "Invalid classifier type: #{data['type']}" unless data['type'] == 'bayes'
 
-      # Create instance with no categories (we'll set them directly)
       instance = allocate
-      instance.instance_variable_set(:@categories, {})
-      instance.instance_variable_set(:@total_words, data['total_words'])
-      instance.instance_variable_set(:@category_counts, Hash.new(0))
-      instance.instance_variable_set(:@category_word_count, Hash.new(0))
-
-      # Restore categories with symbol keys
-      data['categories'].each do |cat_name, words|
-        cat_sym = cat_name.to_sym
-        instance.instance_variable_get(:@categories)[cat_sym] = words.transform_keys(&:to_sym)
-      end
-
-      # Restore counts with symbol keys
-      data['category_counts'].each do |cat_name, count|
-        instance.instance_variable_get(:@category_counts)[cat_name.to_sym] = count
-      end
-
-      data['category_word_count'].each do |cat_name, count|
-        instance.instance_variable_get(:@category_word_count)[cat_name.to_sym] = count
-      end
-
+      instance.send(:restore_state, data)
       instance
     end
 
@@ -268,6 +248,30 @@ module Classifier
         @categories.delete(category)
         @category_counts.delete(category)
         @category_word_count.delete(category)
+      end
+    end
+
+    private
+
+    # Restores classifier state from a hash (used by from_json)
+    # @rbs (Hash[String, untyped]) -> void
+    def restore_state(data)
+      mu_initialize
+      @categories = {} #: Hash[Symbol, Hash[Symbol, Integer]]
+      @total_words = data['total_words']
+      @category_counts = Hash.new(0) #: Hash[Symbol, Integer]
+      @category_word_count = Hash.new(0) #: Hash[Symbol, Integer]
+
+      data['categories'].each do |cat_name, words|
+        @categories[cat_name.to_sym] = words.transform_keys(&:to_sym)
+      end
+
+      data['category_counts'].each do |cat_name, count|
+        @category_counts[cat_name.to_sym] = count
+      end
+
+      data['category_word_count'].each do |cat_name, count|
+        @category_word_count[cat_name.to_sym] = count
       end
     end
   end
