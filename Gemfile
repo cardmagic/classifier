@@ -8,6 +8,7 @@ gem 'ostruct'
 
 group :test do
   gem 'simplecov', require: false
+  gem 'rantly', require: false
 end
 
 group :development do
