@@ -17,6 +17,10 @@ module Classifier
     # @rbs @category_word_count: Hash[Symbol, Integer]
     # @rbs @cached_training_count: Float?
     # @rbs @cached_vocab_size: Integer?
+    # @rbs @dirty: bool
+    # @rbs @storage: Storage::Base?
+
+    attr_accessor :storage
 
     # The class can be created with one or more categories, each of which will be
     # initialized and given a training method. E.g.,
@@ -31,6 +35,8 @@ module Classifier
       @category_word_count = Hash.new(0)
       @cached_training_count = nil
       @cached_vocab_size = nil
+      @dirty = false
+      @storage = nil
     end
 
     # Provides a general training method for all categories specified in Bayes#new
@@ -46,6 +52,7 @@ module Classifier
       word_hash = text.word_hash
       synchronize do
         invalidate_caches
+        @dirty = true
         @category_counts[category] += 1
         word_hash.each do |word, count|
           @categories[category][word] ||= 0
@@ -70,6 +77,7 @@ module Classifier
       word_hash = text.word_hash
       synchronize do
         invalidate_caches
+        @dirty = true
         @category_counts[category] -= 1
         word_hash.each do |word, count|
           next unless @total_words >= 0
@@ -159,17 +167,81 @@ module Classifier
       instance
     end
 
-    # Saves the classifier state to a file.
+    # Saves the classifier to the configured storage.
+    # Raises ArgumentError if no storage is configured.
     #
-    # @rbs (String) -> Integer
-    def save(path)
-      File.write(path, to_json)
+    # @rbs () -> void
+    def save
+      raise ArgumentError, 'No storage configured. Use save_to_file(path) or set storage=' unless storage
+
+      storage.write(to_json)
+      @dirty = false
     end
 
-    # Loads a classifier from a file saved with #save.
+    # Saves the classifier state to a file (legacy API).
+    #
+    # @rbs (String) -> Integer
+    def save_to_file(path)
+      result = File.write(path, to_json)
+      @dirty = false
+      result
+    end
+
+    # Reloads the classifier from the configured storage.
+    # Raises UnsavedChangesError if there are unsaved changes.
+    # Use reload! to force reload and discard changes.
+    #
+    # @rbs () -> self
+    def reload
+      raise ArgumentError, 'No storage configured' unless storage
+      raise UnsavedChangesError, 'Unsaved changes would be lost. Call save first or use reload!' if @dirty
+
+      data = storage.read
+      raise StorageError, 'No saved state found' unless data
+
+      restore_from_json(data)
+      @dirty = false
+      self
+    end
+
+    # Force reloads the classifier from storage, discarding any unsaved changes.
+    #
+    # @rbs () -> self
+    def reload!
+      raise ArgumentError, 'No storage configured' unless storage
+
+      data = storage.read
+      raise StorageError, 'No saved state found' unless data
+
+      restore_from_json(data)
+      @dirty = false
+      self
+    end
+
+    # Returns true if there are unsaved changes.
+    #
+    # @rbs () -> bool
+    def dirty?
+      @dirty
+    end
+
+    # Loads a classifier from the configured storage.
+    # The storage is set on the returned instance.
+    #
+    # @rbs (storage: Storage::Base) -> Bayes
+    def self.load(storage:)
+      data = storage.read
+      raise StorageError, 'No saved state found' unless data
+
+      instance = from_json(data)
+      instance.storage = storage
+      instance
+    end
+
+    # Loads a classifier from a file (legacy API).
     #
     # @rbs (String) -> Bayes
-    def self.load(path)
+    def self.load_from_file(path)
       from_json(File.read(path))
     end
 
@@ -219,6 +291,7 @@ module Classifier
     def add_category(category)
       synchronize do
         invalidate_caches
+        @dirty = true
         @categories[category.prepare_category_name] = {}
       end
     end
@@ -228,16 +301,17 @@ module Classifier
     # Custom marshal serialization to exclude mutex state
     # @rbs () -> Array[untyped]
     def marshal_dump
-      [@categories, @total_words, @category_counts, @category_word_count]
+      [@categories, @total_words, @category_counts, @category_word_count, @dirty]
     end
 
     # Custom marshal deserialization to recreate mutex
     # @rbs (Array[untyped]) -> void
     def marshal_load(data)
       mu_initialize
-      @categories, @total_words, @category_counts, @category_word_count = data
+      @categories, @total_words, @category_counts, @category_word_count, @dirty = data
       @cached_training_count = nil
       @cached_vocab_size = nil
+      @storage = nil
     end
 
     # Allows you to remove categories from the classifier.
@@ -255,6 +329,7 @@ module Classifier
         raise StandardError, "No such category: #{category}" unless @categories.key?(category)
 
         invalidate_caches
+        @dirty = true
         @total_words -= @category_word_count[category].to_i
 
         @categories.delete(category)
@@ -264,6 +339,17 @@ module Classifier
     end
 
     private
+
+    # Restores classifier state from a JSON string (used by reload)
+    # @rbs (String) -> void
+    def restore_from_json(json)
+      data = JSON.parse(json)
+      raise ArgumentError, "Invalid classifier type: #{data['type']}" unless data['type'] == 'bayes'
+
+      synchronize do
+        restore_state(data)
+      end
+    end
 
     # Restores classifier state from a hash (used by from_json)
     # @rbs (Hash[String, untyped]) -> void
@@ -275,6 +361,8 @@ module Classifier
       @category_word_count = Hash.new(0) #: Hash[Symbol, Integer]
       @cached_training_count = nil
       @cached_vocab_size = nil
+      @dirty = false
+      @storage = nil
 
       data['categories'].each do |cat_name, words|
         @categories[cat_name.to_sym] = words.transform_keys(&:to_sym)

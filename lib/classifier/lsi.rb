@@ -72,9 +72,11 @@ module Classifier
     # @rbs @version: Integer
     # @rbs @built_at_version: Integer
     # @rbs @singular_values: Array[Float]?
+    # @rbs @dirty: bool
+    # @rbs @storage: Storage::Base?
 
     attr_reader :word_list, :singular_values
-    attr_accessor :auto_rebuild
+    attr_accessor :auto_rebuild, :storage
 
     # Create a fresh index.
     # If you want to call #build_index manually, use
@@ -88,6 +90,8 @@ module Classifier
       @items = {}
       @version = 0
       @built_at_version = -1
+      @dirty = false
+      @storage = nil
     end
 
     # Returns true if the index needs to be rebuilt.  The index needs
@@ -137,6 +141,7 @@ module Classifier
       synchronize do
         @items[item] = ContentNode.new(clean_word_hash, *categories)
         @version += 1
+        @dirty = true
       end
       build_index if @auto_rebuild
     end
@@ -166,12 +171,15 @@ module Classifier
     #
     # @rbs (String) -> void
     def remove_item(item)
-      synchronize do
-        return unless @items.key?(item)
+      removed = synchronize do
+        next false unless @items.key?(item)
 
         @items.delete(item)
         @version += 1
+        @dirty = true
+        true
       end
+      build_index if removed && @auto_rebuild
     end
 
     # Returns an array of items that are indexed.
@@ -380,14 +388,15 @@ module Classifier
     # Custom marshal serialization to exclude mutex state
     # @rbs () -> Array[untyped]
     def marshal_dump
-      [@auto_rebuild, @word_list, @items, @version, @built_at_version]
+      [@auto_rebuild, @word_list, @items, @version, @built_at_version, @dirty]
     end
 
     # Custom marshal deserialization to recreate mutex
     # @rbs (Array[untyped]) -> void
     def marshal_load(data)
       mu_initialize
-      @auto_rebuild, @word_list, @items, @version, @built_at_version = data
+      @auto_rebuild, @word_list, @items, @version, @built_at_version, @dirty = data
+      @storage = nil
     end
 
     # Returns a hash representation of the LSI index.
@@ -445,21 +454,112 @@ module Classifier
       instance
     end
 
-    # Saves the LSI index to a file.
+    # Saves the LSI index to the configured storage.
+    # Raises ArgumentError if no storage is configured.
     #
-    # @rbs (String) -> Integer
-    def save(path)
-      File.write(path, to_json)
+    # @rbs () -> void
+    def save
+      raise ArgumentError, 'No storage configured. Use save_to_file(path) or set storage=' unless storage
+
+      storage.write(to_json)
+      @dirty = false
     end
 
-    # Loads an LSI index from a file saved with #save.
+    # Saves the LSI index to a file (legacy API).
+    #
+    # @rbs (String) -> Integer
+    def save_to_file(path)
+      result = File.write(path, to_json)
+      @dirty = false
+      result
+    end
+
+    # Reloads the LSI index from the configured storage.
+    # Raises UnsavedChangesError if there are unsaved changes.
+    # Use reload! to force reload and discard changes.
+    #
+    # @rbs () -> self
+    def reload
+      raise ArgumentError, 'No storage configured' unless storage
+      raise UnsavedChangesError, 'Unsaved changes would be lost. Call save first or use reload!' if @dirty
+
+      data = storage.read
+      raise StorageError, 'No saved state found' unless data
+
+      restore_from_json(data)
+      @dirty = false
+      self
+    end
+
+    # Force reloads the LSI index from storage, discarding any unsaved changes.
+    #
+    # @rbs () -> self
+    def reload!
+      raise ArgumentError, 'No storage configured' unless storage
+
+      data = storage.read
+      raise StorageError, 'No saved state found' unless data
+
+      restore_from_json(data)
+      @dirty = false
+      self
+    end
+
+    # Returns true if there are unsaved changes.
+    #
+    # @rbs () -> bool
+    def dirty?
+      @dirty
+    end
+
+    # Loads an LSI index from the configured storage.
+    # The storage is set on the returned instance.
+    #
+    # @rbs (storage: Storage::Base) -> LSI
+    def self.load(storage:)
+      data = storage.read
+      raise StorageError, 'No saved state found' unless data
+
+      instance = from_json(data)
+      instance.storage = storage
+      instance
+    end
+
+    # Loads an LSI index from a file (legacy API).
     #
     # @rbs (String) -> LSI
-    def self.load(path)
+    def self.load_from_file(path)
       from_json(File.read(path))
     end
 
     private
+
+    # Restores LSI state from a JSON string (used by reload)
+    # @rbs (String) -> void
+    def restore_from_json(json)
+      data = JSON.parse(json)
+      raise ArgumentError, "Invalid classifier type: #{data['type']}" unless data['type'] == 'lsi'
+
+      synchronize do
+        # Recreate the items
+        @items = {}
+        data['items'].each do |item_key, item_data|
+          word_hash = item_data['word_hash'].transform_keys(&:to_sym)
+          categories = item_data['categories']
+          @items[item_key] = ContentNode.new(word_hash, *categories)
+        end
+
+        # Restore settings
+        @auto_rebuild = data['auto_rebuild']
+        @version += 1
+        @built_at_version = -1
+        @word_list = WordList.new
+        @dirty = false
+      end
+
+      # Rebuild the index
+      build_index
+    end
 
     # @rbs (Float) -> void
     def validate_cutoff!(cutoff)

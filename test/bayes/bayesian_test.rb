@@ -501,11 +501,11 @@ class BayesianTest < Minitest::Test
 
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'classifier.json')
-      @classifier.save(path)
+      @classifier.save_to_file(path)
 
       assert_path_exists path, 'Save should create file'
 
-      loaded = Classifier::Bayes.load(path)
+      loaded = Classifier::Bayes.load_from_file(path)
 
       assert_equal @classifier.categories.sort, loaded.categories.sort
       assert_equal @classifier.classify('good'), loaded.classify('good')
@@ -518,8 +518,8 @@ class BayesianTest < Minitest::Test
 
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'classifier.json')
-      @classifier.save(path)
-      loaded = Classifier::Bayes.load(path)
+      @classifier.save_to_file(path)
+      loaded = Classifier::Bayes.load_from_file(path)
 
       # Verify classifications match
       assert_equal @classifier.classifications('apple'), loaded.classifications('apple')
@@ -532,8 +532,8 @@ class BayesianTest < Minitest::Test
 
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'classifier.json')
-      @classifier.save(path)
-      loaded = Classifier::Bayes.load(path)
+      @classifier.save_to_file(path)
+      loaded = Classifier::Bayes.load_from_file(path)
 
       # Continue training on loaded classifier
       loaded.train_interesting 'more interesting content'
