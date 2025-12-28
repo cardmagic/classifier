@@ -60,7 +60,7 @@ Metrics/ClassLength:
   Max: 250
   Exclude:
     - 'test/**/*'
-    - 'lib/classifier/lsi.rb' # LSI is inherently complex with SVD, indexing, and introspection
+    - 'lib/classifier/lsi.rb'
 
 # SV_decomp is a standard algorithm name
 Naming/MethodName:
