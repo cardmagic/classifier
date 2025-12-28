@@ -198,7 +198,7 @@ module Classifier
     # A value of 1 for cutoff means that no semantic analysis will take place,
     # turning the LSI class into a simple vector search engine.
     #
-    # Use #singular_value_spectrum after building to choose optimal cutoff.
+    #
     #
     # @rbs (?Float) -> void
     def build_index(cutoff = 0.75)
