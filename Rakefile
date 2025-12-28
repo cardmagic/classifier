@@ -67,7 +67,7 @@ task :publish do
 end
 
 # C Code Coverage tasks
-namespace :coverage do
+namespace :coverage do # rubocop:disable Metrics/BlockLength
   desc 'Clean C coverage data files'
   task :clean do
     FileUtils.rm_f(Dir.glob('ext/classifier/**/*.gcda'))
@@ -86,7 +86,7 @@ namespace :coverage do
   end
 
   desc 'Generate C coverage report using lcov'
-  task :report do
+  task :report do # rubocop:disable Metrics/BlockLength
     project_root = File.expand_path(__dir__)
     ext_dir = File.join(project_root, 'ext/classifier')
     # Find the directory containing .gcda files (build directory varies by platform/Ruby version)

@@ -171,13 +171,15 @@ module Classifier
     #
     # @rbs (String) -> void
     def remove_item(item)
-      synchronize do
-        return unless @items.key?(item)
+      removed = synchronize do
+        next false unless @items.key?(item)
 
         @items.delete(item)
         @version += 1
         @dirty = true
+        true
       end
+      build_index if removed && @auto_rebuild
     end
 
     # Returns an array of items that are indexed.
