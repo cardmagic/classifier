@@ -4,8 +4,12 @@
 # Copyright:: Copyright (c) 2005 Lucas Carlson
 # License::   LGPL
 
+require 'mutex_m'
+
 module Classifier
   class Bayes
+    include Mutex_m
+
     # @rbs @categories: Hash[Symbol, Hash[Symbol, Integer]]
     # @rbs @total_words: Integer
     # @rbs @category_counts: Hash[Symbol, Integer]
@@ -16,6 +20,7 @@ module Classifier
     #      b = Classifier::Bayes.new 'Interesting', 'Uninteresting', 'Spam'
     # @rbs (*String | Symbol) -> void
     def initialize(*categories)
+      super()
       @categories = {}
       categories.each { |category| @categories[category.prepare_category_name] = {} }
       @total_words = 0
@@ -33,12 +38,15 @@ module Classifier
     # @rbs (String | Symbol, String) -> void
     def train(category, text)
       category = category.prepare_category_name
-      @category_counts[category] += 1
-      text.word_hash.each do |word, count|
-        @categories[category][word] ||= 0
-        @categories[category][word] += count
-        @total_words += count
-        @category_word_count[category] += count
+      word_hash = text.word_hash
+      synchronize do
+        @category_counts[category] += 1
+        word_hash.each do |word, count|
+          @categories[category][word] ||= 0
+          @categories[category][word] += count
+          @total_words += count
+          @category_word_count[category] += count
+        end
       end
     end
 
@@ -53,19 +61,22 @@ module Classifier
     # @rbs (String | Symbol, String) -> void
     def untrain(category, text)
       category = category.prepare_category_name
-      @category_counts[category] -= 1
-      text.word_hash.each do |word, count|
-        next unless @total_words >= 0
+      word_hash = text.word_hash
+      synchronize do
+        @category_counts[category] -= 1
+        word_hash.each do |word, count|
+          next unless @total_words >= 0
 
-        orig = @categories[category][word] || 0
-        @categories[category][word] ||= 0
-        @categories[category][word] -= count
-        if @categories[category][word] <= 0
-          @categories[category].delete(word)
-          count = orig
+          orig = @categories[category][word] || 0
+          @categories[category][word] ||= 0
+          @categories[category][word] -= count
+          if @categories[category][word] <= 0
+            @categories[category].delete(word)
+            count = orig
+          end
+          @category_word_count[category] -= count if @category_word_count[category] >= count
+          @total_words -= count
         end
-        @category_word_count[category] -= count if @category_word_count[category] >= count
-        @total_words -= count
       end
     end
 
@@ -77,17 +88,19 @@ module Classifier
     # @rbs (String) -> Hash[String, Float]
     def classifications(text)
       words = text.word_hash.keys
-      training_count = @category_counts.values.sum.to_f
-      vocab_size = [@categories.values.flat_map(&:keys).uniq.size, 1].max
+      synchronize do
+        training_count = @category_counts.values.sum.to_f
+        vocab_size = [@categories.values.flat_map(&:keys).uniq.size, 1].max
 
-      @categories.to_h do |category, category_words|
-        smoothed_total = ((@category_word_count[category] || 0) + vocab_size).to_f
+        @categories.to_h do |category, category_words|
+          smoothed_total = ((@category_word_count[category] || 0) + vocab_size).to_f
 
-        # Laplace smoothing: P(word|category) = (count + α) / (total + α * V)
-        word_score = words.sum { |w| Math.log(((category_words[w] || 0) + 1) / smoothed_total) }
-        prior_score = Math.log((@category_counts[category] || 0.1) / training_count)
+          # Laplace smoothing: P(word|category) = (count + α) / (total + α * V)
+          word_score = words.sum { |w| Math.log(((category_words[w] || 0) + 1) / smoothed_total) }
+          prior_score = Math.log((@category_counts[category] || 0.1) / training_count)
 
-        [category.to_s, word_score + prior_score]
+          [category.to_s, word_score + prior_score]
+        end
       end
     end
 
@@ -134,7 +147,7 @@ module Classifier
     #
     # @rbs () -> Array[String]
     def categories
-      @categories.keys.collect(&:to_s)
+      synchronize { @categories.keys.collect(&:to_s) }
     end
 
     # Allows you to add categories to the classifier.
@@ -148,10 +161,23 @@ module Classifier
     #
     # @rbs (String | Symbol) -> Hash[Symbol, Integer]
     def add_category(category)
-      @categories[category.prepare_category_name] = {}
+      synchronize { @categories[category.prepare_category_name] = {} }
     end
 
     alias append_category add_category
+
+    # Custom marshal serialization to exclude mutex state
+    # @rbs () -> Array[untyped]
+    def marshal_dump
+      [@categories, @total_words, @category_counts, @category_word_count]
+    end
+
+    # Custom marshal deserialization to recreate mutex
+    # @rbs (Array[untyped]) -> void
+    def marshal_load(data)
+      mu_initialize
+      @categories, @total_words, @category_counts, @category_word_count = data
+    end
 
     # Allows you to remove categories from the classifier.
     # For example:
@@ -164,13 +190,15 @@ module Classifier
     # @rbs (String | Symbol) -> void
     def remove_category(category)
       category = category.prepare_category_name
-      raise StandardError, "No such category: #{category}" unless @categories.key?(category)
+      synchronize do
+        raise StandardError, "No such category: #{category}" unless @categories.key?(category)
 
-      @total_words -= @category_word_count[category].to_i
+        @total_words -= @category_word_count[category].to_i
 
-      @categories.delete(category)
-      @category_counts.delete(category)
-      @category_word_count.delete(category)
+        @categories.delete(category)
+        @category_counts.delete(category)
+        @category_word_count.delete(category)
+      end
     end
   end
 end

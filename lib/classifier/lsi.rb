@@ -53,6 +53,7 @@ rescue LoadError
   require 'classifier/extensions/vector'
 end
 
+require 'mutex_m'
 require 'classifier/lsi/word_list'
 require 'classifier/lsi/content_node'
 require 'classifier/lsi/summary'
@@ -62,6 +63,8 @@ module Classifier
   # data based on underlying semantic relations. For more information on the algorithms used,
   # please consult Wikipedia[http://en.wikipedia.org/wiki/Latent_Semantic_Indexing].
   class LSI
+    include Mutex_m
+
     # @rbs @auto_rebuild: bool
     # @rbs @word_list: WordList
     # @rbs @items: Hash[untyped, ContentNode]
@@ -77,6 +80,7 @@ module Classifier
     #
     # @rbs (?Hash[Symbol, untyped]) -> void
     def initialize(options = {})
+      super()
       @auto_rebuild = true unless options[:auto_rebuild] == false
       @word_list = WordList.new
       @items = {}
@@ -90,7 +94,7 @@ module Classifier
     #
     # @rbs () -> bool
     def needs_rebuild?
-      (@items.keys.size > 1) && (@version != @built_at_version)
+      synchronize { (@items.keys.size > 1) && (@version != @built_at_version) }
     end
 
     # Adds an item to the index. item is assumed to be a string, but
@@ -109,8 +113,10 @@ module Classifier
     # @rbs (String, *String | Symbol) ?{ (String) -> String } -> void
     def add_item(item, *categories, &block)
       clean_word_hash = block ? block.call(item).clean_word_hash : item.to_s.clean_word_hash
-      @items[item] = ContentNode.new(clean_word_hash, *categories)
-      @version += 1
+      synchronize do
+        @items[item] = ContentNode.new(clean_word_hash, *categories)
+        @version += 1
+      end
       build_index if @auto_rebuild
     end
 
@@ -128,25 +134,29 @@ module Classifier
     #
     # @rbs (String) -> Array[String | Symbol]
     def categories_for(item)
-      return [] unless @items[item]
+      synchronize do
+        return [] unless @items[item]
 
-      @items[item].categories
+        @items[item].categories
+      end
     end
 
     # Removes an item from the database, if it is indexed.
     #
     # @rbs (String) -> void
     def remove_item(item)
-      return unless @items.key?(item)
+      synchronize do
+        return unless @items.key?(item)
 
-      @items.delete(item)
-      @version += 1
+        @items.delete(item)
+        @version += 1
+      end
     end
 
     # Returns an array of items that are indexed.
     # @rbs () -> Array[untyped]
     def items
-      @items.keys
+      synchronize { @items.keys }
     end
 
     # This function rebuilds the index if needs_rebuild? returns true.
@@ -166,40 +176,42 @@ module Classifier
     #
     # @rbs (?Float) -> void
     def build_index(cutoff = 0.75)
-      return unless needs_rebuild?
+      synchronize do
+        return unless needs_rebuild_unlocked?
 
-      make_word_list
+        make_word_list
 
-      doc_list = @items.values
-      tda = doc_list.collect { |node| node.raw_vector_with(@word_list) }
+        doc_list = @items.values
+        tda = doc_list.collect { |node| node.raw_vector_with(@word_list) }
 
-      if self.class.native_available?
-        # Convert vectors to arrays for matrix construction
-        tda_arrays = tda.map { |v| v.respond_to?(:to_a) ? v.to_a : v }
-        tdm = self.class.matrix_class.alloc(*tda_arrays).trans
-        ntdm = build_reduced_matrix(tdm, cutoff)
+        if self.class.native_available?
+          # Convert vectors to arrays for matrix construction
+          tda_arrays = tda.map { |v| v.respond_to?(:to_a) ? v.to_a : v }
+          tdm = self.class.matrix_class.alloc(*tda_arrays).trans
+          ntdm = build_reduced_matrix(tdm, cutoff)
 
-        ntdm.size[1].times do |col|
-          vec = self.class.vector_class.alloc(ntdm.column(col).to_a).row
-          doc_list[col].lsi_vector = vec
-          doc_list[col].lsi_norm = vec.normalize
+          ntdm.size[1].times do |col|
+            vec = self.class.vector_class.alloc(ntdm.column(col).to_a).row
+            doc_list[col].lsi_vector = vec
+            doc_list[col].lsi_norm = vec.normalize
+          end
+        else
+          tdm = Matrix.rows(tda).trans
+          ntdm = build_reduced_matrix(tdm, cutoff)
+
+          ntdm.column_size.times do |col|
+            next unless doc_list[col]
+
+            column = ntdm.column(col)
+            next unless column
+
+            doc_list[col].lsi_vector = column
+            doc_list[col].lsi_norm = column.normalize
+          end
         end
-      else
-        tdm = Matrix.rows(tda).trans
-        ntdm = build_reduced_matrix(tdm, cutoff)
 
-        ntdm.column_size.times do |col|
-          next unless doc_list[col]
-
-          column = ntdm.column(col)
-          next unless column
-
-          doc_list[col].lsi_vector = column
-          doc_list[col].lsi_norm = column.normalize
-        end
+        @built_at_version = @version
       end
-
-      @built_at_version = @version
     end
 
     # This method returns max_chunks entries, ordered by their average semantic rating.
@@ -213,12 +225,14 @@ module Classifier
     #
     # @rbs (?Integer) -> Array[String]
     def highest_relative_content(max_chunks = 10)
-      return [] if needs_rebuild?
+      synchronize do
+        return [] if needs_rebuild_unlocked?
 
-      avg_density = {}
-      @items.each_key { |x| avg_density[x] = proximity_array_for_content(x).sum { |pair| pair[1] } }
+        avg_density = {}
+        @items.each_key { |x| avg_density[x] = proximity_array_for_content_unlocked(x).sum { |pair| pair[1] } }
 
-      avg_density.keys.sort_by { |x| avg_density[x] }.reverse[0..(max_chunks - 1)].map
+        avg_density.keys.sort_by { |x| avg_density[x] }.reverse[0..(max_chunks - 1)].map
+      end
     end
 
     # This function is the primitive that find_related and classify
@@ -235,20 +249,8 @@ module Classifier
     # text data. See add_item for examples of how this works.
     #
     # @rbs (String) ?{ (String) -> String } -> Array[[String, Float]]
-    def proximity_array_for_content(doc, &)
-      return [] if needs_rebuild?
-
-      content_node = node_for_content(doc, &)
-      result =
-        @items.keys.collect do |item|
-          val = if self.class.native_available?
-                  content_node.search_vector * @items[item].search_vector.col
-                else
-                  (Matrix[content_node.search_vector] * @items[item].search_vector)[0]
-                end
-          [item, val]
-        end
-      result.sort_by { |x| x[1] }.reverse
+    def proximity_array_for_content(doc, &block)
+      synchronize { proximity_array_for_content_unlocked(doc, &block) }
     end
 
     # Similar to proximity_array_for_content, this function takes similar
@@ -258,20 +260,8 @@ module Classifier
     # the text you're working with. search uses this primitive.
     #
     # @rbs (String) ?{ (String) -> String } -> Array[[String, Float]]
-    def proximity_norms_for_content(doc, &)
-      return [] if needs_rebuild?
-
-      content_node = node_for_content(doc, &)
-      result =
-        @items.keys.collect do |item|
-          val = if self.class.native_available?
-                  content_node.search_norm * @items[item].search_norm.col
-                else
-                  (Matrix[content_node.search_norm] * @items[item].search_norm)[0]
-                end
-          [item, val]
-        end
-      result.sort_by { |x| x[1] }.reverse
+    def proximity_norms_for_content(doc, &block)
+      synchronize { proximity_norms_for_content_unlocked(doc, &block) }
     end
 
     # This function allows for text-based search of your index. Unlike other functions
@@ -284,11 +274,13 @@ module Classifier
     #
     # @rbs (String, ?Integer) -> Array[String]
     def search(string, max_nearest = 3)
-      return [] if needs_rebuild?
+      synchronize do
+        return [] if needs_rebuild_unlocked?
 
-      carry = proximity_norms_for_content(string)
-      result = carry.collect { |x| x[0] }
-      result[0..(max_nearest - 1)]
+        carry = proximity_norms_for_content_unlocked(string)
+        result = carry.collect { |x| x[0] }
+        result[0..(max_nearest - 1)]
+      end
     end
 
     # This function takes content and finds other documents
@@ -303,10 +295,12 @@ module Classifier
     #
     # @rbs (String, ?Integer) ?{ (String) -> String } -> Array[String]
     def find_related(doc, max_nearest = 3, &block)
-      carry =
-        proximity_array_for_content(doc, &block).reject { |pair| pair[0] == doc }
-      result = carry.collect { |x| x[0] }
-      result[0..(max_nearest - 1)]
+      synchronize do
+        carry =
+          proximity_array_for_content_unlocked(doc, &block).reject { |pair| pair[0] == doc }
+        result = carry.collect { |x| x[0] }
+        result[0..(max_nearest - 1)]
+      end
     end
 
     # This function uses a voting system to categorize documents, based on
@@ -319,27 +313,18 @@ module Classifier
     # what category the document is in. This may not always make sense.
     #
     # @rbs (String, ?Float) ?{ (String) -> String } -> String | Symbol
-    def classify(doc, cutoff = 0.30, &)
-      votes = vote(doc, cutoff, &)
+    def classify(doc, cutoff = 0.30, &block)
+      synchronize do
+        votes = vote_unlocked(doc, cutoff, &block)
 
-      ranking = votes.keys.sort_by { |x| votes[x] }
-      ranking[-1]
+        ranking = votes.keys.sort_by { |x| votes[x] }
+        ranking[-1]
+      end
     end
 
     # @rbs (String, ?Float) ?{ (String) -> String } -> Hash[String | Symbol, Float]
-    def vote(doc, cutoff = 0.30, &)
-      icutoff = (@items.size * cutoff).round
-      carry = proximity_array_for_content(doc, &)
-      carry = carry[0..(icutoff - 1)]
-      votes = {}
-      carry.each do |pair|
-        categories = @items[pair[0]].categories
-        categories.each do |category|
-          votes[category] ||= 0.0
-          votes[category] += pair[1]
-        end
-      end
-      votes
+    def vote(doc, cutoff = 0.30, &block)
+      synchronize { vote_unlocked(doc, cutoff, &block) }
     end
 
     # Returns the same category as classify() but also returns
@@ -354,15 +339,17 @@ module Classifier
     #
     # See classify() for argument docs
     # @rbs (String, ?Float) ?{ (String) -> String } -> [String | Symbol | nil, Float?]
-    def classify_with_confidence(doc, cutoff = 0.30, &)
-      votes = vote(doc, cutoff, &)
-      votes_sum = votes.values.sum
-      return [nil, nil] if votes_sum.zero?
+    def classify_with_confidence(doc, cutoff = 0.30, &block)
+      synchronize do
+        votes = vote_unlocked(doc, cutoff, &block)
+        votes_sum = votes.values.sum
+        return [nil, nil] if votes_sum.zero?
 
-      ranking = votes.keys.sort_by { |x| votes[x] }
-      winner = ranking[-1]
-      vote_share = votes[winner] / votes_sum.to_f
-      [winner, vote_share]
+        ranking = votes.keys.sort_by { |x| votes[x] }
+        winner = ranking[-1]
+        vote_share = votes[winner] / votes_sum.to_f
+        [winner, vote_share]
+      end
     end
 
     # Prototype, only works on indexed documents.
@@ -370,14 +357,99 @@ module Classifier
     # it's supposed to.
     # @rbs (String, ?Integer) -> Array[Symbol]
     def highest_ranked_stems(doc, count = 3)
-      raise 'Requested stem ranking on non-indexed content!' unless @items[doc]
+      synchronize do
+        raise 'Requested stem ranking on non-indexed content!' unless @items[doc]
 
-      arr = node_for_content(doc).lsi_vector.to_a
-      top_n = arr.sort.reverse[0..(count - 1)]
-      top_n.collect { |x| @word_list.word_for_index(arr.index(x)) }
+        arr = node_for_content_unlocked(doc).lsi_vector.to_a
+        top_n = arr.sort.reverse[0..(count - 1)]
+        top_n.collect { |x| @word_list.word_for_index(arr.index(x)) }
+      end
+    end
+
+    # Custom marshal serialization to exclude mutex state
+    # @rbs () -> Array[untyped]
+    def marshal_dump
+      [@auto_rebuild, @word_list, @items, @version, @built_at_version]
+    end
+
+    # Custom marshal deserialization to recreate mutex
+    # @rbs (Array[untyped]) -> void
+    def marshal_load(data)
+      mu_initialize
+      @auto_rebuild, @word_list, @items, @version, @built_at_version = data
     end
 
     private
+
+    # Unlocked version of needs_rebuild? for internal use when lock is already held
+    # @rbs () -> bool
+    def needs_rebuild_unlocked?
+      (@items.keys.size > 1) && (@version != @built_at_version)
+    end
+
+    # Unlocked version of proximity_array_for_content for internal use
+    # @rbs (String) ?{ (String) -> String } -> Array[[String, Float]]
+    def proximity_array_for_content_unlocked(doc, &block)
+      return [] if needs_rebuild_unlocked?
+
+      content_node = node_for_content_unlocked(doc, &block)
+      result =
+        @items.keys.collect do |item|
+          val = if self.class.native_available?
+                  content_node.search_vector * @items[item].search_vector.col
+                else
+                  (Matrix[content_node.search_vector] * @items[item].search_vector)[0]
+                end
+          [item, val]
+        end
+      result.sort_by { |x| x[1] }.reverse
+    end
+
+    # Unlocked version of proximity_norms_for_content for internal use
+    # @rbs (String) ?{ (String) -> String } -> Array[[String, Float]]
+    def proximity_norms_for_content_unlocked(doc, &block)
+      return [] if needs_rebuild_unlocked?
+
+      content_node = node_for_content_unlocked(doc, &block)
+      result =
+        @items.keys.collect do |item|
+          val = if self.class.native_available?
+                  content_node.search_norm * @items[item].search_norm.col
+                else
+                  (Matrix[content_node.search_norm] * @items[item].search_norm)[0]
+                end
+          [item, val]
+        end
+      result.sort_by { |x| x[1] }.reverse
+    end
+
+    # Unlocked version of vote for internal use
+    # @rbs (String, ?Float) ?{ (String) -> String } -> Hash[String | Symbol, Float]
+    def vote_unlocked(doc, cutoff = 0.30, &block)
+      icutoff = (@items.size * cutoff).round
+      carry = proximity_array_for_content_unlocked(doc, &block)
+      carry = carry[0..(icutoff - 1)]
+      votes = {}
+      carry.each do |pair|
+        categories = @items[pair[0]].categories
+        categories.each do |category|
+          votes[category] ||= 0.0
+          votes[category] += pair[1]
+        end
+      end
+      votes
+    end
+
+    # Unlocked version of node_for_content for internal use
+    # @rbs (String) ?{ (String) -> String } -> ContentNode
+    def node_for_content_unlocked(item, &block)
+      return @items[item] if @items[item]
+
+      clean_word_hash = block ? block.call(item).clean_word_hash : item.to_s.clean_word_hash
+      cn = ContentNode.new(clean_word_hash, &block)
+      cn.raw_vector_with(@word_list) unless needs_rebuild_unlocked?
+      cn
+    end
 
     # @rbs (untyped, ?Float) -> untyped
     def build_reduced_matrix(matrix, cutoff = 0.75)
@@ -397,16 +469,6 @@ module Classifier
       result = result.trans if result.row_size != matrix.row_size
 
       result
-    end
-
-    # @rbs (String) ?{ (String) -> String } -> ContentNode
-    def node_for_content(item, &block)
-      return @items[item] if @items[item]
-
-      clean_word_hash = block ? block.call(item).clean_word_hash : item.to_s.clean_word_hash
-      cn = ContentNode.new(clean_word_hash, &block)
-      cn.raw_vector_with(@word_list) unless needs_rebuild?
-      cn
     end
 
     # @rbs () -> void
