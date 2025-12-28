@@ -6,6 +6,8 @@
 
 A Ruby library for text classification using Bayesian and Latent Semantic Indexing (LSI) algorithms.
 
+**[Documentation](https://rubyclassifier.com/docs)** · **[Tutorials](https://rubyclassifier.com/docs/tutorials)** · **[Guides](https://rubyclassifier.com/docs/guides)**
+
 ## Table of Contents
 
 - [Installation](#installation)
@@ -112,8 +114,8 @@ m.system.classify "new scientific discovery"
 
 ### Learn More
 
-- [Bayesian Filtering Explained](http://www.process.com/precisemail/bayesian_filtering.htm)
-- [Wikipedia: Bayesian Filtering](http://en.wikipedia.org/wiki/Bayesian_filtering)
+- [Bayes Basics Guide](https://rubyclassifier.com/docs/guides/bayes/basics) - In-depth documentation
+- [Build a Spam Filter Tutorial](https://rubyclassifier.com/docs/tutorials/spam-filter) - Step-by-step guide
 - [Paul Graham: A Plan for Spam](http://www.paulgraham.com/spam.html)
 
 ## LSI (Latent Semantic Indexing)
@@ -156,8 +158,8 @@ lsi.search "programming", 3
 
 ### Learn More
 
+- [LSI Basics Guide](https://rubyclassifier.com/docs/guides/lsi/basics) - In-depth documentation
 - [Wikipedia: Latent Semantic Analysis](http://en.wikipedia.org/wiki/Latent_semantic_analysis)
-- [C2 Wiki: Latent Semantic Indexing](http://www.c2.com/cgi/wiki?LatentSemanticIndexing)
 
 ## Performance
 
