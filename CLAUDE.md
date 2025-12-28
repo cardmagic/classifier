@@ -12,27 +12,27 @@ Ruby gem providing text classification via two algorithms:
 
 ```bash
 # Compile native C extension
-rake compile
+bundle exec rake compile
 
 # Run all tests (compiles first)
-rake test
+bundle exec rake test
 
 # Run a single test file
 ruby -Ilib test/bayes/bayesian_test.rb
 ruby -Ilib test/lsi/lsi_test.rb
 
 # Run tests with pure Ruby (no native extension)
-NATIVE_VECTOR=true rake test
+NATIVE_VECTOR=true bundle exec rake test
 
 # Run benchmarks
-rake benchmark
-rake benchmark:compare
+bundle exec rake benchmark
+bundle exec rake benchmark:compare
 
 # Interactive console
-rake console
+bundle exec rake console
 
 # Generate documentation
-rake doc
+bundle exec rake doc
 ```
 
 ## Architecture
@@ -67,7 +67,7 @@ LSI uses a native C extension for fast linear algebra operations:
 - Jacobi SVD implementation for singular value decomposition
 
 Check current backend: `Classifier::LSI.backend` returns `:native` or `:ruby`
-Force pure Ruby: `NATIVE_VECTOR=true rake test`
+Force pure Ruby: `NATIVE_VECTOR=true bundle exec rake test`
 
 ### Content Nodes (`lib/classifier/lsi/content_node.rb`)
 

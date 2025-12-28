@@ -15,6 +15,8 @@ module Classifier
     # @rbs @total_words: Integer
     # @rbs @category_counts: Hash[Symbol, Integer]
     # @rbs @category_word_count: Hash[Symbol, Integer]
+    # @rbs @cached_training_count: Float?
+    # @rbs @cached_vocab_size: Integer?
 
     # The class can be created with one or more categories, each of which will be
     # initialized and given a training method. E.g.,
@@ -27,6 +29,8 @@ module Classifier
       @total_words = 0
       @category_counts = Hash.new(0)
       @category_word_count = Hash.new(0)
+      @cached_training_count = nil
+      @cached_vocab_size = nil
     end
 
     # Provides a general training method for all categories specified in Bayes#new
@@ -41,6 +45,7 @@ module Classifier
       category = category.prepare_category_name
       word_hash = text.word_hash
       synchronize do
+        invalidate_caches
         @category_counts[category] += 1
         word_hash.each do |word, count|
           @categories[category][word] ||= 0
@@ -64,6 +69,7 @@ module Classifier
       category = category.prepare_category_name
       word_hash = text.word_hash
       synchronize do
+        invalidate_caches
         @category_counts[category] -= 1
         word_hash.each do |word, count|
           next unless @total_words >= 0
@@ -90,8 +96,8 @@ module Classifier
     def classifications(text)
       words = text.word_hash.keys
       synchronize do
-        training_count = @category_counts.values.sum.to_f
-        vocab_size = [@categories.values.flat_map(&:keys).uniq.size, 1].max
+        training_count = cached_training_count
+        vocab_size = cached_vocab_size
 
         @categories.to_h do |category, category_words|
           smoothed_total = ((@category_word_count[category] || 0) + vocab_size).to_f
@@ -211,7 +217,10 @@ module Classifier
     #
     # @rbs (String | Symbol) -> Hash[Symbol, Integer]
     def add_category(category)
-      synchronize { @categories[category.prepare_category_name] = {} }
+      synchronize do
+        invalidate_caches
+        @categories[category.prepare_category_name] = {}
+      end
     end
 
     alias append_category add_category
@@ -227,6 +236,8 @@ module Classifier
     def marshal_load(data)
       mu_initialize
       @categories, @total_words, @category_counts, @category_word_count = data
+      @cached_training_count = nil
+      @cached_vocab_size = nil
     end
 
     # Allows you to remove categories from the classifier.
@@ -243,6 +254,7 @@ module Classifier
       synchronize do
         raise StandardError, "No such category: #{category}" unless @categories.key?(category)
 
+        invalidate_caches
         @total_words -= @category_word_count[category].to_i
 
         @categories.delete(category)
@@ -261,6 +273,8 @@ module Classifier
       @total_words = data['total_words']
       @category_counts = Hash.new(0) #: Hash[Symbol, Integer]
       @category_word_count = Hash.new(0) #: Hash[Symbol, Integer]
+      @cached_training_count = nil
+      @cached_vocab_size = nil
 
       data['categories'].each do |cat_name, words|
         @categories[cat_name.to_sym] = words.transform_keys(&:to_sym)
@@ -273,6 +287,22 @@ module Classifier
       data['category_word_count'].each do |cat_name, count|
         @category_word_count[cat_name.to_sym] = count
       end
+    end
+
+    # @rbs () -> void
+    def invalidate_caches
+      @cached_training_count = nil
+      @cached_vocab_size = nil
+    end
+
+    # @rbs () -> Float
+    def cached_training_count
+      @cached_training_count ||= @category_counts.values.sum.to_f
+    end
+
+    # @rbs () -> Integer
+    def cached_vocab_size
+      @cached_vocab_size ||= [@categories.values.flat_map(&:keys).uniq.size, 1].max
     end
   end
 end

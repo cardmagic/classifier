@@ -27,11 +27,14 @@ class Vector
   undef_method :normalize if method_defined?(:normalize)
 
   def magnitude
-    sum_of_squares = 0.to_r
-    size.times do |i|
-      sum_of_squares += self[i]**2.to_r
+    # Cache magnitude since Vector is immutable after creation
+    @magnitude ||= begin
+      sum_of_squares = 0.to_r
+      size.times do |i|
+        sum_of_squares += self[i]**2.to_r
+      end
+      Math.sqrt(sum_of_squares.to_f)
     end
-    Math.sqrt(sum_of_squares.to_f)
   end
 
   def normalize
