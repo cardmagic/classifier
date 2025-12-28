@@ -71,8 +71,9 @@ module Classifier
     # @rbs @items: Hash[untyped, ContentNode]
     # @rbs @version: Integer
     # @rbs @built_at_version: Integer
+    # @rbs @singular_values: Array[Float]?
 
-    attr_reader :word_list
+    attr_reader :word_list, :singular_values
     attr_accessor :auto_rebuild
 
     # Create a fresh index.
@@ -96,6 +97,25 @@ module Classifier
     # @rbs () -> bool
     def needs_rebuild?
       synchronize { (@items.keys.size > 1) && (@version != @built_at_version) }
+    end
+
+    # @rbs () -> Array[Hash[Symbol, untyped]]?
+    def singular_value_spectrum
+      return nil unless @singular_values
+
+      total = @singular_values.sum
+      return nil if total.zero?
+
+      cumulative = 0.0
+      @singular_values.map.with_index do |value, i|
+        cumulative += value
+        {
+          dimension: i,
+          value: value,
+          percentage: value / total,
+          cumulative_percentage: cumulative / total
+        }
+      end
     end
 
     # Adds an item to the index. item is assumed to be a string, but
@@ -177,6 +197,8 @@ module Classifier
     #
     # @rbs (?Float) -> void
     def build_index(cutoff = 0.75)
+      validate_cutoff!(cutoff)
+
       synchronize do
         return unless needs_rebuild_unlocked?
 
@@ -295,12 +317,10 @@ module Classifier
     # find_related function to find related documents, then returns the
     # most obvious category from this list.
     #
-    # cutoff signifies the number of documents to consider when clasifying
-    # text. A cutoff of 1 means that every document in the index votes on
-    # what category the document is in. This may not always make sense.
-    #
     # @rbs (String, ?Float) ?{ (String) -> String } -> String | Symbol
     def classify(doc, cutoff = 0.30, &block)
+      validate_cutoff!(cutoff)
+
       synchronize do
         votes = vote_unlocked(doc, cutoff, &block)
 
@@ -311,6 +331,8 @@ module Classifier
 
     # @rbs (String, ?Float) ?{ (String) -> String } -> Hash[String | Symbol, Float]
     def vote(doc, cutoff = 0.30, &block)
+      validate_cutoff!(cutoff)
+
       synchronize { vote_unlocked(doc, cutoff, &block) }
     end
 
@@ -327,6 +349,8 @@ module Classifier
     # See classify() for argument docs
     # @rbs (String, ?Float) ?{ (String) -> String } -> [String | Symbol | nil, Float?]
     def classify_with_confidence(doc, cutoff = 0.30, &block)
+      validate_cutoff!(cutoff)
+
       synchronize do
         votes = vote_unlocked(doc, cutoff, &block)
         votes_sum = votes.values.sum
@@ -437,6 +461,13 @@ module Classifier
 
     private
 
+    # @rbs (Float) -> void
+    def validate_cutoff!(cutoff)
+      return if cutoff.positive? && cutoff < 1
+
+      raise ArgumentError, "cutoff must be between 0 and 1 (exclusive), got #{cutoff}"
+    end
+
     # Assigns LSI vectors using native C extension
     # @rbs (untyped, Array[ContentNode]) -> void
     def assign_native_ext_lsi_vectors(ntdm, doc_list)
@@ -536,8 +567,10 @@ module Classifier
       # TODO: Check that M>=N on these dimensions! Transpose helps assure this
       u, v, s = matrix.SV_decomp
 
-      # TODO: Better than 75% term, please. :\
-      s_cutoff = s.sort.reverse[(s.size * cutoff).round - 1]
+      @singular_values = s.sort.reverse
+
+      s_cutoff_index = [(s.size * cutoff).round - 1, 0].max
+      s_cutoff = @singular_values[s_cutoff_index]
       s.size.times do |ord|
         s[ord] = 0.0 if s[ord] < s_cutoff
       end

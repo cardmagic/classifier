@@ -489,4 +489,195 @@ class LSITest < Minitest::Test
       assert_equal lsi.search('dog', 3), loaded.search('dog', 3)
     end
   end
+
+  # Cutoff parameter validation tests (Issue #67)
+
+  def test_build_index_cutoff_validation_too_low
+    lsi = Classifier::LSI.new auto_rebuild: false
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+
+    assert_raises(ArgumentError) { lsi.build_index(0.0) }
+    assert_raises(ArgumentError) { lsi.build_index(-0.5) }
+  end
+
+  def test_build_index_cutoff_validation_too_high
+    lsi = Classifier::LSI.new auto_rebuild: false
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+
+    assert_raises(ArgumentError) { lsi.build_index(1.0) }
+    assert_raises(ArgumentError) { lsi.build_index(1.5) }
+  end
+
+  def test_build_index_cutoff_validation_valid_range
+    lsi = Classifier::LSI.new auto_rebuild: false
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+
+    # Should not raise for valid cutoffs
+    lsi.build_index(0.01)
+    lsi.build_index(0.5)
+    lsi.build_index(0.99)
+  end
+
+  def test_build_index_very_small_cutoff_no_negative_index
+    lsi = Classifier::LSI.new auto_rebuild: false
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+
+    lsi.build_index(0.01)
+
+    assert_equal 'Dog', lsi.classify(@str1)
+    refute_nil lsi.singular_values
+  end
+
+  def test_classify_cutoff_validation
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+
+    assert_raises(ArgumentError) { lsi.classify(@str1, 0.0) }
+    assert_raises(ArgumentError) { lsi.classify(@str1, 1.0) }
+    assert_raises(ArgumentError) { lsi.classify(@str1, -0.1) }
+    assert_raises(ArgumentError) { lsi.classify(@str1, 1.5) }
+  end
+
+  def test_vote_cutoff_validation
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+
+    assert_raises(ArgumentError) { lsi.vote(@str1, 0.0) }
+    assert_raises(ArgumentError) { lsi.vote(@str1, 1.0) }
+  end
+
+  def test_classify_with_confidence_cutoff_validation
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+
+    assert_raises(ArgumentError) { lsi.classify_with_confidence(@str1, 0.0) }
+    assert_raises(ArgumentError) { lsi.classify_with_confidence(@str1, 1.0) }
+  end
+
+  # Singular value introspection tests (Issue #67)
+
+  def test_singular_values_nil_before_build
+    lsi = Classifier::LSI.new auto_rebuild: false
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+
+    assert_nil lsi.singular_values
+  end
+
+  def test_singular_values_populated_after_build
+    lsi = Classifier::LSI.new auto_rebuild: false
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+    lsi.build_index
+
+    refute_nil lsi.singular_values
+    assert_instance_of Array, lsi.singular_values
+    assert(lsi.singular_values.all? { |v| v.is_a?(Numeric) })
+    assert_predicate lsi.singular_values.size, :positive?
+  end
+
+  def test_singular_values_sorted_descending
+    lsi = Classifier::LSI.new auto_rebuild: false
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+    lsi.add_item @str4, 'Cat'
+    lsi.add_item @str5, 'Bird'
+    lsi.build_index
+
+    values = lsi.singular_values
+    sorted = values.sort.reverse
+
+    assert_equal sorted, values, 'Singular values should be sorted in descending order'
+  end
+
+  def test_singular_value_spectrum_nil_before_build
+    lsi = Classifier::LSI.new auto_rebuild: false
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+
+    assert_nil lsi.singular_value_spectrum
+  end
+
+  def test_singular_value_spectrum_structure
+    lsi = Classifier::LSI.new auto_rebuild: false
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+    lsi.add_item @str4, 'Cat'
+    lsi.add_item @str5, 'Bird'
+    lsi.build_index
+
+    spectrum = lsi.singular_value_spectrum
+
+    refute_nil spectrum
+    assert_instance_of Array, spectrum
+
+    # Each entry should have required keys
+    spectrum.each_with_index do |entry, i|
+      assert_equal i, entry[:dimension]
+      assert entry.key?(:value)
+      assert entry.key?(:percentage)
+      assert entry.key?(:cumulative_percentage)
+    end
+  end
+
+  def test_singular_value_spectrum_percentages
+    lsi = Classifier::LSI.new auto_rebuild: false
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+    lsi.add_item @str4, 'Cat'
+    lsi.add_item @str5, 'Bird'
+    lsi.build_index
+
+    spectrum = lsi.singular_value_spectrum
+
+    # Individual percentages should sum to 1
+    total_pct = spectrum.sum { |e| e[:percentage] }
+
+    assert_in_delta 1.0, total_pct, 0.001
+
+    # Cumulative should reach 1.0 at the end
+    assert_in_delta 1.0, spectrum.last[:cumulative_percentage], 0.001
+
+    # Cumulative should be monotonically increasing
+    spectrum.each_cons(2) do |a, b|
+      assert_operator a[:cumulative_percentage], :<=, b[:cumulative_percentage]
+    end
+  end
+
+  def test_singular_value_spectrum_for_tuning
+    lsi = Classifier::LSI.new auto_rebuild: false
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+    lsi.add_item @str4, 'Cat'
+    lsi.add_item @str5, 'Bird'
+    lsi.build_index
+
+    spectrum = lsi.singular_value_spectrum
+
+    # Find how many dimensions capture 75% of variance (the default cutoff)
+    dims_for_threshold = spectrum.find_index { |e| e[:cumulative_percentage] >= 0.75 }
+
+    # This should be usable for tuning decisions
+    refute_nil dims_for_threshold, 'Should be able to find dimensions for 75% variance'
+    assert_operator dims_for_threshold, :<, spectrum.size, 'Some dimensions should be below 75% threshold'
+  end
 end
