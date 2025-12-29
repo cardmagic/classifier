@@ -48,11 +48,11 @@ class LSITest < Minitest::Test
 
   def test_add_with_categories
     lsi = Classifier::LSI.new
-    lsi.add('Ruby programming' => [:doc1, :programming, :dynamic])
+    lsi.add('Ruby programming' => %i[doc1 programming dynamic])
     lsi.add('Java development' => [:doc2, 'enterprise'])
 
     assert_equal 2, lsi.items.size
-    assert_equal [:programming, :dynamic], lsi.categories_for(:doc1)
+    assert_equal %i[programming dynamic], lsi.categories_for(:doc1)
     assert_equal ['enterprise'], lsi.categories_for(:doc2)
   end
 
