@@ -143,9 +143,7 @@ module Classifier
     # @rbs (**untyped items) -> void
     def add(**items)
       items.each do |category, value|
-        category_str = category.to_s
-        docs = value.is_a?(Array) ? value : [value]
-        docs.each { |doc| add_item(doc, category_str) }
+        Array(value).each { |doc| add_item(doc, category.to_s) }
       end
     end
 
