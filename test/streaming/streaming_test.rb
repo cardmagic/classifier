@@ -342,6 +342,7 @@ class StreamingEnforcementTest < Minitest::Test
   CLASSIFIERS = Classifier.constants.filter_map do |const|
     klass = Classifier.const_get(const)
     next unless klass.is_a?(Class)
+
     klass if klass.method_defined?(:classify) || klass.method_defined?(:transform)
   end.freeze
 
@@ -354,13 +355,13 @@ class StreamingEnforcementTest < Minitest::Test
   ].freeze
 
   def test_classifiers_discovered
-    assert CLASSIFIERS.size >= 5, "Expected at least 5 classifiers, found: #{CLASSIFIERS.map(&:name)}"
+    assert_operator CLASSIFIERS.size, :>=, 5, "Expected at least 5 classifiers, found: #{CLASSIFIERS.map(&:name)}"
   end
 
   CLASSIFIERS.each do |klass|
     define_method("test_#{klass.name.split('::').last.downcase}_includes_streaming") do
-      assert klass.include?(Classifier::Streaming),
-             "#{klass} must include Classifier::Streaming"
+      assert_includes klass, Classifier::Streaming,
+                      "#{klass} must include Classifier::Streaming"
     end
 
     STREAMING_METHODS.each do |method|

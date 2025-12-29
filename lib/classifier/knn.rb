@@ -282,16 +282,15 @@ module Classifier
     # @example Keyword style
     #   knn.train_batch(spam: documents, ham: other_docs)
     #
-    # @rbs (
-    #   ?(String | Symbol)?, ?Array[String]?, ?batch_size: Integer, **Array[String]
-    # ) { (Streaming::Progress) -> void } -> void
+    # @rbs (?(String | Symbol)?, ?Array[String]?, ?batch_size: Integer, **Array[String]) { (Streaming::Progress) -> void } -> void
     def train_batch(category = nil, documents = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &block)
       # @type var categories: Hash[Symbol, Array[String]]
       @lsi.train_batch(category, documents, batch_size: batch_size, **categories, &block) # steep:ignore
       synchronize { @dirty = true }
     end
 
-    # Alias add_batch to train_batch for consistency with LSI.
+    # @rbs!
+    #   alias add_batch train_batch
     alias add_batch train_batch
 
     private

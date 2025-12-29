@@ -5,6 +5,7 @@ class StorageAPIConsistencyTest < Minitest::Test
   CLASSIFIERS = Classifier.constants.filter_map do |const|
     klass = Classifier.const_get(const)
     next unless klass.is_a?(Class)
+
     klass if klass.method_defined?(:classify) || klass.method_defined?(:transform)
   end.freeze
 
@@ -12,7 +13,7 @@ class StorageAPIConsistencyTest < Minitest::Test
   CLASS_METHODS = %i[load].freeze
 
   def test_classifiers_discovered
-    assert CLASSIFIERS.size >= 5, "Expected at least 5 classifiers, found: #{CLASSIFIERS.map(&:name)}"
+    assert_operator CLASSIFIERS.size, :>=, 5, "Expected at least 5 classifiers, found: #{CLASSIFIERS.map(&:name)}"
   end
 
   CLASSIFIERS.each do |klass|

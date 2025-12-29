@@ -399,9 +399,7 @@ module Classifier
     #   classifier.train_batch(spam: documents, ham: other_docs)
     #   classifier.fit
     #
-    # @rbs (
-    #   ?(String | Symbol), ?Array[String], ?batch_size: Integer, **Array[String]
-    # ) { (Streaming::Progress) -> void } -> void
+    # @rbs (?(String | Symbol), ?Array[String], ?batch_size: Integer, **Array[String]) { (Streaming::Progress) -> void } -> void
     def train_batch(category = nil, documents = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &block)
       if category && documents
         train_batch_for_category(category, documents, batch_size: batch_size, &block)

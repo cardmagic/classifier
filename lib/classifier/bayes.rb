@@ -354,9 +354,7 @@ module Classifier
     #     puts "#{progress.percent}% complete"
     #   end
     #
-    # @rbs (
-    #   ?(String | Symbol), ?Array[String], ?batch_size: Integer, **Array[String]
-    # ) { (Streaming::Progress) -> void } -> void
+    # @rbs (?(String | Symbol), ?Array[String], ?batch_size: Integer, **Array[String]) { (Streaming::Progress) -> void } -> void
     def train_batch(category = nil, documents = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &block)
       if category && documents
         train_batch_for_category(category, documents, batch_size: batch_size, &block)
