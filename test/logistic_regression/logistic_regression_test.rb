@@ -96,21 +96,21 @@ class LogisticRegressionTest < Minitest::Test
   def test_classify_with_more_training_data
     # Spam examples
     @classifier.train(spam: [
-      'Buy now and save!',
-      'Free money waiting for you',
-      'Click here for amazing deals',
-      'Limited time offer expires soon',
-      'Congratulations you won a prize'
-    ])
+                        'Buy now and save!',
+                        'Free money waiting for you',
+                        'Click here for amazing deals',
+                        'Limited time offer expires soon',
+                        'Congratulations you won a prize'
+                      ])
 
     # Ham examples
     @classifier.train(ham: [
-      'Meeting scheduled for tomorrow at 10am',
-      'Please review the attached document',
-      'Can we discuss the project timeline?',
-      'Thanks for your help yesterday',
-      'Looking forward to seeing you'
-    ])
+                        'Meeting scheduled for tomorrow at 10am',
+                        'Please review the attached document',
+                        'Can we discuss the project timeline?',
+                        'Thanks for your help yesterday',
+                        'Looking forward to seeing you'
+                      ])
 
     assert_equal 'Spam', @classifier.classify('Free prize money')
     assert_equal 'Ham', @classifier.classify('Project meeting tomorrow')
@@ -183,6 +183,7 @@ class LogisticRegressionTest < Minitest::Test
 
     # Should be sorted by absolute value (descending)
     sorted_by_abs = values.sort_by { |v| -v.abs }
+
     assert_equal sorted_by_abs, values
   end
 
@@ -233,6 +234,7 @@ class LogisticRegressionTest < Minitest::Test
 
     refute_predicate @classifier, :fitted?
     @classifier.classify('test')
+
     assert_predicate @classifier, :fitted?
   end
 
@@ -242,6 +244,7 @@ class LogisticRegressionTest < Minitest::Test
 
     refute_predicate @classifier, :fitted?
     @classifier.probabilities('test')
+
     assert_predicate @classifier, :fitted?
   end
 
@@ -353,6 +356,7 @@ class LogisticRegressionTest < Minitest::Test
 
       # Check that loaded classifier makes same predictions
       test_texts = ['buy free', 'hello meeting', 'money offer', 'project friend']
+
       test_texts.each do |text|
         assert_equal @classifier.classify(text), loaded.classify(text)
       end
@@ -407,6 +411,7 @@ class LogisticRegressionTest < Minitest::Test
 
     # Should not crash
     result = @classifier.classify('test')
+
     assert_includes @classifier.categories, result
   end
 
@@ -425,6 +430,7 @@ class LogisticRegressionTest < Minitest::Test
 
     # Should handle unicode without crashing
     result = @classifier.classify('日本語 test')
+
     assert_includes @classifier.categories, result
   end
 
@@ -478,7 +484,7 @@ class LogisticRegressionTest < Minitest::Test
     # Without regularization, weights could become very large
     classifier = Classifier::LogisticRegression.new(
       :spam, :ham,
-      regularization: 1.0  # Strong regularization
+      regularization: 1.0 # Strong regularization
     )
 
     classifier.train_spam 'unique_spam_word'
@@ -502,6 +508,7 @@ class LogisticRegressionTest < Minitest::Test
 
     # Should be able to perfectly classify training data
     probs = @classifier.probabilities('spam spam spam')
+
     assert_operator probs['Spam'], :>, 0.9
   end
 
