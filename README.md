@@ -6,7 +6,7 @@
 
 Text classification in Ruby. Five algorithms, native performance, streaming support.
 
-**[Documentation](https://rubyclassifier.com/docs)** · **[Tutorials](https://rubyclassifier.com/docs/tutorials)** · **[API Reference](https://rubyclassifier.com/docs/api)**
+**[Documentation](https://rubyclassifier.com/docs)** · **[Tutorials](https://rubyclassifier.com/docs/tutorials)** · **[API Reference](https://rubydoc.info/gems/classifier)**
 
 ## Why This Library?
 
@@ -16,7 +16,7 @@ Text classification in Ruby. Five algorithms, native performance, streaming supp
 | **Incremental LSI** | ✅ Brand's algorithm (no rebuild) | ❌ Full SVD rebuild on every add |
 | **LSI Performance** | ✅ Native C extension (5-50x faster) | ❌ Pure Ruby or requires GSL |
 | **Streaming** | ✅ Train on multi-GB datasets | ❌ Must load all data in memory |
-| **Persistence** | ✅ Pluggable (file, Redis, S3) | ❌ Marshal only |
+| **Persistence** | ✅ Pluggable (file, Redis, S3, SQL, Custom) | ❌ Marshal only |
 
 ## Installation
 
@@ -30,8 +30,10 @@ gem 'classifier'
 
 ```ruby
 classifier = Classifier::Bayes.new(:spam, :ham)
-classifier.train(spam: "Buy cheap viagra now!", ham: "Meeting at 3pm tomorrow")
-classifier.classify "You've won a prize!"  # => "Spam"
+classifier.train(spam: "Buy viagra cheap pills now")
+classifier.train(spam: "You won million dollars prize")
+classifier.train(ham: ["Meeting tomorrow at 3pm", "Quarterly report attached"])
+classifier.classify("Cheap pills!")  # => "Spam"
 ```
 [Bayesian Guide →](https://rubyclassifier.com/docs/guides/bayes/basics)
 
@@ -39,8 +41,9 @@ classifier.classify "You've won a prize!"  # => "Spam"
 
 ```ruby
 classifier = Classifier::LogisticRegression.new(:positive, :negative)
-classifier.train(positive: "Great product!", negative: "Terrible experience")
-classifier.classify "Loved it!"  # => "Positive"
+classifier.train(positive: "love amazing great wonderful")
+classifier.train(negative: "hate terrible awful bad")
+classifier.classify("I love it!")  # => "Positive"
 ```
 [Logistic Regression Guide →](https://rubyclassifier.com/docs/guides/logisticregression/basics)
 
@@ -48,8 +51,8 @@ classifier.classify "Loved it!"  # => "Positive"
 
 ```ruby
 lsi = Classifier::LSI.new
-lsi.add(pets: "Dogs are loyal", tech: "Ruby is elegant")
-lsi.classify "My puppy is playful"  # => "pets"
+lsi.add(dog: "dog puppy canine bark fetch", cat: "cat kitten feline meow purr")
+lsi.classify("My puppy barks")  # => "dog"
 ```
 [LSI Guide →](https://rubyclassifier.com/docs/guides/lsi/basics)
 
@@ -57,8 +60,9 @@ lsi.classify "My puppy is playful"  # => "pets"
 
 ```ruby
 knn = Classifier::KNN.new(k: 3)
-knn.train(spam: "Free money!", ham: "Quarterly report attached")  # or knn.add()
-knn.classify "Claim your prize"  # => "spam"
+%w[laptop coding software developer programming].each { |w| knn.add(tech: w) }
+%w[football basketball soccer goal team].each { |w| knn.add(sports: w) }
+knn.classify("programming code")  # => "tech"
 ```
 [k-Nearest Neighbors Guide →](https://rubyclassifier.com/docs/guides/knn/basics)
 
@@ -66,8 +70,8 @@ knn.classify "Claim your prize"  # => "spam"
 
 ```ruby
 tfidf = Classifier::TFIDF.new
-tfidf.fit(["Dogs are pets", "Cats are independent"])
-tfidf.transform("Dogs are loyal")  # => {:dog => 0.707, :loyal => 0.707}
+tfidf.fit(["Ruby is great", "Python is great", "Ruby on Rails"])
+tfidf.transform("Ruby programming")  # => {:rubi => 1.0}
 ```
 [TF-IDF Guide →](https://rubyclassifier.com/docs/guides/tfidf/basics)
 
@@ -87,7 +91,7 @@ lsi.add(tech: "Go is fast")
 lsi.add(tech: "Rust is safe")
 ```
 
-[Learn more →](https://rubyclassifier.com/docs/guides/lsi/incremental)
+[Learn more →](https://rubyclassifier.com/docs/guides/lsi/basics)
 
 ### Persistence
 
@@ -98,7 +102,7 @@ classifier.save
 loaded = Classifier::Bayes.load(storage: classifier.storage)
 ```
 
-[Learn more →](https://rubyclassifier.com/docs/guides/persistence)
+[Learn more →](https://rubyclassifier.com/docs/guides/persistence/basics)
 
 ### Streaming Training
 
@@ -106,7 +110,7 @@ loaded = Classifier::Bayes.load(storage: classifier.storage)
 classifier.train_from_stream(:spam, File.open("spam_corpus.txt"))
 ```
 
-[Learn more →](https://rubyclassifier.com/docs/guides/streaming)
+[Learn more →](https://rubyclassifier.com/docs/tutorials/streaming-training)
 
 ## Performance
 
