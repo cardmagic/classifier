@@ -227,11 +227,9 @@ module Classifier
       end
 
       # Use incremental update if enabled and we have a U matrix
-      if @incremental_mode && @u_matrix
-        perform_incremental_update(node, clean_word_hash)
-      elsif @auto_rebuild
-        build_index
-      end
+      return perform_incremental_update(node, clean_word_hash) if @incremental_mode && @u_matrix
+
+      build_index if @auto_rebuild
     end
 
     # A less flexible shorthand for add_item that assumes
@@ -930,25 +928,26 @@ module Classifier
         if vocabulary_growth_exceeds_threshold?(word_hash)
           disable_incremental_mode!
           needs_full_rebuild = true
-        else
-          old_rank = @u_matrix.column_size
-          extend_vocabulary_for_incremental(word_hash)
-          raw_vec = node.raw_vector_with(@word_list)
-          raw_vector = Vector[*raw_vec.to_a]
-
-          @u_matrix, @singular_values = IncrementalSVD.update(
-            @u_matrix, @singular_values, raw_vector, max_rank: @max_rank
-          )
-
-          new_rank = @u_matrix.column_size
-          if new_rank > old_rank
-            reproject_all_documents
-          else
-            assign_lsi_vector_incremental(node)
-          end
-
-          @built_at_version = @version
+          next
         end
+
+        old_rank = @u_matrix.column_size
+        extend_vocabulary_for_incremental(word_hash)
+        raw_vec = node.raw_vector_with(@word_list)
+        raw_vector = Vector[*raw_vec.to_a]
+
+        @u_matrix, @singular_values = IncrementalSVD.update(
+          @u_matrix, @singular_values, raw_vector, max_rank: @max_rank
+        )
+
+        new_rank = @u_matrix.column_size
+        if new_rank > old_rank
+          reproject_all_documents
+        else
+          assign_lsi_vector_incremental(node)
+        end
+
+        @built_at_version = @version
       end
 
       build_index if needs_full_rebuild

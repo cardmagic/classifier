@@ -86,7 +86,6 @@ module Classifier
           @io.seek(original_pos)
 
           return nil if sample_lines.zero?
-          return nil unless @io.respond_to?(:size)
 
           avg_line_size = sample_bytes.to_f / sample_lines
           io_size = @io.__send__(:size) #: Integer
