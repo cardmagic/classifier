@@ -17,6 +17,17 @@ class BayesianTest < Minitest::Test
     assert_equal %w[Interesting Uninteresting].sort, @classifier.categories.sort
   end
 
+  def test_array_initialization
+    classifier = Classifier::Bayes.new(%w[Spam Ham])
+
+    assert_equal %w[Ham Spam], classifier.categories.sort
+
+    classifier.train_spam 'bad nasty spam email'
+    classifier.train_ham 'good legitimate email'
+
+    assert_equal 'Spam', classifier.classify('this is spam')
+  end
+
   def test_add_category
     @classifier.add_category 'Test'
 

@@ -19,6 +19,16 @@ class LogisticRegressionTest < Minitest::Test
     assert_equal %w[Spam Ham].sort, classifier2.categories.sort
   end
 
+  def test_accepts_array_of_categories
+    classifier = Classifier::LogisticRegression.new(%w[Spam Ham])
+
+    assert_equal %w[Ham Spam], classifier.categories.sort
+  end
+
+  def test_array_initialization_requires_at_least_two
+    assert_raises(ArgumentError) { Classifier::LogisticRegression.new(['Only']) }
+  end
+
   def test_custom_hyperparameters
     classifier = Classifier::LogisticRegression.new(
       :spam, :ham,

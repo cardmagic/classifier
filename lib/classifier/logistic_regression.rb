@@ -46,6 +46,7 @@ module Classifier
     #
     #   classifier = Classifier::LogisticRegression.new(:spam, :ham)
     #   classifier = Classifier::LogisticRegression.new('Positive', 'Negative', 'Neutral')
+    #   classifier = Classifier::LogisticRegression.new(['Positive', 'Negative', 'Neutral'])
     #
     # Options:
     # - learning_rate: Step size for gradient descent (default: 0.1)
@@ -53,13 +54,14 @@ module Classifier
     # - max_iterations: Maximum training iterations (default: 100)
     # - tolerance: Convergence threshold (default: 1e-4)
     #
-    # @rbs (*String | Symbol, ?learning_rate: Float, ?regularization: Float,
+    # @rbs (*String | Symbol | Array[String | Symbol], ?learning_rate: Float, ?regularization: Float,
     #       ?max_iterations: Integer, ?tolerance: Float) -> void
     def initialize(*categories, learning_rate: DEFAULT_LEARNING_RATE,
                    regularization: DEFAULT_REGULARIZATION,
                    max_iterations: DEFAULT_MAX_ITERATIONS,
                    tolerance: DEFAULT_TOLERANCE)
       super()
+      categories = categories.flatten
       raise ArgumentError, 'At least two categories required' if categories.size < 2
 
       @categories = categories.map { |c| c.to_s.prepare_category_name }

@@ -12,11 +12,11 @@ Text classification in Ruby. Five algorithms, native performance, streaming supp
 
 | | This Gem | Other Forks |
 |:--|:--|:--|
-| **Algorithms** | 5 classifiers | 2 only |
-| **Incremental LSI** | Brand's algorithm (no rebuild) | Full SVD rebuild on every add |
-| **LSI Performance** | Native C extension (5-50x faster) | Pure Ruby or requires GSL |
-| **Streaming** | Train on multi-GB datasets | Must load all data in memory |
-| **Persistence** | Pluggable (file, Redis, S3) | Marshal only |
+| **Algorithms** | ✅ 5 classifiers | ❌ 2 only |
+| **Incremental LSI** | ✅ Brand's algorithm (no rebuild) | ❌ Full SVD rebuild on every add |
+| **LSI Performance** | ✅ Native C extension (5-50x faster) | ❌ Pure Ruby or requires GSL |
+| **Streaming** | ✅ Train on multi-GB datasets | ❌ Must load all data in memory |
+| **Persistence** | ✅ Pluggable (file, Redis, S3) | ❌ Marshal only |
 
 ## Installation
 
@@ -42,7 +42,7 @@ classifier = Classifier::LogisticRegression.new(:positive, :negative)
 classifier.train(positive: "Great product!", negative: "Terrible experience")
 classifier.classify "Loved it!"  # => "Positive"
 ```
-[Logistic Regression Guide →](https://rubyclassifier.com/docs/guides/logistic-regression/basics)
+[Logistic Regression Guide →](https://rubyclassifier.com/docs/guides/logisticregression/basics)
 
 ### LSI (Latent Semantic Indexing)
 
