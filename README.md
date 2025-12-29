@@ -4,7 +4,7 @@
 [![CI](https://github.com/cardmagic/classifier/actions/workflows/ruby.yml/badge.svg)](https://github.com/cardmagic/classifier/actions/workflows/ruby.yml)
 [![License: LGPL](https://img.shields.io/badge/License-LGPL_2.1-blue.svg)](https://opensource.org/licenses/LGPL-2.1)
 
-A Ruby library for text classification using Bayesian and Latent Semantic Indexing (LSI) algorithms.
+A Ruby library for text classification using Bayesian, LSI (Latent Semantic Indexing), and k-Nearest Neighbors (kNN) algorithms.
 
 **[Documentation](https://rubyclassifier.com/docs)** · **[Tutorials](https://rubyclassifier.com/docs/tutorials)** · **[Guides](https://rubyclassifier.com/docs/guides)**
 
@@ -13,6 +13,7 @@ A Ruby library for text classification using Bayesian and Latent Semantic Indexi
 - [Installation](#installation)
 - [Bayesian Classifier](#bayesian-classifier)
 - [LSI (Latent Semantic Indexing)](#lsi-latent-semantic-indexing)
+- [k-Nearest Neighbors (kNN)](#k-nearest-neighbors-knn)
 - [Persistence](#persistence)
 - [Performance](#performance)
 - [Development](#development)
@@ -170,9 +171,94 @@ gem 'pragmatic_segmenter'
 - [LSI Basics Guide](https://rubyclassifier.com/docs/guides/lsi/basics) - In-depth documentation
 - [Wikipedia: Latent Semantic Analysis](http://en.wikipedia.org/wiki/Latent_semantic_analysis)
 
+## k-Nearest Neighbors (kNN)
+
+Instance-based classification that stores examples and classifies by finding the most similar ones. No training phase required—just add examples and classify.
+
+### Key Features
+
+- **No Training Required**: Uses instance-based learning—store examples and classify by similarity
+- **Interpretable Results**: Returns neighbors that contributed to the decision
+- **Incremental Updates**: Easy to add or remove examples without retraining
+- **Distance-Weighted Voting**: Optional weighting by similarity score
+- **Built on LSI**: Leverages LSI's semantic similarity for better matching
+
+### Quick Start
+
+```ruby
+require 'classifier'
+
+knn = Classifier::KNN.new(k: 3)
+
+# Add labeled examples
+knn.add(spam: ["Buy now! Limited offer!", "You've won a million dollars!"])
+knn.add(ham: ["Meeting at 3pm tomorrow", "Please review the document"])
+
+# Classify new text
+knn.classify "Congratulations! Claim your prize!"
+# => "spam"
+```
+
+### Detailed Classification
+
+Get neighbor information for interpretable results:
+
+```ruby
+result = knn.classify_with_neighbors "Free money offer"
+
+result[:category]    # => "spam"
+result[:confidence]  # => 0.85
+result[:neighbors]   # => [{item: "Buy now!...", category: "spam", similarity: 0.92}, ...]
+result[:votes]       # => {"spam" => 2.0, "ham" => 1.0}
+```
+
+### Distance-Weighted Voting
+
+Weight votes by similarity score for more accurate classification:
+
+```ruby
+knn = Classifier::KNN.new(k: 5, weighted: true)
+
+knn.add(
+  positive: ["Great product!", "Loved it!", "Excellent service"],
+  negative: ["Terrible experience", "Would not recommend"]
+)
+
+# Closer neighbors have more influence on the result
+knn.classify "This was amazing!"
+# => "positive"
+```
+
+### Updating the Classifier
+
+```ruby
+# Add more examples anytime
+knn.add(neutral: "It was okay, nothing special")
+
+# Remove examples
+knn.remove_item "Buy now! Limited offer!"
+
+# Change k value
+knn.k = 7
+
+# List all categories
+knn.categories
+# => ["spam", "ham", "neutral"]
+```
+
+### When to Use kNN vs Bayes vs LSI
+
+| Classifier | Best For |
+|------------|----------|
+| **Bayes** | Fast classification, any training size (stores only word counts) |
+| **LSI** | Semantic similarity, document clustering, search |
+| **kNN** | <1000 examples, interpretable results, incremental updates |
+
+**Why the size difference?** Bayes stores aggregate statistics—adding 10,000 documents just increments counters. kNN stores every example and compares against all of them during classification, so performance degrades with size.
+
 ## Persistence
 
-Save and load trained classifiers with pluggable storage backends. Works with both Bayes and LSI classifiers.
+Save and load classifiers with pluggable storage backends. Works with Bayes, LSI, and kNN classifiers.
 
 ### File Storage
 

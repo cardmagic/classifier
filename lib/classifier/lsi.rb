@@ -629,6 +629,7 @@ module Classifier
     # @rbs (String) ?{ (String) -> String } -> Array[[String, Float]]
     def proximity_array_for_content_unlocked(doc, &)
       return [] if needs_rebuild_unlocked?
+      return @items.keys.map { |item| [item, 1.0] } if @items.size == 1
 
       content_node = node_for_content_unlocked(doc, &)
       result =

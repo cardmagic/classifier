@@ -1,8 +1,8 @@
 Gem::Specification.new do |s|
   s.name        = 'classifier'
   s.version     = '2.1.0'
-  s.summary     = 'A general classifier module to allow Bayesian and other types of classifications.'
-  s.description = 'A general classifier module to allow Bayesian and other types of classifications.'
+  s.summary     = 'Text classification with Bayesian, LSI, and k-Nearest Neighbors algorithms.'
+  s.description = 'A Ruby library for text classification using Bayesian, LSI (Latent Semantic Indexing), and k-Nearest Neighbors (kNN) algorithms. Includes native C extension for fast LSI operations.'
   s.author = 'Lucas Carlson'
   s.email = 'lucas@rufy.com'
   s.homepage = 'https://rubyclassifier.com'
