@@ -73,7 +73,7 @@ module Classifier
         @vocabulary[term] = vocab_index
         vocab_index += 1
 
-        # IDF: log((N + 1) / (df + 1)) + 1 with smoothing
+        # IDF: log((N + 1) / (df + 1)) + 1
         @idf[term] = Math.log((@num_documents + 1).to_f / (df + 1)) + 1
       end
 
@@ -229,23 +229,17 @@ module Classifier
 
     # @rbs (Integer | Float, String) -> void
     def validate_df!(value, name)
-      if value.is_a?(Float)
-        raise ArgumentError, "#{name} must be between 0.0 and 1.0" unless value.between?(0.0, 1.0)
-      elsif value.is_a?(Integer)
-        raise ArgumentError, "#{name} must be non-negative" if value.negative?
-      else
-        raise ArgumentError, "#{name} must be an Integer or Float"
-      end
+      raise ArgumentError, "#{name} must be an Integer or Float" unless value.is_a?(Float) || value.is_a?(Integer)
+      raise ArgumentError, "#{name} must be between 0.0 and 1.0" if value.is_a?(Float) && !value.between?(0.0, 1.0)
+      raise ArgumentError, "#{name} must be non-negative" if value.is_a?(Integer) && value.negative?
     end
 
     # @rbs (Array[Integer]) -> void
     def validate_ngram_range!(range)
-      valid_structure = range.is_a?(Array) && range.size == 2
-      raise ArgumentError, 'ngram_range must be an array of two integers' unless valid_structure
-
-      valid_values = range.all? { |v| v.is_a?(Integer) && v.positive? }
-      raise ArgumentError, 'ngram_range values must be positive integers' unless valid_values
-
+      raise ArgumentError, 'ngram_range must be an array of two integers' unless range.is_a?(Array) && range.size == 2
+      raise ArgumentError, 'ngram_range values must be positive integers' unless range.all? do |v|
+        v.is_a?(Integer) && v.positive?
+      end
       raise ArgumentError, 'ngram_range[0] must be <= ngram_range[1]' if range[0] > range[1]
     end
 
