@@ -250,9 +250,11 @@ knn.categories
 
 | Classifier | Best For |
 |------------|----------|
-| **Bayes** | Large training sets, fast classification, spam filtering |
+| **Bayes** | Fast classification, any training size (stores only word counts) |
 | **LSI** | Semantic similarity, document clustering, search |
-| **kNN** | Small datasets, interpretable results, incremental learning |
+| **kNN** | <1000 examples, interpretable results, incremental updates |
+
+**Why the size difference?** Bayes stores aggregate statistics—adding 10,000 documents just increments counters. kNN stores every example and compares against all of them during classification, so performance degrades with size.
 
 ## Persistence
 
