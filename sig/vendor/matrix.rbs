@@ -11,16 +11,26 @@ class Vector[T]
   def collect: [U] () { (T) -> U } -> Vector[U]
   def to_a: () -> Array[T]
   def *: (untyped) -> untyped
+  def -: (Vector[T]) -> Vector[T]
+  def is_a?: (untyped) -> bool
 end
 
 class Matrix[T]
   def self.rows: [T] (Array[Array[T]]) -> Matrix[T]
   def self.[]: [T] (*Array[T]) -> Matrix[T]
   def self.diag: (untyped) -> Matrix[untyped]
+  def self.columns: [T] (Array[Array[T]]) -> Matrix[T]
+  def self.empty: (Integer, Integer) -> Matrix[untyped]
+  def self.zero: (Integer, Integer) -> Matrix[Numeric]
+  def self.vstack: [T] (Matrix[T], Matrix[T]) -> Matrix[T]
   def trans: () -> Matrix[T]
+  def transpose: () -> Matrix[T]
   def *: (untyped) -> untyped
   def row_size: () -> Integer
   def column_size: () -> Integer
+  def row: (Integer) -> Vector[T]
   def column: (Integer) -> Vector[T]
   def SV_decomp: () -> [Matrix[T], Matrix[T], untyped]
+  def is_a?: (untyped) -> bool
+  def respond_to?: (Symbol) -> bool
 end

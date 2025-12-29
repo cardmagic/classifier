@@ -363,7 +363,7 @@ module Classifier
     #   classifier.fit
     #
     # @rbs (String | Symbol, IO, ?batch_size: Integer) { (Streaming::Progress) -> void } -> void
-    def train_from_stream(category, io, batch_size: Streaming::DEFAULT_BATCH_SIZE, &block)
+    def train_from_stream(category, io, batch_size: Streaming::DEFAULT_BATCH_SIZE)
       category = category.to_s.prepare_category_name
       raise StandardError, "No such category: #{category}" unless @categories.include?(category)
 
@@ -399,7 +399,9 @@ module Classifier
     #   classifier.train_batch(spam: documents, ham: other_docs)
     #   classifier.fit
     #
-    # @rbs (?(String | Symbol), ?Array[String], ?batch_size: Integer, **Array[String]) { (Streaming::Progress) -> void } -> void
+    # @rbs (
+    #   ?(String | Symbol), ?Array[String], ?batch_size: Integer, **Array[String]
+    # ) { (Streaming::Progress) -> void } -> void
     def train_batch(category = nil, documents = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &block)
       if category && documents
         train_batch_for_category(category, documents, batch_size: batch_size, &block)
@@ -414,7 +416,7 @@ module Classifier
 
     # Trains a batch of documents for a single category.
     # @rbs (String | Symbol, Array[String], ?batch_size: Integer) { (Streaming::Progress) -> void } -> void
-    def train_batch_for_category(category, documents, batch_size: Streaming::DEFAULT_BATCH_SIZE, &block)
+    def train_batch_for_category(category, documents, batch_size: Streaming::DEFAULT_BATCH_SIZE)
       category = category.to_s.prepare_category_name
       raise StandardError, "No such category: #{category}" unless @categories.include?(category)
 

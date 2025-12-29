@@ -71,17 +71,15 @@ module Classifier
 
       case storage
       when Storage::File
-        dir = File.dirname(storage.path)
-        base = File.basename(storage.path, '.*')
-        ext = File.extname(storage.path)
+        file_storage = storage #: Storage::File
+        dir = File.dirname(file_storage.path)
+        base = File.basename(file_storage.path, '.*')
+        ext = File.extname(file_storage.path)
 
         pattern = File.join(dir, "#{base}_checkpoint_*#{ext}")
         Dir.glob(pattern).map do |path|
           File.basename(path, ext).sub(/^#{Regexp.escape(base)}_checkpoint_/, '')
         end.sort
-      when Storage::Memory
-        # Memory storage doesn't support checkpoint listing
-        []
       else
         []
       end
@@ -103,9 +101,10 @@ module Classifier
     def checkpoint_path_for(checkpoint_id)
       raise ArgumentError, 'Storage must be File storage for checkpoints' unless storage.is_a?(Storage::File)
 
-      dir = File.dirname(storage.path)
-      base = File.basename(storage.path, '.*')
-      ext = File.extname(storage.path)
+      file_storage = storage #: Storage::File
+      dir = File.dirname(file_storage.path)
+      base = File.basename(file_storage.path, '.*')
+      ext = File.extname(file_storage.path)
 
       File.join(dir, "#{base}_checkpoint_#{checkpoint_id}#{ext}")
     end

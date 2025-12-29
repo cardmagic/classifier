@@ -33,6 +33,7 @@ class BayesStreamingTest < Minitest::Test
     @classifier.train(:ham, 'this is normal email')
 
     result = @classifier.classify('spam content')
+
     assert_equal 'Spam', result
   end
 
@@ -82,10 +83,12 @@ class BayesStreamingTest < Minitest::Test
 
   def test_train_from_stream_marks_dirty
     io = StringIO.new("content\n")
-    refute @classifier.dirty?
+
+    refute_predicate @classifier, :dirty?
 
     @classifier.train_from_stream(:spam, io)
-    assert @classifier.dirty?
+
+    assert_predicate @classifier, :dirty?
   end
 
   def test_train_from_stream_with_file
@@ -100,6 +103,7 @@ class BayesStreamingTest < Minitest::Test
     end
 
     @classifier.train(:ham, 'normal message here')
+
     assert_equal 'Spam', @classifier.classify('spam message')
   end
 
@@ -110,6 +114,7 @@ class BayesStreamingTest < Minitest::Test
     @classifier.train_batch(:spam, documents)
 
     @classifier.train(:ham, 'hello friend')
+
     assert_equal 'Spam', @classifier.classify('buy free limited')
   end
 
@@ -169,15 +174,16 @@ class BayesStreamingTest < Minitest::Test
   end
 
   def test_train_batch_marks_dirty
-    refute @classifier.dirty?
+    refute_predicate @classifier, :dirty?
     @classifier.train_batch(:spam, ['content'])
-    assert @classifier.dirty?
+
+    assert_predicate @classifier, :dirty?
   end
 
   def test_train_batch_multiple_categories
     @classifier.train_batch(
       spam: ['buy now', 'free offer'],
-      ham: ['hello', 'meeting']
+      ham: %w[hello meeting]
     )
 
     assert_equal 'Spam', @classifier.classify('buy free')
@@ -200,6 +206,7 @@ class BayesStreamingTest < Minitest::Test
 
     # Both should classify the same
     test_doc = 'buy cheap free limited'
+
     assert_equal classifier1.classify(test_doc), classifier2.classify(test_doc)
 
     # Classifications should be identical
@@ -221,6 +228,7 @@ class BayesStreamingTest < Minitest::Test
 
     # Both should classify the same
     test_doc = 'buy cheap free limited'
+
     assert_equal classifier1.classify(test_doc), classifier2.classify(test_doc)
   end
 
@@ -235,7 +243,8 @@ class BayesStreamingTest < Minitest::Test
       @classifier.save_checkpoint('50pct')
 
       checkpoint_path = File.join(dir, 'classifier_checkpoint_50pct.json')
-      assert File.exist?(checkpoint_path)
+
+      assert_path_exists checkpoint_path
     end
   end
 
@@ -267,6 +276,7 @@ class BayesStreamingTest < Minitest::Test
       @classifier.save_checkpoint('90pct')
 
       checkpoints = @classifier.list_checkpoints
+
       assert_equal %w[10pct 50pct 90pct], checkpoints.sort
     end
   end
@@ -280,10 +290,12 @@ class BayesStreamingTest < Minitest::Test
       @classifier.save_checkpoint('test')
 
       checkpoint_path = File.join(dir, 'classifier_checkpoint_test.json')
-      assert File.exist?(checkpoint_path)
+
+      assert_path_exists checkpoint_path
 
       @classifier.delete_checkpoint('test')
-      refute File.exist?(checkpoint_path)
+
+      refute_path_exists checkpoint_path
     end
   end
 

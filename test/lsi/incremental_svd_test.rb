@@ -20,8 +20,8 @@ class IncrementalSVDModuleTest < Minitest::Test
     assert_instance_of Array, s_new
 
     # Rank may have increased by 1 (if new direction found)
-    assert s_new.size >= s.size
-    assert s_new.size <= s.size + 1
+    assert_operator s_new.size, :>=, s.size
+    assert_operator s_new.size, :<=, s.size + 1
   end
 
   def test_update_preserves_orthogonality
@@ -42,6 +42,7 @@ class IncrementalSVDModuleTest < Minitest::Test
       col_i = u_new.column(i)
       # Column should have unit length (approximately)
       norm = Math.sqrt(col_i.to_a.sum { |x| x * x })
+
       assert_in_delta 1.0, norm, 0.1, "Column #{i} should have unit length"
     end
   end
@@ -95,7 +96,7 @@ class IncrementalSVDModuleTest < Minitest::Test
 
     # Singular values should be sorted in descending order
     (0...(s_new.size - 1)).each do |i|
-      assert s_new[i] >= s_new[i + 1], "Singular values should be descending"
+      assert_operator s_new[i], :>=, s_new[i + 1], 'Singular values should be descending'
     end
   end
 end
@@ -116,12 +117,14 @@ class LSIIncrementalModeTest < Minitest::Test
 
   def test_incremental_mode_initialization
     lsi = Classifier::LSI.new(incremental: true)
+
     assert lsi.instance_variable_get(:@incremental_mode)
-    refute lsi.incremental_enabled? # Not active until first build
+    refute_predicate lsi, :incremental_enabled? # Not active until first build
   end
 
   def test_incremental_mode_with_max_rank
     lsi = Classifier::LSI.new(incremental: true, max_rank: 50)
+
     assert_equal 50, lsi.instance_variable_get(:@max_rank)
   end
 
@@ -131,10 +134,11 @@ class LSIIncrementalModeTest < Minitest::Test
     @dog_docs.each { |doc| lsi.add_item(doc, :dog) }
     @cat_docs.each { |doc| lsi.add_item(doc, :cat) }
 
-    refute lsi.incremental_enabled?
+    refute_predicate lsi, :incremental_enabled?
 
     lsi.build_index
-    assert lsi.incremental_enabled?
+
+    assert_predicate lsi, :incremental_enabled?
     assert_instance_of Matrix, lsi.instance_variable_get(:@u_matrix)
   end
 
@@ -155,7 +159,7 @@ class LSIIncrementalModeTest < Minitest::Test
     assert_equal initial_version + 1, lsi.instance_variable_get(:@version)
 
     # Should still be in incremental mode
-    assert lsi.incremental_enabled?
+    assert_predicate lsi, :incremental_enabled?
   end
 
   def test_incremental_classification_works
@@ -171,9 +175,11 @@ class LSIIncrementalModeTest < Minitest::Test
 
     # Classification should work
     result = lsi.classify('loyal pet that barks').to_s
+
     assert_equal 'dog', result
 
     result = lsi.classify('independent creature that meows').to_s
+
     assert_equal 'cat', result
   end
 
@@ -185,8 +191,9 @@ class LSIIncrementalModeTest < Minitest::Test
     lsi.build_index
 
     rank = lsi.current_rank
+
     assert_instance_of Integer, rank
-    assert rank.positive?
+    assert_predicate rank, :positive?
   end
 
   def test_disable_incremental_mode
@@ -195,11 +202,11 @@ class LSIIncrementalModeTest < Minitest::Test
     @dog_docs.each { |doc| lsi.add_item(doc, :dog) }
     lsi.build_index
 
-    assert lsi.incremental_enabled?
+    assert_predicate lsi, :incremental_enabled?
 
     lsi.disable_incremental_mode!
 
-    refute lsi.incremental_enabled?
+    refute_predicate lsi, :incremental_enabled?
     assert_nil lsi.instance_variable_get(:@u_matrix)
   end
 
@@ -209,12 +216,12 @@ class LSIIncrementalModeTest < Minitest::Test
     @dog_docs.each { |doc| lsi.add_item(doc, :dog) }
     lsi.build_index
 
-    refute lsi.incremental_enabled?
+    refute_predicate lsi, :incremental_enabled?
 
     lsi.enable_incremental_mode!(max_rank: 75)
     lsi.build_index(force: true)
 
-    assert lsi.incremental_enabled?
+    assert_predicate lsi, :incremental_enabled?
     assert_equal 75, lsi.instance_variable_get(:@max_rank)
   end
 
@@ -226,7 +233,8 @@ class LSIIncrementalModeTest < Minitest::Test
 
     # Force rebuild should work
     lsi.build_index(force: true)
-    assert lsi.incremental_enabled?
+
+    assert_predicate lsi, :incremental_enabled?
   end
 
   def test_vocabulary_growth_triggers_full_rebuild
@@ -247,7 +255,7 @@ class LSIIncrementalModeTest < Minitest::Test
 
     # After vocabulary growth > 20%, incremental mode should be disabled
     # and a full rebuild should have occurred
-    refute lsi.incremental_enabled?
+    refute_predicate lsi, :incremental_enabled?
   end
 
   def test_incremental_produces_reasonable_results
@@ -290,6 +298,7 @@ class LSIIncrementalModeTest < Minitest::Test
 
     # Should still work
     result = lsi.classify('barking dog wags tail').to_s
+
     assert_equal 'dog', result
   end
 end

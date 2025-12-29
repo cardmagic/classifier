@@ -19,6 +19,7 @@ class LSIStreamingTest < Minitest::Test
     # Should be able to classify
     # Note: classify returns the category as originally stored (symbol in this case)
     result = @lsi.classify('loyal pet that barks')
+
     assert_equal 'dog', result.to_s
   end
 
@@ -62,9 +63,10 @@ class LSIStreamingTest < Minitest::Test
   end
 
   def test_train_from_stream_marks_dirty
-    refute @lsi.dirty?
+    refute_predicate @lsi, :dirty?
     @lsi.train_from_stream(:category, StringIO.new("content\n"))
-    assert @lsi.dirty?
+
+    assert_predicate @lsi, :dirty?
   end
 
   def test_train_from_stream_rebuilds_index_when_auto_rebuild
@@ -77,7 +79,7 @@ class LSIStreamingTest < Minitest::Test
     @lsi.train_from_stream(:cat, StringIO.new(cat_docs))
 
     # Index should be built
-    refute @lsi.needs_rebuild?
+    refute_predicate @lsi, :needs_rebuild?
   end
 
   def test_train_from_stream_skips_rebuild_when_auto_rebuild_false
@@ -86,7 +88,7 @@ class LSIStreamingTest < Minitest::Test
     @lsi.train_from_stream(:category, StringIO.new("document one\ndocument two\n"))
 
     # Index should need rebuild
-    assert @lsi.needs_rebuild?
+    assert_predicate @lsi, :needs_rebuild?
   end
 
   def test_train_from_stream_with_file
@@ -104,6 +106,7 @@ class LSIStreamingTest < Minitest::Test
     @lsi.add_item('kittens are curious', :cat)
 
     result = @lsi.classify('loyal pet')
+
     assert_equal 'dog', result.to_s
   end
 
@@ -132,13 +135,15 @@ class LSIStreamingTest < Minitest::Test
 
   def test_add_batch_empty
     @lsi.add_batch(category: [])
+
     assert_empty @lsi.items
   end
 
   def test_add_batch_marks_dirty
-    refute @lsi.dirty?
+    refute_predicate @lsi, :dirty?
     @lsi.add_batch(category: ['doc'])
-    assert @lsi.dirty?
+
+    assert_predicate @lsi, :dirty?
   end
 
   def test_add_batch_rebuilds_when_auto_rebuild
@@ -149,7 +154,7 @@ class LSIStreamingTest < Minitest::Test
       cat: ['cats meow', 'kittens purr']
     )
 
-    refute @lsi.needs_rebuild?
+    refute_predicate @lsi, :needs_rebuild?
   end
 
   # train_batch tests (alias for add_batch)
@@ -208,6 +213,7 @@ class LSIStreamingTest < Minitest::Test
 
     # Both should classify the same
     test_doc = 'loyal playful pet'
+
     assert_equal lsi1.classify(test_doc).to_s, lsi2.classify(test_doc).to_s
   end
 
@@ -229,6 +235,7 @@ class LSIStreamingTest < Minitest::Test
 
     # Both should classify the same
     test_doc = 'barking dog'
+
     assert_equal lsi1.classify(test_doc).to_s, lsi2.classify(test_doc).to_s
   end
 
@@ -244,7 +251,8 @@ class LSIStreamingTest < Minitest::Test
       @lsi.save_checkpoint('50pct')
 
       checkpoint_path = File.join(dir, 'lsi_checkpoint_50pct.json')
-      assert File.exist?(checkpoint_path)
+
+      assert_path_exists checkpoint_path
     end
   end
 
@@ -279,6 +287,7 @@ class LSIStreamingTest < Minitest::Test
       @lsi.save_checkpoint('90pct')
 
       checkpoints = @lsi.list_checkpoints
+
       assert_equal %w[10pct 50pct 90pct], checkpoints.sort
     end
   end
@@ -292,10 +301,12 @@ class LSIStreamingTest < Minitest::Test
       @lsi.save_checkpoint('test')
 
       checkpoint_path = File.join(dir, 'lsi_checkpoint_test.json')
-      assert File.exist?(checkpoint_path)
+
+      assert_path_exists checkpoint_path
 
       @lsi.delete_checkpoint('test')
-      refute File.exist?(checkpoint_path)
+
+      refute_path_exists checkpoint_path
     end
   end
 

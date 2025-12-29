@@ -34,7 +34,7 @@ module Classifier
       #
       # @rbs () -> Float?
       def percent
-        return nil unless @total && @total.positive?
+        return nil unless @total&.positive?
 
         (@completed.to_f / @total * 100).round(2)
       end

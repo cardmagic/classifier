@@ -8,7 +8,7 @@ require 'json'
 require 'mutex_m'
 
 module Classifier
-  class Bayes
+  class Bayes # rubocop:disable Metrics/ClassLength
     include Mutex_m
     include Streaming
 
@@ -324,7 +324,7 @@ module Classifier
     #   end
     #
     # @rbs (String | Symbol, IO, ?batch_size: Integer) { (Streaming::Progress) -> void } -> void
-    def train_from_stream(category, io, batch_size: Streaming::DEFAULT_BATCH_SIZE, &block)
+    def train_from_stream(category, io, batch_size: Streaming::DEFAULT_BATCH_SIZE)
       category = category.prepare_category_name
       raise StandardError, "No such category: #{category}" unless @categories.key?(category)
 
@@ -354,7 +354,9 @@ module Classifier
     #     puts "#{progress.percent}% complete"
     #   end
     #
-    # @rbs (?(String | Symbol), ?Array[String], ?batch_size: Integer, **Array[String]) { (Streaming::Progress) -> void } -> void
+    # @rbs (
+    #   ?(String | Symbol), ?Array[String], ?batch_size: Integer, **Array[String]
+    # ) { (Streaming::Progress) -> void } -> void
     def train_batch(category = nil, documents = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &block)
       if category && documents
         train_batch_for_category(category, documents, batch_size: batch_size, &block)
@@ -386,7 +388,7 @@ module Classifier
 
     # Trains a batch of documents for a single category.
     # @rbs (String | Symbol, Array[String], ?batch_size: Integer) { (Streaming::Progress) -> void } -> void
-    def train_batch_for_category(category, documents, batch_size: Streaming::DEFAULT_BATCH_SIZE, &block)
+    def train_batch_for_category(category, documents, batch_size: Streaming::DEFAULT_BATCH_SIZE)
       category = category.prepare_category_name
       raise StandardError, "No such category: #{category}" unless @categories.key?(category)
 

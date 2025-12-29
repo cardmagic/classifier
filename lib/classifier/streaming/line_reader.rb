@@ -33,7 +33,7 @@ module Classifier
       #
       # @rbs () { (String) -> void } -> void
       # @rbs () -> Enumerator[String, void]
-      def each(&block)
+      def each
         return enum_for(:each) unless block_given?
 
         @io.each_line do |line|
@@ -86,9 +86,11 @@ module Classifier
           @io.seek(original_pos)
 
           return nil if sample_lines.zero?
+          return nil unless @io.respond_to?(:size)
 
           avg_line_size = sample_bytes.to_f / sample_lines
-          (@io.size / avg_line_size).round
+          io_size = @io.__send__(:size) #: Integer
+          (io_size / avg_line_size).round
         rescue IOError, Errno::ESPIPE
           nil
         end

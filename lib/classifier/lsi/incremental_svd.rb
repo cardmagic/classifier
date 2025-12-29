@@ -1,5 +1,7 @@
 # rbs_inline: enabled
 
+# rubocop:disable Naming/MethodParameterName, Metrics/ParameterLists
+
 require 'matrix'
 
 module Classifier
@@ -75,9 +77,7 @@ module Classifier
           u_extended = extend_matrix_with_column(u, p_hat)
           u_new = u_extended * u_prime
 
-          if s_prime.size > max_rank
-            u_new, s_prime = truncate(u_new, s_prime, max_rank)
-          end
+          u_new, s_prime = truncate(u_new, s_prime, max_rank) if s_prime.size > max_rank
 
           [u_new, s_prime]
         end
@@ -89,21 +89,19 @@ module Classifier
           u_prime, s_prime = small_svd(k_matrix, epsilon)
           u_new = u * u_prime
 
-          if s_prime.size > max_rank
-            u_new, s_prime = truncate(u_new, s_prime, max_rank)
-          end
+          u_new, s_prime = truncate(u_new, s_prime, max_rank) if s_prime.size > max_rank
 
           [u_new, s_prime]
         end
 
         # Builds the K matrix when rank grows by 1.
-        # @rbs (Array[Float], Vector, Float) -> Matrix
+        # @rbs (Array[Float], untyped, Float) -> untyped
         def build_k_matrix_with_growth(s, m_vec, p_norm)
           k = s.size
           rows = k.times.map do |i|
-            row = Array.new(k + 1, 0.0)
-            row[i] = s[i]
-            row[k] = m_vec[i]
+            row = Array.new(k + 1, 0.0) #: Array[Float]
+            row[i] = s[i].to_f
+            row[k] = m_vec[i].to_f
             row
           end
           rows << Array.new(k + 1, 0.0).tap { |r| r[k] = p_norm }
@@ -149,20 +147,21 @@ module Classifier
         end
 
         # Truncates to max_rank
-        # @rbs (Matrix, Array[Float], Integer) -> [Matrix, Array[Float]]
+        # @rbs (untyped, Array[Float], Integer) -> [untyped, Array[Float]]
         def truncate(u, s, max_rank)
-          s_truncated = s[0...max_rank]
+          s_truncated = s[0...max_rank] || [] #: Array[Float]
           cols = (0...max_rank).map { |i| u.column(i).to_a }
           u_truncated = Matrix.columns(cols)
           [u_truncated, s_truncated]
         end
 
         # Computes magnitude of a vector
-        # @rbs (Vector) -> Float
+        # @rbs (untyped) -> Float
         def magnitude(vec)
-          Math.sqrt(vec.to_a.sum { |x| x * x })
+          Math.sqrt(vec.to_a.sum { |x| x.to_f * x.to_f })
         end
       end
     end
   end
 end
+# rubocop:enable Naming/MethodParameterName, Metrics/ParameterLists

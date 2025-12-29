@@ -145,7 +145,7 @@ module Classifier
     #
     # @rbs () -> bool
     def incremental_enabled?
-      @incremental_mode && @u_matrix != nil
+      @incremental_mode && !@u_matrix.nil?
     end
 
     # Returns the current rank of the incremental SVD (number of singular values kept).
@@ -153,7 +153,7 @@ module Classifier
     #
     # @rbs () -> Integer?
     def current_rank
-      @singular_values&.count { |v| v > 0 }
+      @singular_values&.count(&:positive?)
     end
 
     # Disables incremental mode. Subsequent adds will trigger full rebuilds.
@@ -656,7 +656,7 @@ module Classifier
     #   end
     #
     # @rbs (String | Symbol, IO, ?batch_size: Integer) { (Streaming::Progress) -> void } -> void
-    def train_from_stream(category, io, batch_size: Streaming::DEFAULT_BATCH_SIZE, &block)
+    def train_from_stream(category, io, batch_size: Streaming::DEFAULT_BATCH_SIZE)
       original_auto_rebuild = @auto_rebuild
       @auto_rebuild = false
 
@@ -686,7 +686,7 @@ module Classifier
     #   end
     #
     # @rbs (?batch_size: Integer, **Array[String]) { (Streaming::Progress) -> void } -> void
-    def add_batch(batch_size: Streaming::DEFAULT_BATCH_SIZE, **items, &block)
+    def add_batch(batch_size: Streaming::DEFAULT_BATCH_SIZE, **items)
       original_auto_rebuild = @auto_rebuild
       @auto_rebuild = false
 
@@ -711,7 +711,9 @@ module Classifier
     # Alias train_batch to add_batch for API consistency with other classifiers.
     # Note: LSI uses categories differently (items have categories, not the training call).
     #
-    # @rbs (?(String | Symbol), ?Array[String], ?batch_size: Integer, **Array[String]) { (Streaming::Progress) -> void } -> void
+    # @rbs (
+    #   ?(String | Symbol), ?Array[String], ?batch_size: Integer, **Array[String]
+    # ) { (Streaming::Progress) -> void } -> void
     def train_batch(category = nil, documents = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &block)
       if category && documents
         add_batch(batch_size: batch_size, **{ category.to_sym => documents }, &block)
@@ -889,6 +891,7 @@ module Classifier
 
     # Extracts columns from U corresponding to kept singular values.
     # Columns are sorted by descending singular value to match @singular_values order.
+    # rubocop:disable Naming/MethodParameterName
     # @rbs (untyped, Array[Integer], Array[Float]) -> Matrix
     def extract_reduced_u(u, kept_indices, singular_values)
       return Matrix.empty(u.row_size, 0) if kept_indices.empty?
@@ -907,6 +910,7 @@ module Classifier
       cols = sorted_indices.map { |i| u.column(i).to_a }
       Matrix.columns(cols)
     end
+    # rubocop:enable Naming/MethodParameterName
 
     # @rbs () -> void
     def make_word_list
@@ -953,7 +957,7 @@ module Classifier
     # Checks if vocabulary growth would exceed threshold (20%)
     # @rbs (Hash[Symbol, Integer]) -> bool
     def vocabulary_growth_exceeds_threshold?(word_hash)
-      return false unless @initial_vocab_size && @initial_vocab_size.positive?
+      return false unless @initial_vocab_size&.positive?
 
       new_words = word_hash.keys.count { |w| @word_list[w].nil? }
       growth_ratio = new_words.to_f / @initial_vocab_size

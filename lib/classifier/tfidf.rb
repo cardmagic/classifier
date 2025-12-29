@@ -278,12 +278,12 @@ module Classifier
     #   end
     #
     # @rbs (IO, ?batch_size: Integer) { (Streaming::Progress) -> void } -> self
-    def fit_from_stream(io, batch_size: Streaming::DEFAULT_BATCH_SIZE, &block)
+    def fit_from_stream(io, batch_size: Streaming::DEFAULT_BATCH_SIZE)
       reader = Streaming::LineReader.new(io, batch_size: batch_size)
       total = reader.estimate_line_count
       progress = Streaming::Progress.new(total: total)
 
-      documents = []
+      documents = [] #: Array[String]
 
       reader.each_batch do |batch|
         documents.concat(batch)

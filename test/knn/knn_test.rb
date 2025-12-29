@@ -562,7 +562,7 @@ class KNNTest < Minitest::Test
 
   def test_classify_returns_string_not_symbol
     knn = Classifier::KNN.new(k: 3)
-    knn.add(dog: [@str1, @str2], cat: [@str3, @str4])  # symbol keys
+    knn.add(dog: [@str1, @str2], cat: [@str3, @str4]) # symbol keys
 
     result = knn.classify('This is about dogs')
 
