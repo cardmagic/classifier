@@ -335,3 +335,35 @@ class StreamingModuleTest < Minitest::Test
     end
   end
 end
+
+class StreamingEnforcementTest < Minitest::Test
+  CLASSIFIERS = [
+    Classifier::Bayes,
+    Classifier::LSI,
+    Classifier::KNN,
+    Classifier::LogisticRegression,
+    Classifier::TFIDF
+  ].freeze
+
+  STREAMING_METHODS = %i[
+    train_from_stream
+    train_batch
+    save_checkpoint
+    list_checkpoints
+    delete_checkpoint
+  ].freeze
+
+  CLASSIFIERS.each do |klass|
+    define_method("test_#{klass.name.split('::').last.downcase}_includes_streaming") do
+      assert klass.include?(Classifier::Streaming),
+             "#{klass} must include Classifier::Streaming"
+    end
+
+    STREAMING_METHODS.each do |method|
+      define_method("test_#{klass.name.split('::').last.downcase}_responds_to_#{method}") do
+        assert klass.method_defined?(method) || klass.private_method_defined?(method),
+               "#{klass} must respond to #{method}"
+      end
+    end
+  end
+end
