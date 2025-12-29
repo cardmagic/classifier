@@ -840,7 +840,7 @@ module Classifier
       votes
     end
 
-    # Unlocked version of node_for_content for internal use
+    # Unlocked version of node_for_content for internal use.
     # @rbs (String) ?{ (String) -> String } -> ContentNode
     def node_for_content_unlocked(item, &block)
       return @items[item] if @items[item]
@@ -848,13 +848,7 @@ module Classifier
       clean_word_hash = block ? block.call(item).clean_word_hash : item.to_s.clean_word_hash
       cn = ContentNode.new(clean_word_hash, &block)
       cn.raw_vector_with(@word_list) unless needs_rebuild_unlocked?
-
-      # If incremental mode is active, we need to project the query document
-      # onto the U matrix to get consistent LSI vectors
-      if incremental_enabled?
-        assign_lsi_vector_incremental(cn)
-      end
-
+      assign_lsi_vector_incremental(cn) if incremental_enabled?
       cn
     end
 
@@ -864,19 +858,16 @@ module Classifier
       result
     end
 
-    # Builds reduced matrix and returns both the result and the U matrix
-    # U matrix is needed for incremental SVD updates
+    # Builds reduced matrix and returns both the result and the U matrix.
+    # U matrix is needed for incremental SVD updates.
     # @rbs (untyped, ?Float) -> [untyped, Matrix]
     def build_reduced_matrix_with_u(matrix, cutoff = 0.75)
-      # TODO: Check that M>=N on these dimensions! Transpose helps assure this
       u, v, s = matrix.SV_decomp
 
       all_singular_values = s.sort.reverse
-
       s_cutoff_index = [(s.size * cutoff).round - 1, 0].max
       s_cutoff = all_singular_values[s_cutoff_index]
 
-      # Track which singular values are kept and their values
       kept_indices = []
       kept_singular_values = []
       s.size.times do |ord|
@@ -888,45 +879,31 @@ module Classifier
         end
       end
 
-      # Sort kept singular values in descending order (same order as U columns will be)
-      # kept_indices are sorted by value in extract_reduced_u, so we need to match
       @singular_values = kept_singular_values.sort.reverse
-
-      # Reconstruct the term document matrix, only with reduced rank
       result = u * self.class.matrix_class.diag(s) * v.trans
-
-      # SVD may return transposed dimensions when row_size < column_size
-      # Ensure result matches input dimensions
       result = result.trans if result.row_size != matrix.row_size
-
-      # Extract U matrix with only kept columns (non-zero singular values)
-      # Convert to pure Ruby Matrix for incremental updates
       u_reduced = extract_reduced_u(u, kept_indices, s)
 
       [result, u_reduced]
     end
 
-    # Extracts columns from U corresponding to kept singular values
-    # Columns are sorted by descending singular value to match @singular_values order
+    # Extracts columns from U corresponding to kept singular values.
+    # Columns are sorted by descending singular value to match @singular_values order.
     # @rbs (untyped, Array[Integer], Array[Float]) -> Matrix
     def extract_reduced_u(u, kept_indices, singular_values)
       return Matrix.empty(u.row_size, 0) if kept_indices.empty?
 
-      # Sort indices by their singular values in descending order
       sorted_indices = kept_indices.sort_by { |i| -singular_values[i] }
 
-      # Convert to Ruby Matrix if using native backend
       if u.respond_to?(:to_ruby_matrix)
         u = u.to_ruby_matrix
       elsif !u.is_a?(::Matrix)
-        # Native matrix - extract columns manually
         rows = u.row_size.times.map do |i|
           sorted_indices.map { |j| u[i, j] }
         end
         return Matrix.rows(rows)
       end
 
-      # Extract only the columns we need, sorted by singular value
       cols = sorted_indices.map { |i| u.column(i).to_a }
       Matrix.columns(cols)
     end
@@ -939,45 +916,30 @@ module Classifier
       end
     end
 
-    # Performs incremental SVD update for a new document
+    # Performs incremental SVD update for a new document.
     # @rbs (ContentNode, Hash[Symbol, Integer]) -> void
     def perform_incremental_update(node, word_hash)
       needs_full_rebuild = false
       old_rank = nil
 
       synchronize do
-        # Check for vocabulary growth that would require full rebuild
         if vocabulary_growth_exceeds_threshold?(word_hash)
           disable_incremental_mode!
           needs_full_rebuild = true
         else
           old_rank = @u_matrix.column_size
-
-          # Extend vocabulary and U matrix for new words
           extend_vocabulary_for_incremental(word_hash)
-
-          # Build raw vector for the new document
           raw_vec = node.raw_vector_with(@word_list)
-
-          # Convert to Ruby Vector for incremental SVD
           raw_vector = Vector[*raw_vec.to_a]
 
-          # Perform incremental SVD update
           @u_matrix, @singular_values = IncrementalSVD.update(
-            @u_matrix,
-            @singular_values,
-            raw_vector,
-            max_rank: @max_rank
+            @u_matrix, @singular_values, raw_vector, max_rank: @max_rank
           )
 
           new_rank = @u_matrix.column_size
-
-          # If rank grew, we need to re-project all existing documents
-          # to ensure consistent LSI vector sizes
           if new_rank > old_rank
             reproject_all_documents
           else
-            # Only assign LSI vector to the new document
             assign_lsi_vector_incremental(node)
           end
 
@@ -985,7 +947,6 @@ module Classifier
         end
       end
 
-      # Call build_index outside the synchronized block to avoid deadlock
       build_index if needs_full_rebuild
     end
 
@@ -999,30 +960,25 @@ module Classifier
       growth_ratio > 0.2
     end
 
-    # Extends vocabulary and U matrix for new words
+    # Extends vocabulary and U matrix for new words.
     # @rbs (Hash[Symbol, Integer]) -> void
     def extend_vocabulary_for_incremental(word_hash)
       new_words = word_hash.keys.select { |w| @word_list[w].nil? }
       return if new_words.empty?
 
-      # Add new words to vocabulary
       new_words.each { |word| @word_list.add_word(word) }
-
-      # Extend U matrix with zero rows for new terms
       extend_u_matrix(new_words.size)
     end
 
-    # Extends U matrix with zero rows for new vocabulary terms
+    # Extends U matrix with zero rows for new vocabulary terms.
     # @rbs (Integer) -> void
     def extend_u_matrix(num_new_rows)
       return if num_new_rows.zero? || @u_matrix.nil?
 
       if self.class.native_available? && @u_matrix.is_a?(self.class.matrix_class)
-        # Use native vstack for performance
         new_rows = self.class.matrix_class.zeros(num_new_rows, @u_matrix.column_size)
         @u_matrix = self.class.matrix_class.vstack(@u_matrix, new_rows)
       else
-        # Pure Ruby fallback
         new_rows = Matrix.zero(num_new_rows, @u_matrix.column_size)
         @u_matrix = Matrix.vstack(@u_matrix, new_rows)
       end
@@ -1042,25 +998,17 @@ module Classifier
       end
     end
 
-    # Native batch re-projection using C extension
+    # Native batch re-projection using C extension.
     # @rbs () -> void
     def reproject_all_documents_native
-      # Collect raw vectors for all documents
       nodes = @items.values
       raw_vectors = nodes.map do |node|
         raw = node.raw_vector_with(@word_list)
-        # Ensure we have native vectors
-        if raw.is_a?(self.class.vector_class)
-          raw
-        else
-          self.class.vector_class.alloc(raw.to_a)
-        end
+        raw.is_a?(self.class.vector_class) ? raw : self.class.vector_class.alloc(raw.to_a)
       end
 
-      # Batch project all at once (much faster than individual projections)
       lsi_vectors = @u_matrix.batch_project(raw_vectors)
 
-      # Assign results
       nodes.each_with_index do |node, i|
         lsi_vec = lsi_vectors[i].row
         node.lsi_vector = lsi_vec
@@ -1076,27 +1024,22 @@ module Classifier
       end
     end
 
-    # Assigns LSI vector to a node using projection: lsi_vec = U^T * raw_vec
+    # Assigns LSI vector to a node using projection: lsi_vec = U^T * raw_vec.
     # @rbs (ContentNode) -> void
     def assign_lsi_vector_incremental(node)
       return unless @u_matrix
 
       raw_vec = node.raw_vector_with(@word_list)
       raw_vector = Vector[*raw_vec.to_a]
-
-      # LSI vector = U^T * raw_vector (projection into semantic space)
       lsi_arr = (@u_matrix.transpose * raw_vector).to_a
 
-      # Use the appropriate vector class based on backend
-      if self.class.native_available?
-        lsi_vec = self.class.vector_class.alloc(lsi_arr).row
-        node.lsi_vector = lsi_vec
-        node.lsi_norm = lsi_vec.normalize
-      else
-        lsi_vec = Vector[*lsi_arr]
-        node.lsi_vector = lsi_vec
-        node.lsi_norm = lsi_vec.normalize
-      end
+      lsi_vec = if self.class.native_available?
+                  self.class.vector_class.alloc(lsi_arr).row
+                else
+                  Vector[*lsi_arr]
+                end
+      node.lsi_vector = lsi_vec
+      node.lsi_norm = lsi_vec.normalize
     end
   end
 end

@@ -39,21 +39,14 @@ module Classifier
         #
         # @rbs (Matrix, Array[Float], Vector, max_rank: Integer, ?epsilon: Float) -> [Matrix, Array[Float]]
         def update(u, s, c, max_rank:, epsilon: EPSILON)
-          # Step 1: Project c onto the column space of U
-          # m_vec = U^T * c
           m_vec = project(u, c)
-
-          # Step 2: Compute residual (component orthogonal to U)
-          # p = c - U * m_vec
           u_times_m = u * m_vec
           p_vec = c - (u_times_m.is_a?(Vector) ? u_times_m : Vector[*u_times_m.to_a.flatten])
           p_norm = magnitude(p_vec)
 
           if p_norm > epsilon
-            # New direction found - rank may increase
             update_with_new_direction(u, s, m_vec, p_vec, p_norm, max_rank, epsilon)
           else
-            # Vector is in span of U - no new direction needed
             update_in_span(u, s, m_vec, max_rank, epsilon)
           end
         end
@@ -73,29 +66,15 @@ module Classifier
 
         private
 
-        # Update when new document has a component orthogonal to existing U
+        # Update when new document has a component orthogonal to existing U.
         # @rbs (Matrix, Array[Float], Vector, Vector, Float, Integer, Float) -> [Matrix, Array[Float]]
         def update_with_new_direction(u, s, m_vec, p_vec, p_norm, max_rank, epsilon)
-          # Step 3: Orthonormalize the residual
           p_hat = p_vec * (1.0 / p_norm)
-
-          # Step 4: Form K matrix
-          # K = | diag(s)  m_vec |
-          #     |   0     p_norm |
-          # This is a (k+1) × (k+1) matrix
           k_matrix = build_k_matrix_with_growth(s, m_vec, p_norm)
-
-          # Step 5: SVD of small K matrix
           u_prime, s_prime = small_svd(k_matrix, epsilon)
-
-          # Step 6: Update U = [U | p̂] * U'
-          # First, form [U | p̂] which is m × (k+1)
           u_extended = extend_matrix_with_column(u, p_hat)
-
-          # Multiply to get new U
           u_new = u_extended * u_prime
 
-          # Truncate if rank exceeds max_rank
           if s_prime.size > max_rank
             u_new, s_prime = truncate(u_new, s_prime, max_rank)
           end
@@ -103,21 +82,13 @@ module Classifier
           [u_new, s_prime]
         end
 
-        # Update when new document is entirely within span of existing U
+        # Update when new document is entirely within span of existing U.
         # @rbs (Matrix, Array[Float], Vector, Integer, Float) -> [Matrix, Array[Float]]
         def update_in_span(u, s, m_vec, max_rank, epsilon)
-          # When vector is in span, we update by forming a different K matrix
-          # K = diag(s) with the m_vec contribution
-          # This is a rank-1 update to the existing SVD
           k_matrix = build_k_matrix_in_span(s, m_vec)
-
-          # SVD of K
           u_prime, s_prime = small_svd(k_matrix, epsilon)
-
-          # Update U = U * U'
           u_new = u * u_prime
 
-          # Truncate if needed
           if s_prime.size > max_rank
             u_new, s_prime = truncate(u_new, s_prime, max_rank)
           end
@@ -125,67 +96,38 @@ module Classifier
           [u_new, s_prime]
         end
 
-        # Builds the K matrix when rank grows by 1
-        # K = | diag(s)  m_vec |
-        #     |   0      p_norm |
+        # Builds the K matrix when rank grows by 1.
         # @rbs (Array[Float], Vector, Float) -> Matrix
         def build_k_matrix_with_growth(s, m_vec, p_norm)
           k = s.size
-          rows = []
-
-          # First k rows: [diag(s), m_vec]
-          k.times do |i|
+          rows = k.times.map do |i|
             row = Array.new(k + 1, 0.0)
             row[i] = s[i]
             row[k] = m_vec[i]
-            rows << row
+            row
           end
-
-          # Last row: [0, ..., 0, p_norm]
-          last_row = Array.new(k + 1, 0.0)
-          last_row[k] = p_norm
-          rows << last_row
-
+          rows << Array.new(k + 1, 0.0).tap { |r| r[k] = p_norm }
           Matrix.rows(rows)
         end
 
-        # Builds the K matrix when vector is in span (no rank growth)
-        # This handles the rank-1 update case
+        # Builds the K matrix when vector is in span (no rank growth).
         # @rbs (Array[Float], Vector) -> Matrix
-        def build_k_matrix_in_span(s, m_vec)
+        def build_k_matrix_in_span(s, _m_vec)
           k = s.size
-          rows = []
-
-          # Form diag(s) + contribution from m_vec
-          # When c is in span, the update is: A_new = A + c * e_n^T
-          # In SVD terms: U * (S + m * e_n^T * V^T) * V^T
-          # The K matrix captures this via S with the m contribution
-          k.times do |i|
+          rows = k.times.map do |i|
             row = Array.new(k, 0.0)
             row[i] = s[i]
-            # Add the m_vec contribution - this creates a rank-1 perturbation
-            # The last column gets the m_vec values
-            rows << row
+            row
           end
-
-          # Actually for in-span case, we need to handle this differently
-          # The new column c = U * m, so the matrix grows but not the rank
-          # We still need to account for the new column in the reconstruction
           Matrix.rows(rows)
         end
 
-        # Computes SVD of small matrix and extracts singular values
+        # Computes SVD of small matrix and extracts singular values.
         # @rbs (Matrix, Float) -> [Matrix, Array[Float]]
         def small_svd(matrix, epsilon)
           u, _v, s_array = matrix.SV_decomp
 
-          # Filter out near-zero singular values and sort descending
-          s_filtered = s_array.select { |sv| sv.abs > epsilon }
-          s_sorted = s_filtered.sort.reverse
-
-          # Keep only columns of U corresponding to non-zero singular values
-          # The SV_decomp returns singular values in a specific order
-          # We need to reorder U columns to match descending singular value order
+          s_sorted = s_array.select { |sv| sv.abs > epsilon }.sort.reverse
           indices = s_array.each_with_index
                            .select { |sv, _| sv.abs > epsilon }
                            .sort_by { |sv, _| -sv }

@@ -25,10 +25,8 @@ CMatrix *cmatrix_extend_column(CMatrix *m, CVector *col)
 
     CMatrix *result = cmatrix_alloc(m->rows, m->cols + 1);
 
-    /* Copy existing columns */
     for (size_t i = 0; i < m->rows; i++) {
         memcpy(&MAT_AT(result, i, 0), &MAT_AT(m, i, 0), m->cols * sizeof(double));
-        /* Add new column */
         MAT_AT(result, i, m->cols) = col->data[i];
     }
 
@@ -50,10 +48,7 @@ CMatrix *cmatrix_vstack(CMatrix *top, CMatrix *bottom)
     size_t new_rows = top->rows + bottom->rows;
     CMatrix *result = cmatrix_alloc(new_rows, top->cols);
 
-    /* Copy top matrix */
     memcpy(result->data, top->data, top->rows * top->cols * sizeof(double));
-
-    /* Copy bottom matrix */
     memcpy(result->data + top->rows * top->cols,
            bottom->data,
            bottom->rows * bottom->cols * sizeof(double));
@@ -277,8 +272,6 @@ static VALUE rb_cmatrix_zeros(VALUE klass, VALUE rb_rows, VALUE rb_cols)
     size_t cols = NUM2SIZET(rb_cols);
 
     CMatrix *result = cmatrix_alloc(rows, cols);
-    /* Already zero-initialized by cmatrix_alloc */
-
     return TypedData_Wrap_Struct(klass, &cmatrix_type, result);
 
     (void)klass;
@@ -324,7 +317,6 @@ static VALUE rb_cmatrix_batch_project(VALUE self, VALUE rb_vectors)
         return rb_ary_new();
     }
 
-    /* Convert Ruby vectors to C vectors */
     CVector **raw_vectors = ALLOC_N(CVector *, num_vectors);
     for (long i = 0; i < num_vectors; i++) {
         VALUE rb_vec = rb_ary_entry(rb_vectors, i);
@@ -335,13 +327,9 @@ static VALUE rb_cmatrix_batch_project(VALUE self, VALUE rb_vectors)
         GET_CVECTOR(rb_vec, raw_vectors[i]);
     }
 
-    /* Allocate output array */
     CVector **lsi_vectors = ALLOC_N(CVector *, num_vectors);
-
-    /* Perform batch projection */
     cbatch_project(u, raw_vectors, (size_t)num_vectors, lsi_vectors);
 
-    /* Convert results to Ruby */
     VALUE result = rb_ary_new_capa(num_vectors);
     for (long i = 0; i < num_vectors; i++) {
         VALUE rb_lsi = TypedData_Wrap_Struct(cClassifierVector, &cvector_type,
