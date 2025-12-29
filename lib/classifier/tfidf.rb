@@ -211,10 +211,10 @@ module Classifier
 
     # @rbs (Integer, Integer) -> bool
     def within_df_bounds?(doc_freq, num_docs)
-      min_count = @min_df.is_a?(Float) ? (@min_df * num_docs).ceil : @min_df
-      max_count = @max_df.is_a?(Float) ? (@max_df * num_docs).floor : @max_df
-
-      doc_freq.between?(min_count, max_count)
+      doc_freq.between?(
+        @min_df.is_a?(Float) ? (@min_df * num_docs).ceil : @min_df,
+        @max_df.is_a?(Float) ? (@max_df * num_docs).floor : @max_df
+      )
     end
 
     # @rbs (Hash[Symbol, Float]) -> Hash[Symbol, Float]
