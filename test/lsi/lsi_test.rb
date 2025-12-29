@@ -11,6 +11,110 @@ class LSITest < Minitest::Test
     @str5 = 'This text involves birds. Birds.'
   end
 
+  # Hash-style add API tests (Issue #100)
+
+  def test_add_with_hash_syntax
+    lsi = Classifier::LSI.new
+    lsi.add('Dog' => 'Dogs are loyal pets')
+    lsi.add('Cat' => 'Cats are independent')
+
+    assert_equal 2, lsi.items.size
+    assert_includes lsi.items, 'Dogs are loyal pets'
+    assert_includes lsi.items, 'Cats are independent'
+  end
+
+  def test_add_with_symbol_keys
+    lsi = Classifier::LSI.new
+    lsi.add(Dog: 'Dogs are loyal', Cat: 'Cats are independent')
+
+    assert_equal 2, lsi.items.size
+    assert_equal ['Dog'], lsi.categories_for('Dogs are loyal')
+    assert_equal ['Cat'], lsi.categories_for('Cats are independent')
+  end
+
+  def test_add_multiple_items_same_category
+    lsi = Classifier::LSI.new
+    lsi.add('Dog' => ['Dogs are loyal', 'Puppies are cute', 'Canines are friendly'])
+
+    assert_equal 3, lsi.items.size
+    assert_equal ['Dog'], lsi.categories_for('Dogs are loyal')
+    assert_equal ['Dog'], lsi.categories_for('Puppies are cute')
+    assert_equal ['Dog'], lsi.categories_for('Canines are friendly')
+  end
+
+  def test_add_batch_operations
+    lsi = Classifier::LSI.new
+    lsi.add(
+      'Dog' => ['Dogs are loyal', 'Puppies are cute'],
+      'Cat' => ['Cats are independent', 'Kittens are playful']
+    )
+
+    assert_equal 4, lsi.items.size
+    assert_equal ['Dog'], lsi.categories_for('Dogs are loyal')
+    assert_equal ['Cat'], lsi.categories_for('Cats are independent')
+  end
+
+  def test_add_classification_works
+    lsi = Classifier::LSI.new
+    lsi.add(
+      'Dog' => @str2,
+      'Cat' => [@str3, @str4],
+      'Bird' => @str5
+    )
+
+    assert_equal 'Dog', lsi.classify(@str1)
+    assert_equal 'Cat', lsi.classify(@str3)
+    assert_equal 'Bird', lsi.classify(@str5)
+  end
+
+  def test_add_find_related_works
+    lsi = Classifier::LSI.new
+    lsi.add(
+      'Dog' => [@str1, @str2],
+      'Cat' => [@str3, @str4],
+      'Bird' => @str5
+    )
+
+    # The closest match to str1 should be str2 (both about dogs)
+    related = lsi.find_related(@str1, 3)
+
+    assert_equal @str2, related.first, 'Most related to dog text should be other dog text'
+  end
+
+  def test_add_equivalence_to_add_item
+    # Using add
+    lsi1 = Classifier::LSI.new
+    lsi1.add(
+      'Programming' => ['Ruby programming language', 'Java enterprise development'],
+      'Entertainment' => 'Cat pictures are cute'
+    )
+
+    # Using add_item (legacy)
+    lsi2 = Classifier::LSI.new
+    lsi2.add_item 'Ruby programming language', 'Programming'
+    lsi2.add_item 'Java enterprise development', 'Programming'
+    lsi2.add_item 'Cat pictures are cute', 'Entertainment'
+
+    # Both should classify the same
+    test_text = 'Python programming'
+
+    assert_equal lsi1.classify(test_text), lsi2.classify(test_text)
+  end
+
+  def test_add_triggers_auto_rebuild
+    lsi = Classifier::LSI.new auto_rebuild: true
+    lsi.add('Dog' => ['Dogs are great', 'More about dogs'])
+
+    refute_predicate lsi, :needs_rebuild?, 'Auto-rebuild should keep index current'
+  end
+
+  def test_add_respects_auto_rebuild_false
+    lsi = Classifier::LSI.new auto_rebuild: false
+    lsi.add('Dog' => ['Dogs are great', 'More about dogs'])
+
+    assert_predicate lsi, :needs_rebuild?, 'Index should need rebuild when auto_rebuild is false'
+  end
+
   def test_basic_indexing
     lsi = Classifier::LSI.new
     [@str1, @str2, @str3, @str4, @str5].each { |x| lsi << x }

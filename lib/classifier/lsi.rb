@@ -122,11 +122,38 @@ module Classifier
       end
     end
 
+    # Adds items to the index using hash-style syntax.
+    # The hash keys are categories, and values are items (or arrays of items).
+    #
+    # For example:
+    #   lsi = Classifier::LSI.new
+    #   lsi.add("Dog" => "Dogs are loyal pets")
+    #   lsi.add("Cat" => "Cats are independent")
+    #   lsi.add(Bird: "Birds can fly")  # Symbol keys work too
+    #
+    # Multiple items with the same category:
+    #   lsi.add("Dog" => ["Dogs are loyal", "Puppies are cute"])
+    #
+    # Batch operations with multiple categories:
+    #   lsi.add(
+    #     "Dog" => ["Dogs are loyal", "Puppies are cute"],
+    #     "Cat" => ["Cats are independent", "Kittens are playful"]
+    #   )
+    #
+    # @rbs (**untyped items) -> void
+    def add(**items)
+      items.each do |category, value|
+        Array(value).each { |doc| add_item(doc, category.to_s) }
+      end
+    end
+
     # Adds an item to the index. item is assumed to be a string, but
     # any item may be indexed so long as it responds to #to_s or if
     # you provide an optional block explaining how the indexer can
     # fetch fresh string data. This optional block is passed the item,
     # so the item may only be a reference to a URL or file name.
+    #
+    # @deprecated Use {#add} instead for clearer hash-style syntax.
     #
     # For example:
     #   lsi = Classifier::LSI.new
