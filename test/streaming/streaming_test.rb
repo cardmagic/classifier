@@ -337,13 +337,13 @@ class StreamingModuleTest < Minitest::Test
 end
 
 class StreamingEnforcementTest < Minitest::Test
-  CLASSIFIERS = [
-    Classifier::Bayes,
-    Classifier::LSI,
-    Classifier::KNN,
-    Classifier::LogisticRegression,
-    Classifier::TFIDF
-  ].freeze
+  # Dynamically discover all classifier/vectorizer classes by looking for
+  # classes that define `classify` (classifiers) or `transform` (vectorizers)
+  CLASSIFIERS = Classifier.constants.filter_map do |const|
+    klass = Classifier.const_get(const)
+    next unless klass.is_a?(Class)
+    klass if klass.method_defined?(:classify) || klass.method_defined?(:transform)
+  end.freeze
 
   STREAMING_METHODS = %i[
     train_from_stream
@@ -352,6 +352,10 @@ class StreamingEnforcementTest < Minitest::Test
     list_checkpoints
     delete_checkpoint
   ].freeze
+
+  def test_classifiers_discovered
+    assert CLASSIFIERS.size >= 5, "Expected at least 5 classifiers, found: #{CLASSIFIERS.map(&:name)}"
+  end
 
   CLASSIFIERS.each do |klass|
     define_method("test_#{klass.name.split('::').last.downcase}_includes_streaming") do
