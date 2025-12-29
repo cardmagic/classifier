@@ -122,11 +122,47 @@ module Classifier
       end
     end
 
+    # Adds items to the index using hash-style syntax.
+    # The hash keys are the text content to index, and values are the item identifiers.
+    #
+    # For example:
+    #   lsi = Classifier::LSI.new
+    #   lsi.add("Ruby programming language" => doc1)
+    #   lsi.add("Java enterprise development" => doc2)
+    #   lsi.add(python: doc3)  # Symbol keys work too
+    #
+    # Batch operations:
+    #   lsi.add(
+    #     "Ruby programming" => doc1,
+    #     "Java development" => doc2
+    #   )
+    #
+    # With categories:
+    #   lsi.add("Ruby programming" => [doc1, :programming, :ruby])
+    #   lsi.add("Java development" => [doc2, "enterprise"])
+    #
+    # @rbs (**untyped items) -> void
+    def add(**items)
+      items.each do |text, value|
+        text_str = text.to_s
+        if value.is_a?(Array)
+          item_key = value.first
+          categories = value[1..]
+        else
+          item_key = value
+          categories = []
+        end
+        add_item_internal(item_key, text_str, *categories)
+      end
+    end
+
     # Adds an item to the index. item is assumed to be a string, but
     # any item may be indexed so long as it responds to #to_s or if
     # you provide an optional block explaining how the indexer can
     # fetch fresh string data. This optional block is passed the item,
     # so the item may only be a reference to a URL or file name.
+    #
+    # @deprecated Use {#add} instead for clearer hash-style syntax.
     #
     # For example:
     #   lsi = Classifier::LSI.new
@@ -533,6 +569,20 @@ module Classifier
     end
 
     private
+
+    # Internal method to add an item with explicit text content and item key.
+    # Called by the new hash-style add method.
+    #
+    # @rbs (untyped, String, *String | Symbol) -> void
+    def add_item_internal(item_key, text_content, *categories)
+      clean_word_hash = text_content.clean_word_hash
+      synchronize do
+        @items[item_key] = ContentNode.new(clean_word_hash, *categories)
+        @version += 1
+        @dirty = true
+      end
+      build_index if @auto_rebuild
+    end
 
     # Restores LSI state from a JSON string (used by reload)
     # @rbs (String) -> void

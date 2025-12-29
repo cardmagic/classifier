@@ -115,11 +115,17 @@ require 'classifier'
 
 lsi = Classifier::LSI.new
 
-# Add documents with categories
-lsi.add_item "Dogs are loyal pets that love to play fetch", :pets
-lsi.add_item "Cats are independent and love to nap", :pets
-lsi.add_item "Ruby is a dynamic programming language", :programming
-lsi.add_item "Python is great for data science", :programming
+# Add documents with hash-style syntax (text => [key, *categories])
+lsi.add("Dogs are loyal pets that love to play fetch" => [:dog_doc, :pets])
+lsi.add("Cats are independent and love to nap" => [:cat_doc, :pets])
+lsi.add("Ruby is a dynamic programming language" => [:ruby_doc, :programming])
+lsi.add("Python is great for data science" => [:python_doc, :programming])
+
+# Add multiple documents at once
+lsi.add(
+  "JavaScript runs in the browser" => [:js_doc, :programming],
+  "Hamsters are small furry pets" => [:hamster_doc, :pets]
+)
 
 # Classify new text
 lsi.classify "My puppy loves to run around"
