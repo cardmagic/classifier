@@ -1,8 +1,11 @@
 Gem::Specification.new do |s|
   s.name        = 'classifier'
-  s.version     = '2.1.0'
-  s.summary     = 'Text classification with Bayesian, LSI, and k-Nearest Neighbors algorithms.'
-  s.description = 'A Ruby library for text classification using Bayesian, LSI (Latent Semantic Indexing), and k-Nearest Neighbors (kNN) algorithms. Includes native C extension for fast LSI operations.'
+  s.version     = '2.2.0'
+  s.summary     = 'Text classification with Bayesian, LSI, Logistic Regression, kNN, and TF-IDF vectorization.'
+  s.description = 'A Ruby library for text classification featuring Naive Bayes, LSI (Latent Semantic Indexing), ' \
+                  'Logistic Regression, and k-Nearest Neighbors classifiers. Includes TF-IDF vectorization, ' \
+                  'streaming/incremental training, pluggable persistence backends, thread safety, and a native ' \
+                  'C extension for fast LSI operations.'
   s.author = 'Lucas Carlson'
   s.email = 'lucas@rufy.com'
   s.homepage = 'https://rubyclassifier.com'
@@ -12,6 +15,7 @@ Gem::Specification.new do |s|
     'bug_tracker_uri' => 'https://github.com/cardmagic/classifier/issues',
     'changelog_uri' => 'https://github.com/cardmagic/classifier/releases'
   }
+  s.required_ruby_version = '>= 3.1'
   s.files = Dir['{lib,sig}/**/*.{rb,rbs}', 'ext/**/*.{c,h,rb}', 'bin/*', 'LICENSE', '*.md', 'test/*']
   s.extensions = ['ext/classifier/extconf.rb']
   s.license = 'LGPL'
