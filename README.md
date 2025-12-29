@@ -4,7 +4,7 @@
 [![CI](https://github.com/cardmagic/classifier/actions/workflows/ruby.yml/badge.svg)](https://github.com/cardmagic/classifier/actions/workflows/ruby.yml)
 [![License: LGPL](https://img.shields.io/badge/License-LGPL_2.1-blue.svg)](https://opensource.org/licenses/LGPL-2.1)
 
-A Ruby library for text classification using Bayesian, LSI (Latent Semantic Indexing), and k-Nearest Neighbors (kNN) algorithms.
+A Ruby library for text classification using Bayesian, LSI (Latent Semantic Indexing), k-Nearest Neighbors (kNN), and TF-IDF algorithms.
 
 **[Documentation](https://rubyclassifier.com/docs)** · **[Tutorials](https://rubyclassifier.com/docs/tutorials)** · **[Guides](https://rubyclassifier.com/docs/guides)**
 
@@ -14,6 +14,7 @@ A Ruby library for text classification using Bayesian, LSI (Latent Semantic Inde
 - [Bayesian Classifier](#bayesian-classifier)
 - [LSI (Latent Semantic Indexing)](#lsi-latent-semantic-indexing)
 - [k-Nearest Neighbors (kNN)](#k-nearest-neighbors-knn)
+- [TF-IDF Vectorizer](#tf-idf-vectorizer)
 - [Persistence](#persistence)
 - [Performance](#performance)
 - [Development](#development)
@@ -255,6 +256,77 @@ knn.categories
 | **kNN** | <1000 examples, interpretable results, incremental updates |
 
 **Why the size difference?** Bayes stores aggregate statistics—adding 10,000 documents just increments counters. kNN stores every example and compares against all of them during classification, so performance degrades with size.
+
+## TF-IDF Vectorizer
+
+Transform text documents into TF-IDF (Term Frequency-Inverse Document Frequency) weighted feature vectors. TF-IDF downweights common words and upweights discriminative terms—the foundation for most classic text classification approaches.
+
+### Quick Start
+
+```ruby
+require 'classifier'
+
+tfidf = Classifier::TFIDF.new
+tfidf.fit(["Dogs are great pets", "Cats are independent", "Birds can fly"])
+
+# Transform text to TF-IDF vector (L2 normalized)
+vector = tfidf.transform("Dogs are loyal")
+# => {:dog=>0.7071..., :loyal=>0.7071...}
+
+# Fit and transform in one step
+vectors = tfidf.fit_transform(documents)
+```
+
+### Options
+
+```ruby
+tfidf = Classifier::TFIDF.new(
+  min_df: 2,           # Minimum document frequency (Integer or Float 0.0-1.0)
+  max_df: 0.95,        # Maximum document frequency (filters very common terms)
+  ngram_range: [1, 2], # Extract unigrams and bigrams
+  sublinear_tf: true   # Use 1 + log(tf) instead of raw term frequency
+)
+```
+
+### Vocabulary Inspection
+
+```ruby
+tfidf.fit(documents)
+
+tfidf.vocabulary      # => {:dog=>0, :cat=>1, :bird=>2, ...}
+tfidf.idf             # => {:dog=>1.405, :cat=>1.405, ...}
+tfidf.feature_names   # => [:dog, :cat, :bird, ...]
+tfidf.num_documents   # => 3
+tfidf.fitted?         # => true
+```
+
+### N-gram Support
+
+```ruby
+# Extract bigrams only
+tfidf = Classifier::TFIDF.new(ngram_range: [2, 2])
+tfidf.fit(["quick brown fox", "lazy brown dog"])
+tfidf.vocabulary.keys
+# => [:quick_brown, :brown_fox, :lazi_brown, :brown_dog]
+
+# Unigrams through trigrams
+tfidf = Classifier::TFIDF.new(ngram_range: [1, 3])
+```
+
+### Serialization
+
+```ruby
+# Save to JSON
+json = tfidf.to_json
+File.write("tfidf.json", json)
+
+# Load from JSON
+loaded = Classifier::TFIDF.from_json(File.read("tfidf.json"))
+
+# Or use Marshal
+data = Marshal.dump(tfidf)
+loaded = Marshal.load(data)
+```
 
 ## Persistence
 

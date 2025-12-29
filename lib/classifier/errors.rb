@@ -13,4 +13,7 @@ module Classifier
 
   # Raised when a storage operation fails
   class StorageError < Error; end
+
+  # Raised when using an unfitted model
+  class NotFittedError < Error; end
 end
