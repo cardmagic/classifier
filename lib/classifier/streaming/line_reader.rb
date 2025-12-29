@@ -13,7 +13,7 @@ module Classifier
     #   reader = LineReader.new(io, batch_size: 100)
     #   reader.each_batch { |batch| process_batch(batch) }
     class LineReader
-      include Enumerable
+      include Enumerable #[String]
 
       # @rbs @io: IO
       # @rbs @batch_size: Integer
