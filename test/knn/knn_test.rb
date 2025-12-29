@@ -529,4 +529,56 @@ class KNNTest < Minitest::Test
 
     assert_equal 1, knn.items.size
   end
+
+  # API consistency tests (with Bayes and LogisticRegression)
+
+  def test_train_alias_for_add
+    knn = Classifier::KNN.new(k: 3)
+    knn.train(Dog: [@str1, @str2], Cat: [@str3, @str4])
+
+    assert_equal 4, knn.items.size
+    assert_equal 'Dog', knn.classify('This is about dogs')
+    assert_equal 'Cat', knn.classify('This is about cats')
+  end
+
+  def test_dynamic_train_methods
+    knn = Classifier::KNN.new(k: 3)
+    knn.train_dog @str1, @str2
+    knn.train_cat @str3, @str4
+
+    assert_equal 4, knn.items.size
+    # Dynamic methods create lowercase category names from method name
+    assert_equal 'dog', knn.classify('This is about dogs')
+    assert_equal 'cat', knn.classify('This is about cats')
+  end
+
+  def test_respond_to_train_methods
+    knn = Classifier::KNN.new
+
+    assert_respond_to knn, :train
+    assert_respond_to knn, :train_spam
+    assert_respond_to knn, :train_any_category
+  end
+
+  def test_classify_returns_string_not_symbol
+    knn = Classifier::KNN.new(k: 3)
+    knn.add(dog: [@str1, @str2], cat: [@str3, @str4])  # symbol keys
+
+    result = knn.classify('This is about dogs')
+
+    assert_instance_of String, result
+    assert_equal 'dog', result
+  end
+
+  def test_categories_returns_array_of_strings
+    knn = Classifier::KNN.new
+    knn.add(dog: 'Dogs are great', cat: 'Cats are independent')
+
+    cats = knn.categories
+
+    assert_instance_of Array, cats
+    cats.each { |cat| assert_instance_of String, cat }
+    assert_includes cats, 'dog'
+    assert_includes cats, 'cat'
+  end
 end

@@ -27,6 +27,7 @@
 require 'rubygems'
 require 'classifier/errors'
 require 'classifier/storage'
+require 'classifier/streaming'
 require 'classifier/extensions/string'
 require 'classifier/extensions/vector'
 require 'classifier/bayes'

@@ -16,6 +16,8 @@ module Classifier
   #   tfidf.transform("Dogs are loyal")  # => {:dog=>0.7071..., :loyal=>0.7071...}
   #
   class TFIDF
+    include Streaming
+
     # @rbs @min_df: Integer | Float
     # @rbs @max_df: Integer | Float
     # @rbs @ngram_range: Array[Integer]
@@ -244,6 +246,70 @@ module Classifier
       @min_df, @max_df, @ngram_range, @sublinear_tf, @vocabulary, @idf, @num_documents, @fitted = data
       @dirty = false
       @storage = nil
+    end
+
+    # Loads a vectorizer from a checkpoint.
+    #
+    # @rbs (storage: Storage::Base, checkpoint_id: String) -> TFIDF
+    def self.load_checkpoint(storage:, checkpoint_id:)
+      raise ArgumentError, 'Storage must be File storage for checkpoints' unless storage.is_a?(Storage::File)
+
+      dir = File.dirname(storage.path)
+      base = File.basename(storage.path, '.*')
+      ext = File.extname(storage.path)
+      checkpoint_path = File.join(dir, "#{base}_checkpoint_#{checkpoint_id}#{ext}")
+
+      checkpoint_storage = Storage::File.new(path: checkpoint_path)
+      instance = load(storage: checkpoint_storage)
+      instance.storage = storage
+      instance
+    end
+
+    # Fits the vectorizer from an IO stream.
+    # Collects all documents from the stream, then fits the model.
+    # Note: All documents must be collected in memory for IDF calculation.
+    #
+    # @example Fit from a file
+    #   tfidf.fit_from_stream(File.open('corpus.txt'))
+    #
+    # @example With progress tracking
+    #   tfidf.fit_from_stream(io, batch_size: 500) do |progress|
+    #     puts "#{progress.completed} documents loaded"
+    #   end
+    #
+    # @rbs (IO, ?batch_size: Integer) { (Streaming::Progress) -> void } -> self
+    def fit_from_stream(io, batch_size: Streaming::DEFAULT_BATCH_SIZE, &block)
+      reader = Streaming::LineReader.new(io, batch_size: batch_size)
+      total = reader.estimate_line_count
+      progress = Streaming::Progress.new(total: total)
+
+      documents = []
+
+      reader.each_batch do |batch|
+        documents.concat(batch)
+        progress.completed += batch.size
+        progress.current_batch += 1
+        yield progress if block_given?
+      end
+
+      fit(documents) unless documents.empty?
+      self
+    end
+
+    # TFIDF doesn't support train_from_stream (use fit_from_stream instead).
+    # This method raises NotImplementedError with guidance.
+    #
+    # @rbs (untyped, untyped, **untyped) -> void
+    def train_from_stream(*)
+      raise NotImplementedError, 'TFIDF uses fit_from_stream instead of train_from_stream'
+    end
+
+    # TFIDF doesn't support train_batch (use fit instead).
+    # This method raises NotImplementedError with guidance.
+    #
+    # @rbs (**untyped) -> void
+    def train_batch(*)
+      raise NotImplementedError, 'TFIDF uses fit instead of train_batch'
     end
 
     private

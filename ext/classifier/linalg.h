@@ -50,6 +50,14 @@ CMatrix *cmatrix_diagonal(CVector *v);
 void Init_svd(void);
 void jacobi_svd(CMatrix *a, CMatrix **u, CMatrix **v, CVector **s);
 
+/* Incremental SVD functions */
+void Init_incremental_svd(void);
+CMatrix *cmatrix_extend_column(CMatrix *m, CVector *col);
+CMatrix *cmatrix_vstack(CMatrix *top, CMatrix *bottom);
+CVector *cvector_subtract(CVector *a, CVector *b);
+void cbatch_project(CMatrix *u, CVector **raw_vectors, size_t num_vectors,
+                    CVector **lsi_vectors_out);
+
 /* TypedData definitions */
 extern const rb_data_type_t cvector_type;
 extern const rb_data_type_t cmatrix_type;
