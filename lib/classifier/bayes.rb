@@ -26,11 +26,12 @@ module Classifier
     # The class can be created with one or more categories, each of which will be
     # initialized and given a training method. E.g.,
     #      b = Classifier::Bayes.new 'Interesting', 'Uninteresting', 'Spam'
-    # @rbs (*String | Symbol) -> void
+    #      b = Classifier::Bayes.new ['Interesting', 'Uninteresting', 'Spam']
+    # @rbs (*String | Symbol | Array[String | Symbol]) -> void
     def initialize(*categories)
       super()
       @categories = {}
-      categories.each { |category| @categories[category.prepare_category_name] = {} }
+      categories.flatten.each { |category| @categories[category.prepare_category_name] = {} }
       @total_words = 0
       @category_counts = Hash.new(0)
       @category_word_count = Hash.new(0)
