@@ -237,7 +237,9 @@ module Classifier
     # @rbs (Array[Integer]) -> void
     def validate_ngram_range!(range)
       raise ArgumentError, 'ngram_range must be an array of two integers' unless range.is_a?(Array) && range.size == 2
-      raise ArgumentError, 'ngram_range values must be positive integers' unless range.all?(Integer) && range.all?(&:positive?)
+      unless range.all?(Integer) && range.all?(&:positive?)
+        raise ArgumentError, 'ngram_range values must be positive integers'
+      end
       raise ArgumentError, 'ngram_range[0] must be <= ngram_range[1]' if range[0] > range[1]
     end
 
