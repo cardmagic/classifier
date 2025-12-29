@@ -8,6 +8,37 @@ A Ruby library for text classification using Bayesian, Logistic Regression, LSI 
 
 **[Documentation](https://rubyclassifier.com/docs)** · **[Tutorials](https://rubyclassifier.com/docs/tutorials)** · **[Guides](https://rubyclassifier.com/docs/guides)**
 
+> **Note:** This is the original `classifier` gem, actively maintained since 2005. After a quieter period, active development resumed in 2025 with major new features. If you're choosing between this and a fork, this is the canonical, actively-developed version.
+
+## Why This Library?
+
+This gem has features no fork provides:
+
+| Feature | This Gem | Forks |
+|---------|----------|-------|
+| **5 classifiers** (Bayes, Logistic Regression, LSI, kNN, TF-IDF) | ✅ | ❌ Bayes + LSI only |
+| **Native C extension** for LSI (5-50x faster) | ✅ | ❌ GSL dependency or pure Ruby |
+| **Zero dependencies** for native speed | ✅ | ❌ Requires GSL system library |
+| **Pluggable persistence** (file, Redis, S3, custom) | ✅ | ❌ Marshal only |
+| **Thread-safe** classifiers | ✅ | ❌ |
+| **RBS type annotations** | ✅ | ❌ |
+| **Ruby 3.2-3.4 support** | ✅ | ⚠️ Often outdated |
+| **Proper Laplace smoothing** | ✅ | ❌ Numeric instability |
+| **Calibrated probabilities** (Logistic Regression) | ✅ | ❌ |
+| **Feature weights** for interpretability | ✅ | ❌ |
+
+### Recent Development (2025)
+
+- Added Logistic Regression classifier with SGD and L2 regularization
+- Added k-Nearest Neighbors classifier with distance-weighted voting
+- Added TF-IDF vectorizer with n-gram support
+- Built zero-dependency native C extension (replaces GSL requirement)
+- Added pluggable storage backends for persistence
+- Made all classifiers thread-safe
+- Fixed Laplace smoothing for numerical stability
+- Added RBS type signatures throughout
+- Modernized for Ruby 3.2-3.4
+
 ## Table of Contents
 
 - [Installation](#installation)
