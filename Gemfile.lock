@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    classifier (2.1.0)
+    classifier (2.2.0)
       fast-stemmer (~> 1.0)
       matrix
       mutex_m (~> 0.2)
