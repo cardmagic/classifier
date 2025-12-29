@@ -34,10 +34,6 @@ module Classifier
     attr_accessor :weighted, :storage
 
     # Creates a new kNN classifier.
-    #
-    # @param k [Integer] Number of neighbors to consider (default: 5)
-    # @param weighted [Boolean] Use distance-weighted voting (default: false)
-    #
     # @rbs (?k: Integer, ?weighted: bool) -> void
     def initialize(k: 5, weighted: false) # rubocop:disable Naming/MethodParameterName
       super()
@@ -49,63 +45,21 @@ module Classifier
       @storage = nil
     end
 
-    # Adds labeled examples to the classifier using hash-style syntax.
-    # Keys are categories, values are items (or arrays of items).
-    #
-    # @example Single item per category
-    #   knn.add("spam" => "Buy now!")
-    #   knn.add("ham" => "Meeting tomorrow")
-    #
-    # @example Multiple items per category
-    #   knn.add("spam" => ["Buy now!", "Limited offer!"])
-    #
-    # @example Batch operations
-    #   knn.add(
-    #     "spam" => ["Buy now!", "Limited offer!"],
-    #     "ham" => ["Meeting tomorrow", "Project update"]
-    #   )
-    #
+    # Adds labeled examples. Keys are categories, values are items or arrays.
     # @rbs (**untyped items) -> void
     def add(**items)
       synchronize { @dirty = true }
       @lsi.add(**items)
     end
 
-    # Adds a single labeled example to the classifier.
-    #
-    # @deprecated Use {#add} instead for clearer hash-style syntax.
-    #
-    # @param item [String] The text content to add
-    # @param category [String, Symbol] The category/label for this item
-    #
-    # @rbs (String, String | Symbol) -> void
-    def add_item(item, category)
-      synchronize { @dirty = true }
-      @lsi.add_item(item, category)
-    end
-
-    # Classifies the given text by finding the k nearest neighbors
-    # and using majority voting.
-    #
-    # @param text [String] The text to classify
-    # @return [String, Symbol, nil] The predicted category, or nil if no examples exist
-    #
+    # Classifies text using k nearest neighbors with majority voting.
     # @rbs (String) -> (String | Symbol)?
     def classify(text)
       result = classify_with_neighbors(text)
       result[:category]
     end
 
-    # Classifies the given text and returns detailed information about
-    # the neighbors that contributed to the decision.
-    #
-    # @param text [String] The text to classify
-    # @return [Hash] A hash containing:
-    #   - :category - The predicted category
-    #   - :neighbors - Array of neighbor details (item, category, similarity)
-    #   - :votes - Hash of category => vote count/weight
-    #   - :confidence - Confidence score (winning vote share)
-    #
+    # Classifies and returns {category:, neighbors:, votes:, confidence:}.
     # @rbs (String) -> Hash[Symbol, untyped]
     def classify_with_neighbors(text)
       synchronize do
@@ -174,10 +128,6 @@ module Classifier
     end
 
     # Loads a classifier from a JSON string or Hash.
-    #
-    # @param json [String, Hash] JSON string or parsed hash
-    # @return [KNN] A new KNN instance with restored state
-    #
     # @rbs (String | Hash[String, untyped]) -> KNN
     def self.from_json(json)
       data = json.is_a?(String) ? JSON.parse(json) : json
@@ -194,7 +144,6 @@ module Classifier
     end
 
     # Saves the classifier to the configured storage.
-    #
     # @rbs () -> void
     def save
       raise ArgumentError, 'No storage configured. Use save_to_file(path) or set storage=' unless storage
@@ -204,10 +153,6 @@ module Classifier
     end
 
     # Saves the classifier to a file.
-    #
-    # @param path [String] The file path
-    # @return [Integer] Number of bytes written
-    #
     # @rbs (String) -> Integer
     def save_to_file(path)
       result = File.write(path, to_json)
@@ -216,7 +161,6 @@ module Classifier
     end
 
     # Reloads the classifier from configured storage.
-    #
     # @rbs () -> self
     def reload
       raise ArgumentError, 'No storage configured' unless storage
@@ -230,8 +174,7 @@ module Classifier
       self
     end
 
-    # Force reloads the classifier from storage.
-    #
+    # Force reloads, discarding unsaved changes.
     # @rbs () -> self
     def reload!
       raise ArgumentError, 'No storage configured' unless storage
@@ -250,10 +193,6 @@ module Classifier
     end
 
     # Loads a classifier from configured storage.
-    #
-    # @param storage [Storage::Base] The storage to load from
-    # @return [KNN] The loaded classifier
-    #
     # @rbs (storage: Storage::Base) -> KNN
     def self.load(storage:)
       data = storage.read
@@ -265,10 +204,6 @@ module Classifier
     end
 
     # Loads a classifier from a file.
-    #
-    # @param path [String] The file path
-    # @return [KNN] The loaded classifier
-    #
     # @rbs (String) -> KNN
     def self.load_from_file(path)
       from_json(File.read(path))
@@ -288,8 +223,6 @@ module Classifier
 
     private
 
-    # Finds the k nearest neighbors for the given text.
-    #
     # @rbs (String) -> Array[Hash[Symbol, untyped]]
     def find_neighbors(text)
       # LSI requires at least 2 items to build an index
@@ -315,8 +248,6 @@ module Classifier
       end
     end
 
-    # Tallies votes from neighbors, optionally weighted by similarity.
-    #
     # @rbs (Array[Hash[Symbol, untyped]]) -> Hash[String | Symbol, Float]
     def tally_votes(neighbors)
       votes = Hash.new(0.0)
@@ -342,8 +273,6 @@ module Classifier
       raise ArgumentError, "k must be a positive integer, got #{val}" unless val.is_a?(Integer) && val.positive?
     end
 
-    # Restores state from JSON (used by reload).
-    #
     # @rbs (String) -> void
     def restore_from_json(json)
       data = JSON.parse(json)

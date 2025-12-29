@@ -94,15 +94,6 @@ class KNNTest < Minitest::Test
     assert_equal ['Cat'], knn.categories_for('Cats are independent')
   end
 
-  def test_add_item_legacy_api
-    knn = Classifier::KNN.new
-    knn.add_item 'Dogs are loyal pets', 'Dog'
-    knn.add_item 'Cats are independent', 'Cat'
-
-    assert_equal 2, knn.items.size
-    assert_equal ['Dog'], knn.categories_for('Dogs are loyal pets')
-  end
-
   # Classification tests
 
   def test_basic_classification
