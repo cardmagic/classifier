@@ -4,17 +4,48 @@
 [![CI](https://github.com/cardmagic/classifier/actions/workflows/ruby.yml/badge.svg)](https://github.com/cardmagic/classifier/actions/workflows/ruby.yml)
 [![License: LGPL](https://img.shields.io/badge/License-LGPL_2.1-blue.svg)](https://opensource.org/licenses/LGPL-2.1)
 
-A Ruby library for text classification using Bayesian, LSI (Latent Semantic Indexing), k-Nearest Neighbors (kNN), and TF-IDF algorithms.
+A Ruby library for text classification using Bayesian, Logistic Regression, LSI (Latent Semantic Indexing), k-Nearest Neighbors (kNN), and TF-IDF algorithms.
 
 **[Documentation](https://rubyclassifier.com/docs)** · **[Tutorials](https://rubyclassifier.com/docs/tutorials)** · **[Guides](https://rubyclassifier.com/docs/guides)**
+
+> **Note:** This is the original `classifier` gem, maintained for 20 years since 2005. After a quieter period, active development resumed in 2025 with major new features. If you're choosing between this and a fork, this is the canonical, most actively-developed version.
+
+## Why This Library?
+
+This gem has features no fork provides:
+
+| | This Gem | Forks |
+|:--|:--|:--|
+| **Algorithms** | 5 classifiers | 2 only |
+| **LSI Performance** | Native C (5-50x faster) | Pure Ruby, or requires GSL/Numo + system libs |
+| **Persistence** | Pluggable (file, Redis, S3, SQL) | Marshal only |
+| **Thread Safety** | ✅ | ❌ |
+| **Type Annotations** | RBS throughout | ❌ |
+| **Laplace Smoothing** | Numerically stable | ❌ Unstable |
+| **Probability Calibration** | ✅ | ❌ |
+| **Feature Weights** | ✅ Interpretable | ❌ |
+
+### Recent Developments (Late 2025)
+
+- Added Logistic Regression classifier with SGD and L2 regularization
+- Added k-Nearest Neighbors classifier with distance-weighted voting
+- Added TF-IDF vectorizer with n-gram support
+- Built zero-dependency native C extension (replaces GSL or Numo requirement)
+- Added pluggable storage backends for persistence
+- Made all classifiers thread-safe
+- Fixed Laplace smoothing for numerical stability
+- Added RBS type signatures throughout
+- Modernized for new Ruby coding standards
 
 ## Table of Contents
 
 - [Installation](#installation)
-- [Bayesian Classifier](#bayesian-classifier)
-- [LSI (Latent Semantic Indexing)](#lsi-latent-semantic-indexing)
-- [k-Nearest Neighbors (kNN)](#k-nearest-neighbors-knn)
-- [TF-IDF Vectorizer](#tf-idf-vectorizer)
+- [Algorithms](#bayesian-classifier)
+  - [Bayesian Classifier](#bayesian-classifier)
+  - [Logistic Regression](#logistic-regression)
+  - [LSI (Latent Semantic Indexing)](#lsi-latent-semantic-indexing)
+  - [k-Nearest Neighbors (kNN)](#k-nearest-neighbors-knn)
+  - [TF-IDF Vectorizer](#tf-idf-vectorizer)
 - [Persistence](#persistence)
 - [Performance](#performance)
 - [Development](#development)
@@ -43,7 +74,7 @@ gem install classifier
 
 ### Native C Extension
 
-The gem includes a native C extension for fast LSI operations. It compiles automatically during gem installation. No external dependencies are required.
+The gem includes a zero-dependency native C extension for fast LSI operations (5-50x faster than pure Ruby). It compiles automatically during installation.
 
 To verify the native extension is active:
 
@@ -58,22 +89,6 @@ To force pure Ruby mode (for debugging):
 NATIVE_VECTOR=true ruby your_script.rb
 ```
 
-To suppress the warning when native extension isn't available:
-
-```bash
-SUPPRESS_LSI_WARNING=true ruby your_script.rb
-```
-
-### Compatibility
-
-| Ruby Version | Status |
-|--------------|--------|
-| 4.0          | Supported |
-| 3.4          | Supported |
-| 3.3          | Supported |
-| 3.2          | Supported |
-| 3.1          | EOL (unsupported) |
-
 ## Bayesian Classifier
 
 Fast, accurate classification with modest memory requirements. Ideal for spam filtering, sentiment analysis, and content categorization.
@@ -86,7 +101,7 @@ require 'classifier'
 classifier = Classifier::Bayes.new(:spam, :ham)
 
 # Train with keyword arguments
-classifier.train(spam: "Buy cheap viagra now! Limited offer!")
+classifier.train(spam: "Buy cheap v1agra now! Limited offer!")
 classifier.train(ham: "Meeting scheduled for tomorrow at 10am")
 
 # Train multiple items at once
@@ -106,6 +121,66 @@ classifier.classify "Congratulations! You've won a prize!"
 - [Build a Spam Filter Tutorial](https://rubyclassifier.com/docs/tutorials/spam-filter) - Step-by-step guide
 - [Paul Graham: A Plan for Spam](http://www.paulgraham.com/spam.html)
 
+## Logistic Regression
+
+Linear classifier using Stochastic Gradient Descent (SGD). Often more accurate than Naive Bayes while remaining fast and interpretable. Provides well-calibrated probability estimates and feature weights for understanding which words drive predictions.
+
+### Key Features
+
+- **More Accurate**: No independence assumption means better accuracy on many text problems
+- **Calibrated Probabilities**: Unlike Bayes, probabilities reflect true confidence
+- **Interpretable**: Feature weights show which words matter for each class
+- **Fast**: Linear time prediction, efficient SGD training
+- **L2 Regularization**: Prevents overfitting on small datasets
+
+### Quick Start
+
+```ruby
+require 'classifier'
+
+classifier = Classifier::LogisticRegression.new(:spam, :ham)
+
+# Train with keyword arguments (same API as Bayes)
+classifier.train(spam: ["Buy now! Free money!", "Click here for prizes!"])
+classifier.train(ham: ["Meeting tomorrow", "Please review the document"])
+
+# Classify new text
+classifier.classify "Claim your free prize!"
+# => "Spam"
+
+# Get calibrated probabilities
+classifier.probabilities "Claim your free prize!"
+# => {"Spam" => 0.92, "Ham" => 0.08}
+
+# See which words matter most
+classifier.weights(:spam, limit: 5)
+# => {:free => 2.3, :prize => 1.9, :claim => 1.5, ...}
+```
+
+### Hyperparameters
+
+```ruby
+classifier = Classifier::LogisticRegression.new(
+  :positive, :negative,
+  learning_rate: 0.1,    # SGD step size (default: 0.1)
+  regularization: 0.01,  # L2 penalty strength (default: 0.01)
+  max_iterations: 100,   # Training iterations (default: 100)
+  tolerance: 1e-4        # Convergence threshold (default: 1e-4)
+)
+```
+
+### When to Use Logistic Regression vs Bayes
+
+| Aspect | Logistic Regression | Naive Bayes |
+|--------|---------------------|-------------|
+| **Accuracy** | Often higher | Good baseline |
+| **Probabilities** | Well-calibrated | Tend to be extreme |
+| **Training** | Needs to fit model | Instant (just counting) |
+| **Interpretability** | Feature weights | Word frequencies |
+| **Small datasets** | Use higher regularization | Works well |
+
+Use Logistic Regression when you need accurate probabilities or want to understand feature importance. Use Bayes when you need instant updates or have very small training sets.
+
 ## LSI (Latent Semantic Indexing)
 
 Semantic analysis using Singular Value Decomposition (SVD). More flexible than Bayesian classifiers, providing search, clustering, and classification based on meaning rather than just keywords.
@@ -117,18 +192,18 @@ require 'classifier'
 
 lsi = Classifier::LSI.new
 
-# Add documents with hash-style syntax (category => item(s))
-lsi.add("Pets" => "Dogs are loyal pets that love to play fetch")
-lsi.add("Pets" => "Cats are independent and love to nap")
-lsi.add("Programming" => "Ruby is a dynamic programming language")
+# Add documents (category: item(s))
+lsi.add(pets: "Dogs are loyal pets that love to play fetch")
+lsi.add(pets: "Cats are independent and love to nap")
+lsi.add(programming: "Ruby is a dynamic programming language")
 
 # Add multiple items with the same category
-lsi.add("Programming" => ["Python is great for data science", "JavaScript runs in browsers"])
+lsi.add(programming: ["Python is great for data science", "JavaScript runs in browsers"])
 
 # Batch operations with multiple categories
 lsi.add(
-  "Pets" => ["Hamsters are small furry pets", "Birds can be great companions"],
-  "Programming" => "Go is fast and concurrent"
+  pets: ["Hamsters are small furry pets", "Birds can be great companions"],
+  programming: "Go is fast and concurrent"
 )
 
 # Classify new text
@@ -330,7 +405,7 @@ loaded = Marshal.load(data)
 
 ## Persistence
 
-Save and load classifiers with pluggable storage backends. Works with Bayes, LSI, and kNN classifiers.
+Save and load classifiers with pluggable storage backends. Works with Bayes, LogisticRegression, LSI, and kNN classifiers.
 
 ### File Storage
 

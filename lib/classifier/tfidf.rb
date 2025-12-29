@@ -24,8 +24,11 @@ module Classifier
     # @rbs @idf: Hash[Symbol, Float]
     # @rbs @num_documents: Integer
     # @rbs @fitted: bool
+    # @rbs @dirty: bool
+    # @rbs @storage: Storage::Base?
 
     attr_reader :vocabulary, :idf, :num_documents
+    attr_accessor :storage
 
     # Creates a new TF-IDF vectorizer.
     # - min_df/max_df: filter terms by document frequency (Integer for count, Float for proportion)
@@ -47,6 +50,8 @@ module Classifier
       @idf = {}
       @num_documents = 0
       @fitted = false
+      @dirty = false
+      @storage = nil
     end
 
     # Learns vocabulary and IDF weights from the corpus.
@@ -78,6 +83,7 @@ module Classifier
       end
 
       @fitted = true
+      @dirty = true
       self
     end
 
@@ -115,6 +121,73 @@ module Classifier
     # @rbs () -> bool
     def fitted?
       @fitted
+    end
+
+    # Returns true if there are unsaved changes.
+    # @rbs () -> bool
+    def dirty?
+      @dirty
+    end
+
+    # Saves the vectorizer to the configured storage.
+    # @rbs () -> void
+    def save
+      raise ArgumentError, 'No storage configured' unless storage
+
+      storage.write(to_json)
+      @dirty = false
+    end
+
+    # Saves the vectorizer state to a file.
+    # @rbs (String) -> Integer
+    def save_to_file(path)
+      result = File.write(path, to_json)
+      @dirty = false
+      result
+    end
+
+    # Loads a vectorizer from the configured storage.
+    # @rbs (storage: Storage::Base) -> TFIDF
+    def self.load(storage:)
+      data = storage.read
+      raise StorageError, 'No saved state found' unless data
+
+      instance = from_json(data)
+      instance.storage = storage
+      instance
+    end
+
+    # Loads a vectorizer from a file.
+    # @rbs (String) -> TFIDF
+    def self.load_from_file(path)
+      from_json(File.read(path))
+    end
+
+    # Reloads the vectorizer from storage, raising if there are unsaved changes.
+    # @rbs () -> self
+    def reload
+      raise ArgumentError, 'No storage configured' unless storage
+      raise UnsavedChangesError, 'Unsaved changes would be lost. Call save first or use reload!' if @dirty
+
+      data = storage.read
+      raise StorageError, 'No saved state found' unless data
+
+      restore_from_json(data)
+      @dirty = false
+      self
+    end
+
+    # Force reloads the vectorizer from storage, discarding any unsaved changes.
+    # @rbs () -> self
+    def reload!
+      raise ArgumentError, 'No storage configured' unless storage
+
+      data = storage.read
+      raise StorageError, 'No saved state found' unless data
+
+      restore_from_json(data)
+      @dirty = false
+      self
     end
 
     # @rbs (?untyped) -> Hash[Symbol, untyped]
@@ -155,6 +228,8 @@ module Classifier
       instance.instance_variable_set(:@idf, symbolize_keys(data['idf']))
       instance.instance_variable_set(:@num_documents, data['num_documents'])
       instance.instance_variable_set(:@fitted, data['fitted'])
+      instance.instance_variable_set(:@dirty, false)
+      instance.instance_variable_set(:@storage, nil)
 
       instance
     end
@@ -167,9 +242,26 @@ module Classifier
     # @rbs (Array[untyped]) -> void
     def marshal_load(data)
       @min_df, @max_df, @ngram_range, @sublinear_tf, @vocabulary, @idf, @num_documents, @fitted = data
+      @dirty = false
+      @storage = nil
     end
 
     private
+
+    # Restores vectorizer state from JSON string.
+    # @rbs (String) -> void
+    def restore_from_json(json)
+      data = JSON.parse(json)
+
+      @min_df = data['min_df']
+      @max_df = data['max_df']
+      @ngram_range = data['ngram_range']
+      @sublinear_tf = data['sublinear_tf']
+      @vocabulary = self.class.send(:symbolize_keys, data['vocabulary'])
+      @idf = self.class.send(:symbolize_keys, data['idf'])
+      @num_documents = data['num_documents']
+      @fitted = data['fitted']
+    end
 
     # @rbs (String) -> Hash[Symbol, Integer]
     def extract_terms(document)
