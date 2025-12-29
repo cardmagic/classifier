@@ -30,10 +30,9 @@ gem 'classifier'
 
 ```ruby
 classifier = Classifier::Bayes.new(:spam, :ham)
-classifier.train(:spam, "Buy viagra cheap pills now")
-classifier.train(:spam, "You won million dollars prize")
-classifier.train(:ham, "Meeting tomorrow at 3pm")
-classifier.train(:ham, "Quarterly report attached")
+classifier.train(spam: "Buy viagra cheap pills now")
+classifier.train(spam: "You won million dollars prize")
+classifier.train(ham: ["Meeting tomorrow at 3pm", "Quarterly report attached"])
 classifier.classify("Cheap pills!")  # => "Spam"
 ```
 [Bayesian Guide →](https://rubyclassifier.com/docs/guides/bayes/basics)
@@ -42,8 +41,8 @@ classifier.classify("Cheap pills!")  # => "Spam"
 
 ```ruby
 classifier = Classifier::LogisticRegression.new(:positive, :negative)
-classifier.train(:positive, "love amazing great wonderful")
-classifier.train(:negative, "hate terrible awful bad")
+classifier.train(positive: "love amazing great wonderful")
+classifier.train(negative: "hate terrible awful bad")
 classifier.classify("I love it!")  # => "Positive"
 ```
 [Logistic Regression Guide →](https://rubyclassifier.com/docs/guides/logisticregression/basics)
