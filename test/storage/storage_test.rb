@@ -1,16 +1,20 @@
 require_relative '../test_helper'
 
 class StorageAPIConsistencyTest < Minitest::Test
-  CLASSIFIERS = [
-    Classifier::Bayes,
-    Classifier::LSI,
-    Classifier::KNN,
-    Classifier::LogisticRegression,
-    Classifier::TFIDF
-  ].freeze
+  # Dynamically discover all classifier/vectorizer classes
+  CLASSIFIERS = Classifier.constants.filter_map do |const|
+    klass = Classifier.const_get(const)
+    next unless klass.is_a?(Class)
+
+    klass if klass.method_defined?(:classify) || klass.method_defined?(:transform)
+  end.freeze
 
   INSTANCE_METHODS = %i[save reload reload! dirty? storage storage=].freeze
   CLASS_METHODS = %i[load].freeze
+
+  def test_classifiers_discovered
+    assert_operator CLASSIFIERS.size, :>=, 5, "Expected at least 5 classifiers, found: #{CLASSIFIERS.map(&:name)}"
+  end
 
   CLASSIFIERS.each do |klass|
     class_name = klass.name.split('::').last.downcase

@@ -19,6 +19,7 @@ module Classifier
   #
   class KNN
     include Mutex_m
+    include Streaming
 
     # @rbs @k: Integer
     # @rbs @weighted: bool
@@ -42,17 +43,25 @@ module Classifier
     end
 
     # Adds labeled examples. Keys are categories, values are items or arrays.
+    # Also aliased as `train` for API consistency with Bayes and LogisticRegression.
+    #
+    #   knn.add(spam: "Buy now!", ham: "Meeting tomorrow")
+    #   knn.train(spam: "Buy now!", ham: "Meeting tomorrow")  # equivalent
+    #
     # @rbs (**untyped items) -> void
     def add(**items)
       synchronize { @dirty = true }
       @lsi.add(**items)
     end
 
+    alias train add
+
     # Classifies text using k nearest neighbors with majority voting.
-    # @rbs (String) -> (String | Symbol)?
+    # Returns the category as a String for API consistency with Bayes and LogisticRegression.
+    # @rbs (String) -> String?
     def classify(text)
       result = classify_with_neighbors(text)
-      result[:category]
+      result[:category]&.to_s
     end
 
     # Classifies and returns {category:, neighbors:, votes:, confidence:}.
@@ -91,10 +100,11 @@ module Classifier
       @lsi.items
     end
 
-    # @rbs () -> Array[String | Symbol]
+    # Returns all unique categories as strings.
+    # @rbs () -> Array[String]
     def categories
       synchronize do
-        @lsi.items.flat_map { |item| @lsi.categories_for(item) }.uniq
+        @lsi.items.flat_map { |item| @lsi.categories_for(item) }.uniq.map(&:to_s)
       end
     end
 
@@ -102,6 +112,23 @@ module Classifier
     def k=(value)
       validate_k!(value)
       @k = value
+    end
+
+    # Provides dynamic training methods for categories.
+    # For example:
+    #   knn.train_spam "Buy now!"
+    #   knn.train_ham "Meeting tomorrow"
+    def method_missing(name, *args)
+      category_match = name.to_s.match(/\Atrain_(\w+)\z/)
+      return super unless category_match
+
+      category = category_match[1].to_sym
+      args.each { |text| add(category => text) }
+    end
+
+    # @rbs (Symbol, ?bool) -> bool
+    def respond_to_missing?(name, include_private = false)
+      !!(name.to_s =~ /\Atrain_(\w+)\z/) || super
     end
 
     # @rbs (?untyped) -> untyped
@@ -212,6 +239,59 @@ module Classifier
       @k, @weighted, @lsi, @dirty = data
       @storage = nil
     end
+
+    # Loads a classifier from a checkpoint.
+    #
+    # @rbs (storage: Storage::Base, checkpoint_id: String) -> KNN
+    def self.load_checkpoint(storage:, checkpoint_id:)
+      raise ArgumentError, 'Storage must be File storage for checkpoints' unless storage.is_a?(Storage::File)
+
+      dir = File.dirname(storage.path)
+      base = File.basename(storage.path, '.*')
+      ext = File.extname(storage.path)
+      checkpoint_path = File.join(dir, "#{base}_checkpoint_#{checkpoint_id}#{ext}")
+
+      checkpoint_storage = Storage::File.new(path: checkpoint_path)
+      instance = load(storage: checkpoint_storage)
+      instance.storage = storage
+      instance
+    end
+
+    # Trains the classifier from an IO stream.
+    # Each line in the stream is treated as a separate document.
+    #
+    # @example Train from a file
+    #   knn.train_from_stream(:spam, File.open('spam_corpus.txt'))
+    #
+    # @example With progress tracking
+    #   knn.train_from_stream(:spam, io, batch_size: 500) do |progress|
+    #     puts "#{progress.completed} documents processed"
+    #   end
+    #
+    # @rbs (String | Symbol, IO, ?batch_size: Integer) { (Streaming::Progress) -> void } -> void
+    def train_from_stream(category, io, batch_size: Streaming::DEFAULT_BATCH_SIZE, &block)
+      @lsi.train_from_stream(category, io, batch_size: batch_size, &block)
+      synchronize { @dirty = true }
+    end
+
+    # Adds items in batches.
+    #
+    # @example Positional style
+    #   knn.train_batch(:spam, documents, batch_size: 100)
+    #
+    # @example Keyword style
+    #   knn.train_batch(spam: documents, ham: other_docs)
+    #
+    # @rbs (?(String | Symbol)?, ?Array[String]?, ?batch_size: Integer, **Array[String]) { (Streaming::Progress) -> void } -> void
+    def train_batch(category = nil, documents = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &block)
+      # @type var categories: Hash[Symbol, Array[String]]
+      @lsi.train_batch(category, documents, batch_size: batch_size, **categories, &block) # steep:ignore
+      synchronize { @dirty = true }
+    end
+
+    # @rbs!
+    #   alias add_batch train_batch
+    alias add_batch train_batch
 
     private
 

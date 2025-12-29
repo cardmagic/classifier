@@ -22,4 +22,5 @@ void Init_classifier_ext(void)
     Init_vector();
     Init_matrix();
     Init_svd();
+    Init_incremental_svd();
 }

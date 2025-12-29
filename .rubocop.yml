@@ -5,6 +5,10 @@ plugins:
 Layout/LeadingCommentSpace:
   AllowRBSInlineAnnotation: true
 
+# @rbs type annotations can be long
+Layout/LineLength:
+  Max: 140
+
 AllCops:
   TargetRubyVersion: 3.1
   NewCops: enable

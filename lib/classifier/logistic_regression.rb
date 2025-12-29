@@ -20,6 +20,7 @@ module Classifier
   #
   class LogisticRegression # rubocop:disable Metrics/ClassLength
     include Mutex_m
+    include Streaming
 
     # @rbs @categories: Array[Symbol]
     # @rbs @weights: Hash[Symbol, Hash[Symbol, Float]]
@@ -329,7 +330,111 @@ module Classifier
       @storage = nil
     end
 
+    # Loads a classifier from a checkpoint.
+    #
+    # @rbs (storage: Storage::Base, checkpoint_id: String) -> LogisticRegression
+    def self.load_checkpoint(storage:, checkpoint_id:)
+      raise ArgumentError, 'Storage must be File storage for checkpoints' unless storage.is_a?(Storage::File)
+
+      dir = File.dirname(storage.path)
+      base = File.basename(storage.path, '.*')
+      ext = File.extname(storage.path)
+      checkpoint_path = File.join(dir, "#{base}_checkpoint_#{checkpoint_id}#{ext}")
+
+      checkpoint_storage = Storage::File.new(path: checkpoint_path)
+      instance = load(storage: checkpoint_storage)
+      instance.storage = storage
+      instance
+    end
+
+    # Trains the classifier from an IO stream.
+    # Each line in the stream is treated as a separate document.
+    # Note: The model is NOT automatically fitted after streaming.
+    # Call #fit to train the model after adding all data.
+    #
+    # @example Train from a file
+    #   classifier.train_from_stream(:spam, File.open('spam_corpus.txt'))
+    #   classifier.fit  # Required to train the model
+    #
+    # @example With progress tracking
+    #   classifier.train_from_stream(:spam, io, batch_size: 500) do |progress|
+    #     puts "#{progress.completed} documents processed"
+    #   end
+    #   classifier.fit
+    #
+    # @rbs (String | Symbol, IO, ?batch_size: Integer) { (Streaming::Progress) -> void } -> void
+    def train_from_stream(category, io, batch_size: Streaming::DEFAULT_BATCH_SIZE)
+      category = category.to_s.prepare_category_name
+      raise StandardError, "No such category: #{category}" unless @categories.include?(category)
+
+      reader = Streaming::LineReader.new(io, batch_size: batch_size)
+      total = reader.estimate_line_count
+      progress = Streaming::Progress.new(total: total)
+
+      reader.each_batch do |batch|
+        synchronize do
+          batch.each do |text|
+            features = text.word_hash
+            features.each_key { |word| @vocabulary[word] = true }
+            @training_data << { category: category, features: features }
+          end
+          @fitted = false
+          @dirty = true
+        end
+        progress.completed += batch.size
+        progress.current_batch += 1
+        yield progress if block_given?
+      end
+    end
+
+    # Trains the classifier with an array of documents in batches.
+    # Note: The model is NOT automatically fitted after batch training.
+    # Call #fit to train the model after adding all data.
+    #
+    # @example Positional style
+    #   classifier.train_batch(:spam, documents, batch_size: 100)
+    #   classifier.fit
+    #
+    # @example Keyword style
+    #   classifier.train_batch(spam: documents, ham: other_docs)
+    #   classifier.fit
+    #
+    # @rbs (?(String | Symbol)?, ?Array[String]?, ?batch_size: Integer, **Array[String]) { (Streaming::Progress) -> void } -> void
+    def train_batch(category = nil, documents = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &block)
+      if category && documents
+        train_batch_for_category(category, documents, batch_size: batch_size, &block)
+      else
+        categories.each do |cat, docs|
+          train_batch_for_category(cat, Array(docs), batch_size: batch_size, &block)
+        end
+      end
+    end
+
     private
+
+    # Trains a batch of documents for a single category.
+    # @rbs (String | Symbol, Array[String], ?batch_size: Integer) { (Streaming::Progress) -> void } -> void
+    def train_batch_for_category(category, documents, batch_size: Streaming::DEFAULT_BATCH_SIZE)
+      category = category.to_s.prepare_category_name
+      raise StandardError, "No such category: #{category}" unless @categories.include?(category)
+
+      progress = Streaming::Progress.new(total: documents.size)
+
+      documents.each_slice(batch_size) do |batch|
+        synchronize do
+          batch.each do |text|
+            features = text.word_hash
+            features.each_key { |word| @vocabulary[word] = true }
+            @training_data << { category: category, features: features }
+          end
+          @fitted = false
+          @dirty = true
+        end
+        progress.completed += batch.size
+        progress.current_batch += 1
+        yield progress if block_given?
+      end
+    end
 
     # Core training logic for a single category and text.
     # @rbs (String | Symbol, String) -> void

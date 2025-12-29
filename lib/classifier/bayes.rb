@@ -8,8 +8,9 @@ require 'json'
 require 'mutex_m'
 
 module Classifier
-  class Bayes
+  class Bayes # rubocop:disable Metrics/ClassLength
     include Mutex_m
+    include Streaming
 
     # @rbs @categories: Hash[Symbol, Hash[Symbol, Integer]]
     # @rbs @total_words: Integer
@@ -310,7 +311,114 @@ module Classifier
       end
     end
 
+    # Trains the classifier from an IO stream.
+    # Each line in the stream is treated as a separate document.
+    # This is memory-efficient for large corpora.
+    #
+    # @example Train from a file
+    #   classifier.train_from_stream(:spam, File.open('spam_corpus.txt'))
+    #
+    # @example With progress tracking
+    #   classifier.train_from_stream(:spam, io, batch_size: 500) do |progress|
+    #     puts "#{progress.completed} documents processed"
+    #   end
+    #
+    # @rbs (String | Symbol, IO, ?batch_size: Integer) { (Streaming::Progress) -> void } -> void
+    def train_from_stream(category, io, batch_size: Streaming::DEFAULT_BATCH_SIZE)
+      category = category.prepare_category_name
+      raise StandardError, "No such category: #{category}" unless @categories.key?(category)
+
+      reader = Streaming::LineReader.new(io, batch_size: batch_size)
+      total = reader.estimate_line_count
+      progress = Streaming::Progress.new(total: total)
+
+      reader.each_batch do |batch|
+        train_batch_internal(category, batch)
+        progress.completed += batch.size
+        progress.current_batch += 1
+        yield progress if block_given?
+      end
+    end
+
+    # Trains the classifier with an array of documents in batches.
+    # Reduces lock contention by processing multiple documents per synchronize call.
+    #
+    # @example Positional style
+    #   classifier.train_batch(:spam, documents, batch_size: 100)
+    #
+    # @example Keyword style
+    #   classifier.train_batch(spam: documents, ham: other_docs, batch_size: 100)
+    #
+    # @example With progress tracking
+    #   classifier.train_batch(:spam, documents, batch_size: 100) do |progress|
+    #     puts "#{progress.percent}% complete"
+    #   end
+    #
+    # @rbs (?(String | Symbol)?, ?Array[String]?, ?batch_size: Integer, **Array[String]) { (Streaming::Progress) -> void } -> void
+    def train_batch(category = nil, documents = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &block)
+      if category && documents
+        train_batch_for_category(category, documents, batch_size: batch_size, &block)
+      else
+        categories.each do |cat, docs|
+          train_batch_for_category(cat, Array(docs), batch_size: batch_size, &block)
+        end
+      end
+    end
+
+    # Loads a classifier from a checkpoint.
+    #
+    # @rbs (storage: Storage::Base, checkpoint_id: String) -> Bayes
+    def self.load_checkpoint(storage:, checkpoint_id:)
+      raise ArgumentError, 'Storage must be File storage for checkpoints' unless storage.is_a?(Storage::File)
+
+      dir = File.dirname(storage.path)
+      base = File.basename(storage.path, '.*')
+      ext = File.extname(storage.path)
+      checkpoint_path = File.join(dir, "#{base}_checkpoint_#{checkpoint_id}#{ext}")
+
+      checkpoint_storage = Storage::File.new(path: checkpoint_path)
+      instance = load(storage: checkpoint_storage)
+      instance.storage = storage
+      instance
+    end
+
     private
+
+    # Trains a batch of documents for a single category.
+    # @rbs (String | Symbol, Array[String], ?batch_size: Integer) { (Streaming::Progress) -> void } -> void
+    def train_batch_for_category(category, documents, batch_size: Streaming::DEFAULT_BATCH_SIZE)
+      category = category.prepare_category_name
+      raise StandardError, "No such category: #{category}" unless @categories.key?(category)
+
+      progress = Streaming::Progress.new(total: documents.size)
+
+      documents.each_slice(batch_size) do |batch|
+        train_batch_internal(category, batch)
+        progress.completed += batch.size
+        progress.current_batch += 1
+        yield progress if block_given?
+      end
+    end
+
+    # Internal method to train a batch of documents.
+    # Uses a single synchronize block for the entire batch.
+    # @rbs (Symbol, Array[String]) -> void
+    def train_batch_internal(category, batch)
+      synchronize do
+        invalidate_caches
+        @dirty = true
+        batch.each do |text|
+          word_hash = text.word_hash
+          @category_counts[category] += 1
+          word_hash.each do |word, count|
+            @categories[category][word] ||= 0
+            @categories[category][word] += count
+            @total_words += count
+            @category_word_count[category] += count
+          end
+        end
+      end
+    end
 
     # Core training logic for a single category and text.
     # @rbs (String | Symbol, String) -> void
