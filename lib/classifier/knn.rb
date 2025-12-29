@@ -9,13 +9,9 @@ require 'mutex_m'
 require 'classifier/lsi'
 
 module Classifier
-  # This class implements a k-Nearest Neighbors classifier that leverages
-  # the existing LSI infrastructure for similarity computations.
+  # Instance-based classification: stores examples and classifies by similarity.
   #
-  # Unlike traditional classifiers that require training, kNN uses instance-based
-  # learning - it stores examples and classifies by finding the most similar ones.
-  #
-  # Example usage:
+  # Example:
   #   knn = Classifier::KNN.new(k: 3)
   #   knn.add("spam" => ["Buy now!", "Limited offer!"])
   #   knn.add("ham" => ["Meeting tomorrow", "Project update"])
@@ -70,15 +66,12 @@ module Classifier
 
         votes = tally_votes(neighbors)
         winner = votes.max_by { |_, v| v }&.first
-        total_votes = votes.values.sum
-        confidence = winner && total_votes.positive? ? votes[winner] / total_votes.to_f : 0.0
+        return empty_result unless winner
 
-        {
-          category: winner,
-          neighbors: neighbors,
-          votes: votes,
-          confidence: confidence
-        }
+        total_votes = votes.values.sum
+        confidence = total_votes.positive? ? votes[winner] / total_votes.to_f : 0.0
+
+        { category: winner, neighbors: neighbors, votes: votes, confidence: confidence }
       end
     end
 
@@ -133,9 +126,8 @@ module Classifier
       data = json.is_a?(String) ? JSON.parse(json) : json
       raise ArgumentError, "Invalid classifier type: #{data['type']}" unless data['type'] == 'knn'
 
-      # Restore the LSI from its nested data
-      lsi_data = data['lsi']
-      lsi_data['type'] = 'lsi' # Ensure type is set for LSI.from_json
+      lsi_data = data['lsi'].dup
+      lsi_data['type'] = 'lsi'
 
       instance = new(k: data['k'], weighted: data['weighted'])
       instance.instance_variable_set(:@lsi, LSI.from_json(lsi_data))
@@ -225,17 +217,6 @@ module Classifier
 
     # @rbs (String) -> Array[Hash[Symbol, untyped]]
     def find_neighbors(text)
-      # LSI requires at least 2 items to build an index
-      # For single item, return it directly with a default similarity
-      if @lsi.items.size == 1
-        item = @lsi.items.first
-        return [{
-          item: item,
-          category: @lsi.categories_for(item).first,
-          similarity: 1.0
-        }]
-      end
-
       proximity = @lsi.proximity_array_for_content(text)
       neighbors = proximity.reject { |item, _| item == text }.first(@k)
 
@@ -253,10 +234,8 @@ module Classifier
       votes = Hash.new(0.0)
 
       neighbors.each do |neighbor|
-        category = neighbor[:category]
-        next unless category
-
-        weight = @weighted ? [neighbor[:similarity], 0.0].max : 1.0
+        category = neighbor[:category] or next
+        weight = @weighted ? neighbor[:similarity] : 1.0
         votes[category] += weight
       end
 
@@ -282,7 +261,7 @@ module Classifier
         @k = data['k']
         @weighted = data['weighted']
 
-        lsi_data = data['lsi']
+        lsi_data = data['lsi'].dup
         lsi_data['type'] = 'lsi'
         @lsi = LSI.from_json(lsi_data)
         @dirty = false
