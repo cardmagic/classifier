@@ -18,7 +18,7 @@ module Classifier
   #   classifier.classify("Claim your prize!") # => "Spam"
   #   classifier.probabilities("Claim your prize!") # => {"Spam" => 0.92, "Ham" => 0.08}
   #
-  class LogisticRegression
+  class LogisticRegression # rubocop:disable Metrics/ClassLength
     include Mutex_m
 
     # @rbs @categories: Array[Symbol]
@@ -279,6 +279,35 @@ module Classifier
       from_json(File.read(path))
     end
 
+    # Reloads the classifier from storage, raising if there are unsaved changes.
+    #
+    # @rbs () -> self
+    def reload
+      raise ArgumentError, 'No storage configured' unless storage
+      raise UnsavedChangesError, 'Unsaved changes would be lost. Call save first or use reload!' if @dirty
+
+      data = storage.read
+      raise StorageError, 'No saved state found' unless data
+
+      restore_from_json(data)
+      @dirty = false
+      self
+    end
+
+    # Force reloads the classifier from storage, discarding any unsaved changes.
+    #
+    # @rbs () -> self
+    def reload!
+      raise ArgumentError, 'No storage configured' unless storage
+
+      data = storage.read
+      raise StorageError, 'No saved state found' unless data
+
+      restore_from_json(data)
+      @dirty = false
+      self
+    end
+
     # Custom marshal serialization to exclude mutex state.
     #
     # @rbs () -> Array[untyped]
@@ -395,6 +424,14 @@ module Classifier
       exp_scores = scores.transform_values { |s| Math.exp(s - max_score) }
       sum = exp_scores.values.sum.to_f
       exp_scores.transform_keys(&:to_s).transform_values { |e| (e / sum).to_f }
+    end
+
+    # Restores classifier state from JSON string.
+    # @rbs (String) -> void
+    def restore_from_json(json)
+      data = JSON.parse(json)
+      categories = data['categories'].map(&:to_sym)
+      restore_state(data, categories)
     end
 
     # Restores classifier state from parsed JSON data.
