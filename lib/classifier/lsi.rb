@@ -709,7 +709,7 @@ module Classifier
     # Alias train_batch to add_batch for API consistency with other classifiers.
     # Note: LSI uses categories differently (items have categories, not the training call).
     #
-    # @rbs (?(String | Symbol), ?Array[String], ?batch_size: Integer, **Array[String]) { (Streaming::Progress) -> void } -> void
+    # @rbs (?(String | Symbol)?, ?Array[String]?, ?batch_size: Integer, **Array[String]) { (Streaming::Progress) -> void } -> void
     def train_batch(category = nil, documents = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &block)
       if category && documents
         add_batch(batch_size: batch_size, **{ category.to_sym => documents }, &block)

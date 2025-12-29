@@ -40,7 +40,7 @@ module Classifier
     # @example Keyword style
     #   classifier.train_batch(spam: documents, ham: other_docs, batch_size: 100)
     #
-    # @rbs (?(Symbol | String), ?Array[String], ?batch_size: Integer, **Array[String]) { (Progress) -> void } -> void
+    # @rbs (?(Symbol | String)?, ?Array[String]?, ?batch_size: Integer, **Array[String]) { (Progress) -> void } -> void
     def train_batch(category = nil, documents = nil, batch_size: DEFAULT_BATCH_SIZE, **categories, &block)
       raise NotImplementedError, "#{self.class} must implement train_batch"
     end

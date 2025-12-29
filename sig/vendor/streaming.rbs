@@ -1,0 +1,14 @@
+# Type stubs for Streaming module
+# Defines the interface that including classes must implement
+
+module Classifier
+  # Interface for classes that include Streaming
+  interface _StreamingHost
+    def storage: () -> Storage::Base?
+    def storage=: (Storage::Base?) -> void
+    def save: () -> void
+  end
+
+  module Streaming : _StreamingHost
+  end
+end

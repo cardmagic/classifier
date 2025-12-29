@@ -299,16 +299,16 @@ module Classifier
     # TFIDF doesn't support train_from_stream (use fit_from_stream instead).
     # This method raises NotImplementedError with guidance.
     #
-    # @rbs (untyped, untyped, **untyped) -> void
-    def train_from_stream(*)
+    # @rbs (*untyped, **untyped) -> void
+    def train_from_stream(*) # steep:ignore
       raise NotImplementedError, 'TFIDF uses fit_from_stream instead of train_from_stream'
     end
 
     # TFIDF doesn't support train_batch (use fit instead).
     # This method raises NotImplementedError with guidance.
     #
-    # @rbs (**untyped) -> void
-    def train_batch(*)
+    # @rbs (*untyped, **untyped) -> void
+    def train_batch(*) # steep:ignore
       raise NotImplementedError, 'TFIDF uses fit instead of train_batch'
     end
 
