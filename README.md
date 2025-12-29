@@ -4,7 +4,7 @@
 [![CI](https://github.com/cardmagic/classifier/actions/workflows/ruby.yml/badge.svg)](https://github.com/cardmagic/classifier/actions/workflows/ruby.yml)
 [![License: LGPL](https://img.shields.io/badge/License-LGPL_2.1-blue.svg)](https://opensource.org/licenses/LGPL-2.1)
 
-A Ruby library for text classification using Bayesian, LSI (Latent Semantic Indexing), k-Nearest Neighbors (kNN), and TF-IDF algorithms.
+A Ruby library for text classification using Bayesian, Logistic Regression, LSI (Latent Semantic Indexing), k-Nearest Neighbors (kNN), and TF-IDF algorithms.
 
 **[Documentation](https://rubyclassifier.com/docs)** · **[Tutorials](https://rubyclassifier.com/docs/tutorials)** · **[Guides](https://rubyclassifier.com/docs/guides)**
 
@@ -12,6 +12,7 @@ A Ruby library for text classification using Bayesian, LSI (Latent Semantic Inde
 
 - [Installation](#installation)
 - [Bayesian Classifier](#bayesian-classifier)
+- [Logistic Regression](#logistic-regression)
 - [LSI (Latent Semantic Indexing)](#lsi-latent-semantic-indexing)
 - [k-Nearest Neighbors (kNN)](#k-nearest-neighbors-knn)
 - [TF-IDF Vectorizer](#tf-idf-vectorizer)
@@ -105,6 +106,66 @@ classifier.classify "Congratulations! You've won a prize!"
 - [Bayes Basics Guide](https://rubyclassifier.com/docs/guides/bayes/basics) - In-depth documentation
 - [Build a Spam Filter Tutorial](https://rubyclassifier.com/docs/tutorials/spam-filter) - Step-by-step guide
 - [Paul Graham: A Plan for Spam](http://www.paulgraham.com/spam.html)
+
+## Logistic Regression
+
+Linear classifier using Stochastic Gradient Descent (SGD). Often more accurate than Naive Bayes while remaining fast and interpretable. Provides well-calibrated probability estimates and feature weights for understanding which words drive predictions.
+
+### Key Features
+
+- **More Accurate**: No independence assumption means better accuracy on many text problems
+- **Calibrated Probabilities**: Unlike Bayes, probabilities reflect true confidence
+- **Interpretable**: Feature weights show which words matter for each class
+- **Fast**: Linear time prediction, efficient SGD training
+- **L2 Regularization**: Prevents overfitting on small datasets
+
+### Quick Start
+
+```ruby
+require 'classifier'
+
+classifier = Classifier::LogisticRegression.new(:spam, :ham)
+
+# Train with keyword arguments (same API as Bayes)
+classifier.train(spam: ["Buy now! Free money!", "Click here for prizes!"])
+classifier.train(ham: ["Meeting tomorrow", "Please review the document"])
+
+# Classify new text
+classifier.classify "Claim your free prize!"
+# => "Spam"
+
+# Get calibrated probabilities
+classifier.probabilities "Claim your free prize!"
+# => {"Spam" => 0.92, "Ham" => 0.08}
+
+# See which words matter most
+classifier.weights(:spam, limit: 5)
+# => {:free => 2.3, :prize => 1.9, :claim => 1.5, ...}
+```
+
+### Hyperparameters
+
+```ruby
+classifier = Classifier::LogisticRegression.new(
+  :positive, :negative,
+  learning_rate: 0.1,    # SGD step size (default: 0.1)
+  regularization: 0.01,  # L2 penalty strength (default: 0.01)
+  max_iterations: 100,   # Training iterations (default: 100)
+  tolerance: 1e-4        # Convergence threshold (default: 1e-4)
+)
+```
+
+### When to Use Logistic Regression vs Bayes
+
+| Aspect | Logistic Regression | Naive Bayes |
+|--------|---------------------|-------------|
+| **Accuracy** | Often higher | Good baseline |
+| **Probabilities** | Well-calibrated | Tend to be extreme |
+| **Training** | Needs to fit model | Instant (just counting) |
+| **Interpretability** | Feature weights | Word frequencies |
+| **Small datasets** | Use higher regularization | Works well |
+
+Use Logistic Regression when you need accurate probabilities or want to understand feature importance. Use Bayes when you need instant updates or have very small training sets.
 
 ## LSI (Latent Semantic Indexing)
 
@@ -330,7 +391,7 @@ loaded = Marshal.load(data)
 
 ## Persistence
 
-Save and load classifiers with pluggable storage backends. Works with Bayes, LSI, and kNN classifiers.
+Save and load classifiers with pluggable storage backends. Works with Bayes, LogisticRegression, LSI, and kNN classifiers.
 
 ### File Storage
 
