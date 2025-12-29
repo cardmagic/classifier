@@ -8,45 +8,44 @@ A Ruby library for text classification using Bayesian, Logistic Regression, LSI 
 
 **[Documentation](https://rubyclassifier.com/docs)** · **[Tutorials](https://rubyclassifier.com/docs/tutorials)** · **[Guides](https://rubyclassifier.com/docs/guides)**
 
-> **Note:** This is the original `classifier` gem, actively maintained since 2005. After a quieter period, active development resumed in 2025 with major new features. If you're choosing between this and a fork, this is the canonical, actively-developed version.
+> **Note:** This is the original `classifier` gem, maintained for 20 years since 2005. After a quieter period, active development resumed in 2025 with major new features. If you're choosing between this and a fork, this is the canonical, most actively-developed version.
 
 ## Why This Library?
 
 This gem has features no fork provides:
 
-| Feature | This Gem | Forks |
-|---------|----------|-------|
-| **5 classifiers** (Bayes, Logistic Regression, LSI, kNN, TF-IDF) | ✅ | ❌ Bayes + LSI only |
-| **Native C extension** for LSI (5-50x faster) | ✅ | ❌ GSL dependency or pure Ruby |
-| **Zero dependencies** for native speed | ✅ | ❌ Requires GSL system library |
-| **Pluggable persistence** (file, Redis, S3, custom) | ✅ | ❌ Marshal only |
-| **Thread-safe** classifiers | ✅ | ❌ |
-| **RBS type annotations** | ✅ | ❌ |
-| **Ruby 3.2-3.4 support** | ✅ | ⚠️ Often outdated |
-| **Proper Laplace smoothing** | ✅ | ❌ Numeric instability |
-| **Calibrated probabilities** (Logistic Regression) | ✅ | ❌ |
-| **Feature weights** for interpretability | ✅ | ❌ |
+| | This Gem | Forks |
+|:--|:--|:--|
+| **Algorithms** | 5 classifiers | 2 only |
+| **LSI Performance** | Native C (5-50x faster) | Pure Ruby, or requires GSL/Numo + system libs |
+| **Persistence** | Pluggable (file, Redis, S3, SQL) | Marshal only |
+| **Thread Safety** | ✅ | ❌ |
+| **Type Annotations** | RBS throughout | ❌ |
+| **Laplace Smoothing** | Numerically stable | ❌ Unstable |
+| **Probability Calibration** | ✅ | ❌ |
+| **Feature Weights** | ✅ Interpretable | ❌ |
 
-### Recent Development (2025)
+### Recent Developments (Late 2025)
 
 - Added Logistic Regression classifier with SGD and L2 regularization
 - Added k-Nearest Neighbors classifier with distance-weighted voting
 - Added TF-IDF vectorizer with n-gram support
-- Built zero-dependency native C extension (replaces GSL requirement)
+- Built zero-dependency native C extension (replaces GSL or Numo requirement)
 - Added pluggable storage backends for persistence
 - Made all classifiers thread-safe
 - Fixed Laplace smoothing for numerical stability
 - Added RBS type signatures throughout
-- Modernized for Ruby 3.2-3.4
+- Modernized for new Ruby coding standards
 
 ## Table of Contents
 
 - [Installation](#installation)
-- [Bayesian Classifier](#bayesian-classifier)
-- [Logistic Regression](#logistic-regression)
-- [LSI (Latent Semantic Indexing)](#lsi-latent-semantic-indexing)
-- [k-Nearest Neighbors (kNN)](#k-nearest-neighbors-knn)
-- [TF-IDF Vectorizer](#tf-idf-vectorizer)
+- [Algorithms](#bayesian-classifier)
+  - [Bayesian Classifier](#bayesian-classifier)
+  - [Logistic Regression](#logistic-regression)
+  - [LSI (Latent Semantic Indexing)](#lsi-latent-semantic-indexing)
+  - [k-Nearest Neighbors (kNN)](#k-nearest-neighbors-knn)
+  - [TF-IDF Vectorizer](#tf-idf-vectorizer)
 - [Persistence](#persistence)
 - [Performance](#performance)
 - [Development](#development)
@@ -75,7 +74,7 @@ gem install classifier
 
 ### Native C Extension
 
-The gem includes a native C extension for fast LSI operations. It compiles automatically during gem installation. No external dependencies are required.
+The gem includes a zero-dependency native C extension for fast LSI operations (5-50x faster than pure Ruby). It compiles automatically during installation.
 
 To verify the native extension is active:
 
@@ -90,22 +89,6 @@ To force pure Ruby mode (for debugging):
 NATIVE_VECTOR=true ruby your_script.rb
 ```
 
-To suppress the warning when native extension isn't available:
-
-```bash
-SUPPRESS_LSI_WARNING=true ruby your_script.rb
-```
-
-### Compatibility
-
-| Ruby Version | Status |
-|--------------|--------|
-| 4.0          | Supported |
-| 3.4          | Supported |
-| 3.3          | Supported |
-| 3.2          | Supported |
-| 3.1          | EOL (unsupported) |
-
 ## Bayesian Classifier
 
 Fast, accurate classification with modest memory requirements. Ideal for spam filtering, sentiment analysis, and content categorization.
@@ -118,7 +101,7 @@ require 'classifier'
 classifier = Classifier::Bayes.new(:spam, :ham)
 
 # Train with keyword arguments
-classifier.train(spam: "Buy cheap viagra now! Limited offer!")
+classifier.train(spam: "Buy cheap v1agra now! Limited offer!")
 classifier.train(ham: "Meeting scheduled for tomorrow at 10am")
 
 # Train multiple items at once
@@ -209,18 +192,18 @@ require 'classifier'
 
 lsi = Classifier::LSI.new
 
-# Add documents with hash-style syntax (category => item(s))
-lsi.add("Pets" => "Dogs are loyal pets that love to play fetch")
-lsi.add("Pets" => "Cats are independent and love to nap")
-lsi.add("Programming" => "Ruby is a dynamic programming language")
+# Add documents (category: item(s))
+lsi.add(pets: "Dogs are loyal pets that love to play fetch")
+lsi.add(pets: "Cats are independent and love to nap")
+lsi.add(programming: "Ruby is a dynamic programming language")
 
 # Add multiple items with the same category
-lsi.add("Programming" => ["Python is great for data science", "JavaScript runs in browsers"])
+lsi.add(programming: ["Python is great for data science", "JavaScript runs in browsers"])
 
 # Batch operations with multiple categories
 lsi.add(
-  "Pets" => ["Hamsters are small furry pets", "Birds can be great companions"],
-  "Programming" => "Go is fast and concurrent"
+  pets: ["Hamsters are small furry pets", "Birds can be great companions"],
+  programming: "Go is fast and concurrent"
 )
 
 # Classify new text
