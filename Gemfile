@@ -7,8 +7,8 @@ gem 'mutex_m'
 gem 'ostruct'
 
 group :test do
-  gem 'simplecov', require: false
   gem 'rantly', require: false
+  gem 'simplecov', require: false
 end
 
 group :development do

@@ -45,7 +45,7 @@ class PropertyTest < Minitest::Test
       scores1 = @classifier.classifications(random_text)
       scores2 = @classifier.classifications(random_text)
 
-      assert_equal scores1, scores2, "Classification scores should be deterministic"
+      assert_equal scores1, scores2, 'Classification scores should be deterministic'
     end
   end
 
@@ -71,9 +71,9 @@ class PropertyTest < Minitest::Test
       scores2 = c2.classifications(test_phrase)
 
       assert_in_delta scores1['A'], scores2['A'], 0.0001,
-                      "Training order should not affect classification scores"
+                      'Training order should not affect classification scores'
       assert_in_delta scores1['B'], scores2['B'], 0.0001,
-                      "Training order should not affect classification scores"
+                      'Training order should not affect classification scores'
     end
   end
 
@@ -94,9 +94,9 @@ class PropertyTest < Minitest::Test
       restored_scores = classifier.classifications('test phrase')
 
       assert_in_delta original_scores['Spam'], restored_scores['Spam'], 0.0001,
-                      "Untrain should restore original state"
+                      'Untrain should restore original state'
       assert_in_delta original_scores['Ham'], restored_scores['Ham'], 0.0001,
-                      "Untrain should restore original state"
+                      'Untrain should restore original state'
     end
   end
 
@@ -111,12 +111,14 @@ class PropertyTest < Minitest::Test
       classifier.untrain_a untrain_text
 
       category_words = classifier.instance_variable_get(:@categories)[:A]
+
       category_words.each_value do |count|
-        assert_operator count, :>=, 0, "Word counts should never be negative"
+        assert_operator count, :>=, 0, 'Word counts should never be negative'
       end
 
       total = classifier.instance_variable_get(:@total_words)
-      assert_operator total, :>=, 0, "Total words should never be negative"
+
+      assert_operator total, :>=, 0, 'Total words should never be negative'
     end
   end
 
@@ -130,11 +132,13 @@ class PropertyTest < Minitest::Test
       classifier.train_a 'another document'
 
       initial_count = classifier.instance_variable_get(:@category_counts)[:A]
+
       assert_equal 2, initial_count
 
       classifier.untrain_a 'some text'
       after_untrain = classifier.instance_variable_get(:@category_counts)[:A]
-      assert_equal 1, after_untrain, "Untrain should decrement category count"
+
+      assert_equal 1, after_untrain, 'Untrain should decrement category count'
     end
   end
 
@@ -144,8 +148,8 @@ class PropertyTest < Minitest::Test
       random_text = Rantly { sized(range(1, 100)) { string } }
       result = @classifier.classify(random_text)
 
-      assert_includes ['Spam', 'Ham'], result,
-                      "Classification must return a valid category"
+      assert_includes %w[Spam Ham], result,
+                      'Classification must return a valid category'
     end
   end
 
@@ -155,9 +159,9 @@ class PropertyTest < Minitest::Test
       random_text = random_alpha_string(5, 50)
       scores = @classifier.classifications(random_text)
 
-      assert_includes scores.keys, 'Spam', "Should contain Spam category"
-      assert_includes scores.keys, 'Ham', "Should contain Ham category"
-      assert_equal 2, scores.size, "Should have exactly 2 categories"
+      assert_includes scores.keys, 'Spam', 'Should contain Spam category'
+      assert_includes scores.keys, 'Ham', 'Should contain Ham category'
+      assert_equal 2, scores.size, 'Should have exactly 2 categories'
     end
   end
 
@@ -189,7 +193,7 @@ class PropertyTest < Minitest::Test
       scores2 = c2.classifications('test')
 
       assert_in_delta scores1['A'], scores2['A'], 0.0001,
-                      "Multiple trains should equal single train with repeated text"
+                      'Multiple trains should equal single train with repeated text'
     end
   end
 end
@@ -219,8 +223,8 @@ class LSIPropertyTest < Minitest::Test
       c1 = lsi.classify(test_doc)
       c2 = lsi.classify(test_doc)
 
-      assert_equal c1, c2, "LSI classification should be deterministic"
-      assert_equal 'Tech', c1, "Tech document should classify as Tech"
+      assert_equal c1, c2, 'LSI classification should be deterministic'
+      assert_equal 'Tech', c1, 'Tech document should classify as Tech'
     end
   end
 
@@ -239,7 +243,7 @@ class LSIPropertyTest < Minitest::Test
       related1 = lsi.find_related(doc1, 2)
       related2 = lsi.find_related(doc1, 2)
 
-      assert_equal related1, related2, "find_related should be deterministic"
+      assert_equal related1, related2, 'find_related should be deterministic'
     end
   end
 
@@ -256,7 +260,7 @@ class LSIPropertyTest < Minitest::Test
       results1 = lsi.search(query, 2)
       results2 = lsi.search(query, 2)
 
-      assert_equal results1, results2, "Search should be deterministic"
+      assert_equal results1, results2, 'Search should be deterministic'
     end
   end
 
@@ -268,8 +272,9 @@ class LSIPropertyTest < Minitest::Test
     lsi << 'This is a random document about nothing.'
 
     result = lsi.classify('This is random content.')
+
     assert(result.nil? || result.is_a?(String),
-           "Should return nil or a string category")
+           'Should return nil or a string category')
   end
 
   # Test 15: LSI rebuilds correctly after adding multiple items
@@ -289,7 +294,7 @@ class LSIPropertyTest < Minitest::Test
       result1 = lsi.classify(test_text)
       result2 = lsi.classify(test_text)
 
-      assert_equal result1, result2, "Classification should be deterministic after rebuild"
+      assert_equal result1, result2, 'Classification should be deterministic after rebuild'
     end
   end
 end
@@ -308,12 +313,12 @@ class MultiCategoryPropertyTest < Minitest::Test
       normalized_name = category_name.prepare_category_name.to_s
 
       assert_includes classifier.categories, normalized_name,
-                      "Added category should be present"
+                      'Added category should be present'
 
       classifier.remove_category(category_name)
 
       refute_includes classifier.categories, normalized_name,
-                      "Removed category should not be present"
+                      'Removed category should not be present'
     end
   end
 
@@ -341,7 +346,7 @@ class MultiCategoryPropertyTest < Minitest::Test
         next unless category_a[stemmed.to_sym]
 
         refute category_b[stemmed.to_sym],
-               "Words trained in A should not appear in B"
+               'Words trained in A should not appear in B'
       end
     end
   end
