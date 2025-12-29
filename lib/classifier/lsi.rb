@@ -991,12 +991,9 @@ module Classifier
     # @rbs () -> void
     def reproject_all_documents
       return unless @u_matrix
+      return reproject_all_documents_native if self.class.native_available? && @u_matrix.respond_to?(:batch_project)
 
-      if self.class.native_available? && @u_matrix.respond_to?(:batch_project)
-        reproject_all_documents_native
-      else
-        reproject_all_documents_ruby
-      end
+      reproject_all_documents_ruby
     end
 
     # Native batch re-projection using C extension.

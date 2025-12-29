@@ -62,8 +62,7 @@ module Classifier
         #
         # @rbs (Matrix, Vector) -> Vector
         def project(u, raw_vec)
-          result = u.transpose * raw_vec
-          result.is_a?(Vector) ? result : Vector[*result.to_a.flatten]
+          u.transpose * raw_vec
         end
 
         private
