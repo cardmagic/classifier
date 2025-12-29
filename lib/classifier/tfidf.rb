@@ -180,13 +180,13 @@ module Classifier
         word_hash.each { |term, count| result[term] += count }
       end
 
-      if @ngram_range[1] > 1
-        tokens = tokenize_for_ngrams(document)
-        (2..@ngram_range[1]).each do |n|
-          next if n < @ngram_range[0]
+      return result if @ngram_range[1] <= 1
 
-          generate_ngrams(tokens, n).each { |ngram| result[ngram] += 1 }
-        end
+      tokens = tokenize_for_ngrams(document)
+      (2..@ngram_range[1]).each do |n|
+        next if n < @ngram_range[0]
+
+        generate_ngrams(tokens, n).each { |ngram| result[ngram] += 1 }
       end
 
       result
