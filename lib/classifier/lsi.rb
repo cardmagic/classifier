@@ -123,36 +123,29 @@ module Classifier
     end
 
     # Adds items to the index using hash-style syntax.
-    # The hash keys are the text content to index, and values are the item identifiers.
+    # The hash keys are categories, and values are items (or arrays of items).
     #
     # For example:
     #   lsi = Classifier::LSI.new
-    #   lsi.add("Ruby programming language" => doc1)
-    #   lsi.add("Java enterprise development" => doc2)
-    #   lsi.add(python: doc3)  # Symbol keys work too
+    #   lsi.add("Dog" => "Dogs are loyal pets")
+    #   lsi.add("Cat" => "Cats are independent")
+    #   lsi.add(Bird: "Birds can fly")  # Symbol keys work too
     #
-    # Batch operations:
+    # Multiple items with the same category:
+    #   lsi.add("Dog" => ["Dogs are loyal", "Puppies are cute"])
+    #
+    # Batch operations with multiple categories:
     #   lsi.add(
-    #     "Ruby programming" => doc1,
-    #     "Java development" => doc2
+    #     "Dog" => ["Dogs are loyal", "Puppies are cute"],
+    #     "Cat" => ["Cats are independent", "Kittens are playful"]
     #   )
-    #
-    # With categories:
-    #   lsi.add("Ruby programming" => [doc1, :programming, :ruby])
-    #   lsi.add("Java development" => [doc2, "enterprise"])
     #
     # @rbs (**untyped items) -> void
     def add(**items)
-      items.each do |text, value|
-        text_str = text.to_s
-        if value.is_a?(Array)
-          item_key = value.first
-          categories = value[1..]
-        else
-          item_key = value
-          categories = []
-        end
-        add_item_internal(item_key, text_str, *categories)
+      items.each do |category, value|
+        category_str = category.to_s
+        docs = value.is_a?(Array) ? value : [value]
+        docs.each { |doc| add_item(doc, category_str) }
       end
     end
 
@@ -569,20 +562,6 @@ module Classifier
     end
 
     private
-
-    # Internal method to add an item with explicit text content and item key.
-    # Called by the new hash-style add method.
-    #
-    # @rbs (untyped, String, *String | Symbol) -> void
-    def add_item_internal(item_key, text_content, *categories)
-      clean_word_hash = text_content.clean_word_hash
-      synchronize do
-        @items[item_key] = ContentNode.new(clean_word_hash, *categories)
-        @version += 1
-        @dirty = true
-      end
-      build_index if @auto_rebuild
-    end
 
     # Restores LSI state from a JSON string (used by reload)
     # @rbs (String) -> void

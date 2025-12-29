@@ -15,53 +15,52 @@ class LSITest < Minitest::Test
 
   def test_add_with_hash_syntax
     lsi = Classifier::LSI.new
-    lsi.add('Ruby programming language' => :doc1)
-    lsi.add('Java enterprise development' => :doc2)
+    lsi.add('Dog' => 'Dogs are loyal pets')
+    lsi.add('Cat' => 'Cats are independent')
 
     assert_equal 2, lsi.items.size
-    assert_includes lsi.items, :doc1
-    assert_includes lsi.items, :doc2
+    assert_includes lsi.items, 'Dogs are loyal pets'
+    assert_includes lsi.items, 'Cats are independent'
   end
 
   def test_add_with_symbol_keys
     lsi = Classifier::LSI.new
-    lsi.add(ruby: :doc1, java: :doc2)
+    lsi.add(Dog: 'Dogs are loyal', Cat: 'Cats are independent')
 
     assert_equal 2, lsi.items.size
-    assert_includes lsi.items, :doc1
-    assert_includes lsi.items, :doc2
+    assert_equal ['Dog'], lsi.categories_for('Dogs are loyal')
+    assert_equal ['Cat'], lsi.categories_for('Cats are independent')
+  end
+
+  def test_add_multiple_items_same_category
+    lsi = Classifier::LSI.new
+    lsi.add('Dog' => ['Dogs are loyal', 'Puppies are cute', 'Canines are friendly'])
+
+    assert_equal 3, lsi.items.size
+    assert_equal ['Dog'], lsi.categories_for('Dogs are loyal')
+    assert_equal ['Dog'], lsi.categories_for('Puppies are cute')
+    assert_equal ['Dog'], lsi.categories_for('Canines are friendly')
   end
 
   def test_add_batch_operations
     lsi = Classifier::LSI.new
     lsi.add(
-      'Ruby programming' => :doc1,
-      'Java development' => :doc2,
-      'Python scripting' => :doc3
+      'Dog' => ['Dogs are loyal', 'Puppies are cute'],
+      'Cat' => ['Cats are independent', 'Kittens are playful']
     )
 
-    assert_equal 3, lsi.items.size
-    assert_includes lsi.items, :doc1
-    assert_includes lsi.items, :doc2
-    assert_includes lsi.items, :doc3
-  end
-
-  def test_add_with_categories
-    lsi = Classifier::LSI.new
-    lsi.add('Ruby programming' => %i[doc1 programming dynamic])
-    lsi.add('Java development' => [:doc2, 'enterprise'])
-
-    assert_equal 2, lsi.items.size
-    assert_equal %i[programming dynamic], lsi.categories_for(:doc1)
-    assert_equal ['enterprise'], lsi.categories_for(:doc2)
+    assert_equal 4, lsi.items.size
+    assert_equal ['Dog'], lsi.categories_for('Dogs are loyal')
+    assert_equal ['Cat'], lsi.categories_for('Cats are independent')
   end
 
   def test_add_classification_works
     lsi = Classifier::LSI.new
-    lsi.add(@str2 => [:str2, 'Dog'])
-    lsi.add(@str3 => [:str3, 'Cat'])
-    lsi.add(@str4 => [:str4, 'Cat'])
-    lsi.add(@str5 => [:str5, 'Bird'])
+    lsi.add(
+      'Dog' => @str2,
+      'Cat' => [@str3, @str4],
+      'Bird' => @str5
+    )
 
     assert_equal 'Dog', lsi.classify(@str1)
     assert_equal 'Cat', lsi.classify(@str3)
@@ -71,37 +70,30 @@ class LSITest < Minitest::Test
   def test_add_find_related_works
     lsi = Classifier::LSI.new
     lsi.add(
-      @str1 => :str1,
-      @str2 => :str2,
-      @str3 => :str3,
-      @str4 => :str4,
-      @str5 => :str5
+      'Dog' => [@str1, @str2],
+      'Cat' => [@str3, @str4],
+      'Bird' => @str5
     )
 
     # The closest match to str1 should be str2 (both about dogs)
-    related = lsi.find_related(:str1, 3)
+    related = lsi.find_related(@str1, 3)
 
-    assert_equal :str2, related.first, 'Most related to dog text should be other dog text'
+    assert_equal @str2, related.first, 'Most related to dog text should be other dog text'
   end
 
   def test_add_equivalence_to_add_item
     # Using add
     lsi1 = Classifier::LSI.new
-    lsi1.add('Ruby programming language' => [:doc1, 'Programming'])
-    lsi1.add('Java enterprise development' => [:doc2, 'Programming'])
-    lsi1.add('Cat pictures are cute' => [:doc3, 'Entertainment'])
+    lsi1.add(
+      'Programming' => ['Ruby programming language', 'Java enterprise development'],
+      'Entertainment' => 'Cat pictures are cute'
+    )
 
     # Using add_item (legacy)
     lsi2 = Classifier::LSI.new
-    lsi2.add_item :doc1, 'Programming' do
-      'Ruby programming language'
-    end
-    lsi2.add_item :doc2, 'Programming' do
-      'Java enterprise development'
-    end
-    lsi2.add_item :doc3, 'Entertainment' do
-      'Cat pictures are cute'
-    end
+    lsi2.add_item 'Ruby programming language', 'Programming'
+    lsi2.add_item 'Java enterprise development', 'Programming'
+    lsi2.add_item 'Cat pictures are cute', 'Entertainment'
 
     # Both should classify the same
     test_text = 'Python programming'
@@ -111,14 +103,14 @@ class LSITest < Minitest::Test
 
   def test_add_triggers_auto_rebuild
     lsi = Classifier::LSI.new auto_rebuild: true
-    lsi.add('Dogs are great' => :doc1, 'More about dogs' => :doc2)
+    lsi.add('Dog' => ['Dogs are great', 'More about dogs'])
 
     refute_predicate lsi, :needs_rebuild?, 'Auto-rebuild should keep index current'
   end
 
   def test_add_respects_auto_rebuild_false
     lsi = Classifier::LSI.new auto_rebuild: false
-    lsi.add('Dogs are great' => :doc1, 'More about dogs' => :doc2)
+    lsi.add('Dog' => ['Dogs are great', 'More about dogs'])
 
     assert_predicate lsi, :needs_rebuild?, 'Index should need rebuild when auto_rebuild is false'
   end

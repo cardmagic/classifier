@@ -115,25 +115,27 @@ require 'classifier'
 
 lsi = Classifier::LSI.new
 
-# Add documents with hash-style syntax (text => [key, *categories])
-lsi.add("Dogs are loyal pets that love to play fetch" => [:dog_doc, :pets])
-lsi.add("Cats are independent and love to nap" => [:cat_doc, :pets])
-lsi.add("Ruby is a dynamic programming language" => [:ruby_doc, :programming])
-lsi.add("Python is great for data science" => [:python_doc, :programming])
+# Add documents with hash-style syntax (category => item(s))
+lsi.add("Pets" => "Dogs are loyal pets that love to play fetch")
+lsi.add("Pets" => "Cats are independent and love to nap")
+lsi.add("Programming" => "Ruby is a dynamic programming language")
 
-# Add multiple documents at once
+# Add multiple items with the same category
+lsi.add("Programming" => ["Python is great for data science", "JavaScript runs in browsers"])
+
+# Batch operations with multiple categories
 lsi.add(
-  "JavaScript runs in the browser" => [:js_doc, :programming],
-  "Hamsters are small furry pets" => [:hamster_doc, :pets]
+  "Pets" => ["Hamsters are small furry pets", "Birds can be great companions"],
+  "Programming" => "Go is fast and concurrent"
 )
 
 # Classify new text
 lsi.classify "My puppy loves to run around"
-# => :pets
+# => "Pets"
 
 # Get classification with confidence score
 lsi.classify_with_confidence "Learning to code in Ruby"
-# => [:programming, 0.89]
+# => ["Programming", 0.89]
 ```
 
 ### Search and Discovery
