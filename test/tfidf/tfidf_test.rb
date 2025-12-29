@@ -28,6 +28,7 @@ class TFIDFTest < Minitest::Test
     # Terms appearing in only 1 document should be excluded
     tfidf.vocabulary.each_key do |term|
       doc_count = @corpus.count { |doc| doc.clean_word_hash.key?(term) }
+
       assert_operator doc_count, :>=, 2, "Term #{term} should appear in at least 2 documents"
     end
   end
@@ -41,6 +42,7 @@ class TFIDFTest < Minitest::Test
     min_count = (@corpus.size * 0.5).ceil
     tfidf.vocabulary.each_key do |term|
       doc_count = @corpus.count { |doc| doc.clean_word_hash.key?(term) }
+
       assert_operator doc_count, :>=, min_count
     end
   end
@@ -53,6 +55,7 @@ class TFIDFTest < Minitest::Test
     # Terms appearing in more than 2 documents should be excluded
     tfidf.vocabulary.each_key do |term|
       doc_count = @corpus.count { |doc| doc.clean_word_hash.key?(term) }
+
       assert_operator doc_count, :<=, 2
     end
   end
@@ -66,6 +69,7 @@ class TFIDFTest < Minitest::Test
     max_count = (@corpus.size * 0.5).floor
     tfidf.vocabulary.each_key do |term|
       doc_count = @corpus.count { |doc| doc.clean_word_hash.key?(term) }
+
       assert_operator doc_count, :<=, max_count
     end
   end
@@ -179,6 +183,7 @@ class TFIDFTest < Minitest::Test
 
     # L2 norm should be 1 (or close to it due to floating point)
     magnitude = Math.sqrt(vector.values.sum { |v| v * v })
+
     assert_in_delta 1.0, magnitude, 0.0001
   end
 
@@ -247,6 +252,7 @@ class TFIDFTest < Minitest::Test
 
     # Should have bigrams in vocabulary
     bigram_terms = tfidf.vocabulary.keys.select { |t| t.to_s.include?('_') }
+
     refute_empty bigram_terms, 'Should have bigram terms'
   end
 
@@ -257,7 +263,7 @@ class TFIDFTest < Minitest::Test
 
     # Should only have bigrams (terms with underscore)
     tfidf.vocabulary.each_key do |term|
-      assert term.to_s.include?('_'), "Term #{term} should be a bigram"
+      assert_includes term.to_s, '_', "Term #{term} should be a bigram"
     end
   end
 
@@ -267,6 +273,7 @@ class TFIDFTest < Minitest::Test
     tfidf.fit(['quick brown fox jumps', 'lazy brown dog runs'])
 
     trigram_terms = tfidf.vocabulary.keys.select { |t| t.to_s.count('_') == 2 }
+
     refute_empty trigram_terms, 'Should have trigram terms'
   end
 
@@ -325,6 +332,7 @@ class TFIDFTest < Minitest::Test
     # Transform should produce same results
     original_vec = tfidf.transform('Dogs are great')
     loaded_vec = loaded.transform('Dogs are great')
+
     assert_equal original_vec, loaded_vec
   end
 
@@ -352,7 +360,7 @@ class TFIDFTest < Minitest::Test
     tfidf.fit(@corpus)
 
     dumped = Marshal.dump(tfidf)
-    loaded = Marshal.load(dumped) # rubocop:disable Security/MarshalLoad
+    loaded = Marshal.load(dumped)
 
     assert_predicate loaded, :fitted?
     assert_equal tfidf.vocabulary, loaded.vocabulary
@@ -361,6 +369,7 @@ class TFIDFTest < Minitest::Test
     # Transform should produce same results
     original_vec = tfidf.transform('Dogs are great')
     loaded_vec = loaded.transform('Dogs are great')
+
     assert_equal original_vec, loaded_vec
   end
 

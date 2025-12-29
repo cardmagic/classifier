@@ -87,13 +87,13 @@ module Classifier
       raise NotFittedError, 'TFIDF has not been fitted. Call fit first.' unless @fitted
 
       terms = extract_terms(document)
-      result = {}
+      result = {} #: Hash[Symbol, Float]
 
       terms.each do |term, tf|
         next unless @vocabulary.key?(term)
 
         tf_value = @sublinear_tf && tf.positive? ? 1 + Math.log(tf) : tf.to_f
-        result[term] = tf_value * @idf[term]
+        result[term] = (tf_value * @idf[term]).to_f
       end
 
       normalize_vector(result)
@@ -135,7 +135,7 @@ module Classifier
 
     # @rbs (?untyped) -> String
     def to_json(_options = nil)
-      as_json.to_json
+      JSON.generate(as_json)
     end
 
     # Loads a vectorizer from JSON.
