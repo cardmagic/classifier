@@ -29,16 +29,18 @@ Metrics/BlockLength:
   Exclude:
     - 'test/**/*'
     - 'lib/classifier/extensions/vector.rb'
+    - 'lib/classifier/cli.rb'
 
-# Allow longer methods in complex algorithms (SVD, etc.)
+# Allow longer methods in complex algorithms (SVD, etc.) and CLI
 Metrics/MethodLength:
   Max: 25
   Exclude:
     - 'test/**/*'
     - 'lib/classifier/extensions/vector.rb'
     - 'lib/classifier/lsi/content_node.rb'
+    - 'lib/classifier/cli.rb'
 
-# Allow higher complexity for mathematical algorithms
+# Allow higher complexity for mathematical algorithms and CLI
 Metrics/AbcSize:
   Max: 30
   Exclude:
@@ -46,6 +48,7 @@ Metrics/AbcSize:
     - 'lib/classifier/extensions/vector.rb'
     - 'lib/classifier/lsi.rb'
     - 'lib/classifier/lsi/content_node.rb'
+    - 'lib/classifier/cli.rb'
 
 Metrics/CyclomaticComplexity:
   Max: 10
@@ -59,12 +62,13 @@ Metrics/PerceivedComplexity:
     - 'lib/classifier/extensions/vector.rb'
     - 'lib/classifier/lsi/content_node.rb'
 
-# Class length limits - algorithms and tests can be longer
+# Class length limits - algorithms, tests and CLI can be longer
 Metrics/ClassLength:
   Max: 250
   Exclude:
     - 'test/**/*'
     - 'lib/classifier/lsi.rb'
+    - 'lib/classifier/cli.rb'
 
 # SV_decomp is a standard algorithm name
 Naming/MethodName:

@@ -1,3 +1,5 @@
+# rbs_inline: enabled
+
 require 'optparse'
 require 'classifier'
 
@@ -286,14 +288,20 @@ module Classifier
     end
 
     def command_classify
+      text = @args.join(' ')
+
+      # No model and no input - show getting started guide
       unless File.exist?(@options[:model])
+        if text.empty? && ($stdin.tty? || @stdin.nil?)
+          show_getting_started
+          return
+        end
         @error << "Error: model not found at #{@options[:model]}"
         @exit_code = 1
         return
       end
 
       classifier = load_classifier
-      text = @args.join(' ')
 
       if text.empty?
         lines = read_stdin_lines
@@ -370,8 +378,6 @@ module Classifier
       type = CLASSIFIER_TYPES[@options[:type]] || :bayes
 
       case type
-      when :bayes
-        Bayes.new
       when :lsi
         LSI.new(auto_rebuild: true)
       when :knn
@@ -382,14 +388,14 @@ module Classifier
         lr_opts[:regularization] = @options[:regularization] if @options[:regularization]
         lr_opts[:max_iterations] = @options[:max_iterations] if @options[:max_iterations]
         LogisticRegression.new(**lr_opts)
-      else
+      else # :bayes or unknown defaults to Bayes
         Bayes.new
       end
     end
 
     def train_classifier(classifier, category, text)
       case classifier
-      when Bayes
+      when Bayes, LogisticRegression
         classifier.add_category(category) unless classifier.categories.include?(category)
         text.each_line { |line| classifier.train(category, line.strip) unless line.strip.empty? }
       when LSI
@@ -404,9 +410,6 @@ module Classifier
 
           classifier.add(category.to_sym => line.strip)
         end
-      when LogisticRegression
-        classifier.add_category(category) unless classifier.categories.include?(category)
-        text.each_line { |line| classifier.train(category, line.strip) unless line.strip.empty? }
       end
     end
 
@@ -451,6 +454,38 @@ module Classifier
 
     def read_stdin_lines
       read_stdin.to_s.split("\n").map(&:strip).reject(&:empty?)
+    end
+
+    # @rbs () -> void
+    def show_getting_started
+      @output << 'Classifier - Text classification from the command line'
+      @output << ''
+      @output << 'Get started by training some categories:'
+      @output << ''
+      @output << '  # Train from files'
+      @output << '  classifier train spam spam_emails/*.txt'
+      @output << '  classifier train ham good_emails/*.txt'
+      @output << ''
+      @output << '  # Train from stdin'
+      @output << "  echo 'buy viagra now free pills cheap meds' | classifier train spam"
+      @output << "  echo 'meeting scheduled for tomorrow to discuss project' | classifier train ham"
+      @output << ''
+      @output << 'Then classify text:'
+      @output << ''
+      @output << "  classifier 'free money buy now'"
+      @output << "  classifier 'meeting postponed to friday'"
+      @output << ''
+      @output << 'Use LSI for semantic search:'
+      @output << ''
+      @output << '  classifier train docs -m lsi docs/*.txt'
+      @output << "  classifier search 'machine learning' -m lsi"
+      @output << ''
+      @output << 'Options:'
+      @output << '  -f FILE    Model file (default: ./classifier.json)'
+      @output << '  -m TYPE    Model type: bayes, lsi, knn, lr (default: bayes)'
+      @output << '  -p         Show probabilities'
+      @output << ''
+      @output << 'Run "classifier --help" for full usage.'
     end
   end
 end

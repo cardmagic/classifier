@@ -1,0 +1,19 @@
+# Minimal type definitions for optparse stdlib
+
+class OptionParser
+  class InvalidOption < StandardError
+  end
+
+  class MissingArgument < StandardError
+  end
+
+  class InvalidArgument < StandardError
+  end
+
+  def initialize: () { (OptionParser) -> void } -> void
+  def banner=: (String) -> String
+  def separator: (String) -> void
+  def on: (*untyped) ?{ (*untyped) -> untyped } -> void
+  def to_s: () -> String
+  def parse!: (Array[String]) -> Array[String]
+end

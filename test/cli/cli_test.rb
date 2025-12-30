@@ -42,6 +42,16 @@ class CLITest < Minitest::Test
     assert_equal 0, result[:exit_code]
   end
 
+  def test_getting_started_when_no_model_and_no_args
+    result = run_cli('-f', @model_path)
+
+    assert_match(/Get started by training/, result[:output])
+    assert_match(/classifier train spam/, result[:output])
+    assert_match(/classifier --help/, result[:output])
+    assert_equal 0, result[:exit_code]
+    assert_empty result[:error]
+  end
+
   #
   # Train Command
   #
