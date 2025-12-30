@@ -163,11 +163,12 @@ class CLITest < Minitest::Test
 
     assert_equal 0, result[:exit_code]
     info = JSON.parse(result[:output])
+
     assert_equal 'bayes', info['type']
     assert_includes info['categories'], 'Spam'
     assert_includes info['categories'], 'Ham'
-    assert info['category_stats']['Spam']['unique_words'] > 0
-    assert info['category_stats']['Ham']['unique_words'] > 0
+    assert_operator info['category_stats']['Spam']['unique_words'], :>, 0
+    assert_operator info['category_stats']['Ham']['unique_words'], :>, 0
   end
 
   def test_info_without_model_fails

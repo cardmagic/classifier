@@ -54,7 +54,7 @@ class LRCommandsTest < Minitest::Test
     result = run_cli('info', '-f', @model_path)
     info = JSON.parse(result[:output])
 
-    assert_equal false, info['fitted']
+    refute info['fitted']
   end
 
   def test_lr_info_shows_fit_status_after_fit
@@ -63,7 +63,7 @@ class LRCommandsTest < Minitest::Test
     result = run_cli('info', '-f', @model_path)
     info = JSON.parse(result[:output])
 
-    assert_equal true, info['fitted']
+    assert info['fitted']
   end
 
   #
@@ -79,7 +79,7 @@ class LRCommandsTest < Minitest::Test
     result = run_cli('info', '-f', @model_path)
     info = JSON.parse(result[:output])
 
-    assert_equal true, info['fitted']
+    assert info['fitted']
   end
 
   def test_fit_on_bayes_is_noop
@@ -102,7 +102,7 @@ class LRCommandsTest < Minitest::Test
     result = run_cli('info', '-f', @model_path)
     info = JSON.parse(result[:output])
 
-    assert_equal false, info['fitted']
+    refute info['fitted']
   end
 
   #

@@ -196,47 +196,47 @@ module Classifier
     end
 
     def build_model_info(classifier)
-      info = {
-        file: @options[:model],
-        type: classifier_type_name(classifier)
-      }
+      info = { file: @options[:model], type: classifier_type_name(classifier) }
+      add_common_info(info, classifier)
+      add_classifier_specific_info(info, classifier)
+      info
+    end
 
-      # Categories - different classifiers store them differently
-      if classifier.respond_to?(:categories)
-        info[:categories] = classifier.categories.map(&:to_s)
-      end
-
+    def add_common_info(info, classifier)
+      info[:categories] = classifier.categories.map(&:to_s) if classifier.respond_to?(:categories)
       info[:training_count] = classifier.training_count if classifier.respond_to?(:training_count)
       info[:vocab_size] = classifier.vocab_size if classifier.respond_to?(:vocab_size)
       info[:fitted] = classifier.fitted? if classifier.respond_to?(:fitted?)
+    end
 
-      # Category-specific stats for Bayes
-      if classifier.is_a?(Bayes)
-        categories_data = classifier.instance_variable_get(:@categories)
-        info[:category_stats] = classifier.categories.to_h do |cat|
-          cat_data = categories_data[cat.to_sym] || {}
-          [cat.to_s, { unique_words: cat_data.size, total_words: cat_data.values.sum }]
-        end
+    def add_classifier_specific_info(info, classifier)
+      case classifier
+      when Bayes then add_bayes_info(info, classifier)
+      when LSI then add_lsi_info(info, classifier)
+      when KNN then add_knn_info(info, classifier)
       end
+    end
 
-      # LSI-specific info
-      if classifier.is_a?(LSI)
-        info[:documents] = classifier.items.size
-        info[:items] = classifier.items
-        # Get unique categories from items
-        categories = classifier.items.map { |item| classifier.categories_for(item) }.flatten.uniq
-        info[:categories] = categories.map(&:to_s) unless categories.empty?
+    def add_bayes_info(info, classifier)
+      categories_data = classifier.instance_variable_get(:@categories)
+      info[:category_stats] = classifier.categories.to_h do |cat|
+        cat_data = categories_data[cat.to_sym] || {}
+        [cat.to_s, { unique_words: cat_data.size, total_words: cat_data.values.sum }]
       end
+    end
 
-      # KNN-specific info
-      if classifier.is_a?(KNN)
-        data = classifier.instance_variable_get(:@data) || []
-        info[:documents] = data.size
-        categories = data.map { |d| d[:category] }.uniq
-        info[:categories] = categories.map(&:to_s) unless categories.empty?
-      end
+    def add_lsi_info(info, classifier)
+      info[:documents] = classifier.items.size
+      info[:items] = classifier.items
+      categories = classifier.items.map { |item| classifier.categories_for(item) }.flatten.uniq
+      info[:categories] = categories.map(&:to_s) unless categories.empty?
+    end
 
-      info
+    def add_knn_info(info, classifier)
+      data = classifier.instance_variable_get(:@data) || []
+      info[:documents] = data.size
+      categories = data.map { |d| d[:category] }.uniq
+      info[:categories] = categories.map(&:to_s) unless categories.empty?
     end
 
     def command_fit
