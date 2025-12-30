@@ -565,28 +565,29 @@ module Classifier
     def restore_state(data, categories)
       mu_initialize
       @categories = categories
+      restore_weights_and_bias(data)
+      restore_hyperparameters(data)
+      @fitted = data.fetch('fitted', true)
+      @dirty = false
+      @storage = nil
+    end
+
+    def restore_weights_and_bias(data)
       @weights = {}
       @bias = {}
-
-      data['weights'].each do |cat, words|
-        @weights[cat.to_sym] = words.transform_keys(&:to_sym).transform_values(&:to_f)
-      end
-
-      data['bias'].each do |cat, value|
-        @bias[cat.to_sym] = value.to_f
-      end
-
+      data['weights'].each { |cat, words| @weights[cat.to_sym] = words.transform_keys(&:to_sym).transform_values(&:to_f) }
+      data['bias'].each { |cat, value| @bias[cat.to_sym] = value.to_f }
       @vocabulary = data['vocabulary'].to_h { |v| [v.to_sym, true] }
+      @training_data = (data['training_data'] || []).map do |d|
+        { category: d['category'].to_sym, features: d['features'].transform_keys(&:to_sym).transform_values(&:to_i) }
+      end
+    end
+
+    def restore_hyperparameters(data)
       @learning_rate = data['learning_rate']
       @regularization = data['regularization']
       @max_iterations = data['max_iterations']
       @tolerance = data['tolerance']
-      @training_data = (data['training_data'] || []).map do |d|
-        { category: d['category'].to_sym, features: d['features'].transform_keys(&:to_sym).transform_values(&:to_i) }
-      end
-      @fitted = data.fetch('fitted', true)
-      @dirty = false
-      @storage = nil
     end
   end
 end
