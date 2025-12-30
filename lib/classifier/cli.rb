@@ -167,19 +167,20 @@ module Classifier
 
       classifier = load_or_create_classifier
 
-      # For LSI, train with file paths as item keys
       if classifier.is_a?(LSI) && @args.any?
         train_lsi_from_files(classifier, category, @args)
-      else
-        text = read_training_input
-        if text.empty?
-          @error << 'Error: no training data provided'
-          @exit_code = 2
-          return
-        end
-        train_classifier(classifier, category, text)
+        save_classifier(classifier)
+        return
       end
 
+      text = read_training_input
+      if text.empty?
+        @error << 'Error: no training data provided'
+        @exit_code = 2
+        return
+      end
+
+      train_classifier(classifier, category, text)
       save_classifier(classifier)
     end
 
@@ -332,12 +333,12 @@ module Classifier
     def command_classify
       text = @args.join(' ')
 
-      # No model and no input - show getting started guide
+      if text.empty? && ($stdin.tty? || @stdin.nil?) && !File.exist?(@options[:model])
+        show_getting_started
+        return
+      end
+
       unless File.exist?(@options[:model])
-        if text.empty? && ($stdin.tty? || @stdin.nil?)
-          show_getting_started
-          return
-        end
         @error << "Error: model not found at #{@options[:model]}"
         @exit_code = 1
         return
@@ -347,10 +348,8 @@ module Classifier
 
       if text.empty?
         lines = read_stdin_lines
-        if lines.empty?
-          show_model_usage(classifier)
-          return
-        end
+        return show_model_usage(classifier) if lines.empty?
+
         lines.each { |line| classify_and_output(classifier, line) }
       else
         classify_and_output(classifier, text)
@@ -384,7 +383,6 @@ module Classifier
     def classify_and_output(classifier, text)
       return if text.strip.empty?
 
-      # LR requires explicit fit before classification
       if classifier.is_a?(LogisticRegression) && !classifier.fitted?
         raise StandardError, "Model not fitted. Run 'classifier fit' after training."
       end
@@ -486,7 +484,6 @@ module Classifier
     def train_lsi_from_files(classifier, category, files)
       files.each do |file|
         content = File.read(file)
-        # Use file path as item key so search/related returns file paths
         classifier.add_item(file, category.to_sym) { content }
       end
     end
