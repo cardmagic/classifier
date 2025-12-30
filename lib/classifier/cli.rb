@@ -100,15 +100,15 @@ module Classifier
           @options[:weighted] = true
         end
 
-        opts.on('--learning-rate N', Float, 'Learning rate for logistic regression') do |n|
+        opts.on('--learning-rate N', Float, 'Learning rate for logistic regression (default: 0.1)') do |n|
           @options[:learning_rate] = n
         end
 
-        opts.on('--regularization N', Float, 'L2 regularization for logistic regression') do |n|
+        opts.on('--regularization N', Float, 'L2 regularization for logistic regression (default: 0.01)') do |n|
           @options[:regularization] = n
         end
 
-        opts.on('--max-iterations N', Integer, 'Max iterations for logistic regression') do |n|
+        opts.on('--max-iterations N', Integer, 'Max iterations for logistic regression (default: 100)') do |n|
           @options[:max_iterations] = n
         end
 
@@ -547,9 +547,9 @@ module Classifier
       @output << ''
       @output << 'Use LSI for semantic search:'
       @output << ''
-      @output << "  echo 'ruby is a dynamic programming language' | classifier train docs -m lsi -f lsi.json"
-      @output << "  echo 'python is great for data science' | classifier train docs -m lsi -f lsi.json"
-      @output << "  classifier search 'programming' -f lsi.json"
+      @output << "  echo 'ruby is a dynamic programming language' | classifier train docs -m lsi"
+      @output << "  echo 'python is great for data science' | classifier train docs -m lsi"
+      @output << "  classifier search 'programming'"
       @output << ''
       @output << 'Options:'
       @output << '  -f FILE    Model file (default: ./classifier.json)'
