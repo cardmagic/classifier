@@ -360,20 +360,25 @@ module Classifier
     # @rbs (untyped) -> void
     def show_model_usage(classifier)
       type = classifier_type_name(classifier)
-      categories = classifier.categories.map(&:to_s).map(&:downcase).join(', ')
+      cats = classifier.categories.map(&:to_s).map(&:downcase)
+      first_cat = cats.first || 'category'
 
       @output << "Model: #{@options[:model]} (#{type})"
-      @output << "Categories: #{categories}"
+      @output << "Categories: #{cats.join(', ')}"
       @output << ''
       @output << 'Classify text:'
       @output << ''
       @output << "  classifier 'text to classify'"
       @output << "  echo 'text to classify' | classifier"
       @output << ''
+      @output << 'Train more data:'
+      @output << ''
+      @output << "  echo 'new example text' | classifier train #{first_cat}"
+      @output << "  classifier train #{first_cat} file1.txt file2.txt"
+      @output << ''
       @output << 'Other commands:'
       @output << ''
-      @output << '  classifier info              Show model details'
-      @output << '  classifier train <category>  Add more training data'
+      @output << '  classifier info    Show model details (JSON)'
     end
 
     def classify_and_output(classifier, text)
@@ -542,8 +547,9 @@ module Classifier
       @output << ''
       @output << 'Use LSI for semantic search:'
       @output << ''
-      @output << '  classifier train docs -m lsi docs/*.txt'
-      @output << "  classifier search 'machine learning' -m lsi"
+      @output << "  echo 'ruby is a dynamic programming language' | classifier train docs -m lsi -f lsi.json"
+      @output << "  echo 'python is great for data science' | classifier train docs -m lsi -f lsi.json"
+      @output << "  classifier search 'programming' -f lsi.json"
       @output << ''
       @output << 'Options:'
       @output << '  -f FILE    Model file (default: ./classifier.json)'
