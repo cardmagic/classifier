@@ -25,6 +25,7 @@
 # License::   LGPL
 
 require 'rubygems'
+require 'classifier/version'
 require 'classifier/errors'
 require 'classifier/storage'
 require 'classifier/streaming'

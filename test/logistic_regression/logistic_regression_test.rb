@@ -5,10 +5,21 @@ class LogisticRegressionTest < Minitest::Test
     @classifier = Classifier::LogisticRegression.new 'Spam', 'Ham'
   end
 
+  # Helper: train and fit for tests that need classification
+  def train_and_fit
+    @classifier.train_spam 'buy now free money offer limited'
+    @classifier.train_ham 'hello friend meeting project update'
+    @classifier.fit
+  end
+
   # Initialization tests
 
-  def test_requires_at_least_two_categories
-    assert_raises(ArgumentError) { Classifier::LogisticRegression.new 'Only' }
+  def test_requires_at_least_two_categories_at_fit
+    classifier = Classifier::LogisticRegression.new 'Only'
+    classifier.train(:only, 'test text')
+
+    # Error raised at fit time, not initialization
+    assert_raises(ArgumentError) { classifier.fit }
   end
 
   def test_accepts_symbols_and_strings
@@ -25,8 +36,12 @@ class LogisticRegressionTest < Minitest::Test
     assert_equal %w[Ham Spam], classifier.categories.sort
   end
 
-  def test_array_initialization_requires_at_least_two
-    assert_raises(ArgumentError) { Classifier::LogisticRegression.new(['Only']) }
+  def test_array_initialization_requires_at_least_two_at_fit
+    classifier = Classifier::LogisticRegression.new(['Only'])
+    classifier.train(:only, 'test text')
+
+    # Error raised at fit time, not initialization
+    assert_raises(ArgumentError) { classifier.fit }
   end
 
   def test_custom_hyperparameters
@@ -50,6 +65,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_train_with_positional_arguments
     @classifier.train :spam, 'Buy now! Free money!'
     @classifier.train :ham, 'Hello friend, meeting tomorrow'
+    @classifier.fit
 
     assert_equal 'Spam', @classifier.classify('Buy free money')
     assert_equal 'Ham', @classifier.classify('Hello meeting friend')
@@ -58,6 +74,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_train_with_keyword_arguments
     @classifier.train(spam: 'Buy now! Free money!')
     @classifier.train(ham: 'Hello friend, meeting tomorrow')
+    @classifier.fit
 
     assert_equal 'Spam', @classifier.classify('Buy free money')
     assert_equal 'Ham', @classifier.classify('Hello meeting friend')
@@ -66,6 +83,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_train_with_array_value
     @classifier.train(spam: ['Buy now!', 'Free money!', 'Click here!'])
     @classifier.train(ham: 'Normal email content')
+    @classifier.fit
 
     assert_equal 'Spam', @classifier.classify('Buy click free')
   end
@@ -75,6 +93,7 @@ class LogisticRegressionTest < Minitest::Test
       spam: ['Buy now!', 'Free money!'],
       ham: ['Hello friend', 'Meeting tomorrow']
     )
+    @classifier.fit
 
     assert_equal 'Spam', @classifier.classify('Buy free')
     assert_equal 'Ham', @classifier.classify('Hello meeting')
@@ -83,6 +102,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_train_dynamic_method
     @classifier.train_spam 'Buy now! Free money!'
     @classifier.train_ham 'Hello friend'
+    @classifier.fit
 
     assert_equal 'Spam', @classifier.classify('Buy free money')
     assert_equal 'Ham', @classifier.classify('Hello friend')
@@ -98,6 +118,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_classify_basic
     @classifier.train_spam 'Buy now! Free money! Limited offer!'
     @classifier.train_ham 'Hello, how are you? Meeting tomorrow.'
+    @classifier.fit
 
     assert_equal 'Spam', @classifier.classify('Free money offer')
     assert_equal 'Ham', @classifier.classify('Hello, how are you?')
@@ -121,6 +142,7 @@ class LogisticRegressionTest < Minitest::Test
                         'Thanks for your help yesterday',
                         'Looking forward to seeing you'
                       ])
+    @classifier.fit
 
     assert_equal 'Spam', @classifier.classify('Free prize money')
     assert_equal 'Ham', @classifier.classify('Project meeting tomorrow')
@@ -129,6 +151,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_classifications_returns_scores
     @classifier.train_spam 'spam words'
     @classifier.train_ham 'ham words'
+    @classifier.fit
 
     scores = @classifier.classifications('spam words')
 
@@ -143,6 +166,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_probabilities_sum_to_one
     @classifier.train_spam 'spam words here'
     @classifier.train_ham 'ham words here'
+    @classifier.fit
 
     probs = @classifier.probabilities('test words')
 
@@ -152,6 +176,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_probabilities_are_between_zero_and_one
     @classifier.train_spam 'spam words here'
     @classifier.train_ham 'ham words here'
+    @classifier.fit
 
     probs = @classifier.probabilities('test words')
 
@@ -164,6 +189,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_probabilities_reflect_confidence
     @classifier.train(spam: ['spam spam spam'] * 10)
     @classifier.train(ham: ['ham ham ham'] * 10)
+    @classifier.fit
 
     spam_probs = @classifier.probabilities('spam spam spam')
     ham_probs = @classifier.probabilities('ham ham ham')
@@ -177,6 +203,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_weights_returns_hash
     @classifier.train_spam 'buy free money'
     @classifier.train_ham 'hello friend meeting'
+    @classifier.fit
 
     weights = @classifier.weights(:spam)
 
@@ -187,6 +214,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_weights_sorted_by_importance
     @classifier.train_spam 'spam spam spam important'
     @classifier.train_ham 'ham ham ham'
+    @classifier.fit
 
     weights = @classifier.weights(:spam)
     values = weights.values
@@ -200,6 +228,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_weights_with_limit
     @classifier.train_spam 'one two three four five'
     @classifier.train_ham 'six seven eight nine ten'
+    @classifier.fit
 
     weights = @classifier.weights(:spam, limit: 3)
 
@@ -209,6 +238,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_weights_invalid_category
     @classifier.train_spam 'spam'
     @classifier.train_ham 'ham'
+    @classifier.fit
 
     assert_raises(StandardError) { @classifier.weights(:invalid) }
   end
@@ -223,6 +253,7 @@ class LogisticRegressionTest < Minitest::Test
 
     refute_predicate @classifier, :fitted?
 
+    @classifier.fit
     @classifier.classify('test')
 
     assert_predicate @classifier, :fitted?
@@ -238,24 +269,31 @@ class LogisticRegressionTest < Minitest::Test
     assert_predicate @classifier, :fitted?
   end
 
-  def test_auto_fit_on_classify
+  def test_classify_without_fit_raises_error
     @classifier.train_spam 'spam'
     @classifier.train_ham 'ham'
 
     refute_predicate @classifier, :fitted?
-    @classifier.classify('test')
-
-    assert_predicate @classifier, :fitted?
+    assert_raises(Classifier::NotFittedError) { @classifier.classify('test') }
   end
 
-  def test_auto_fit_on_probabilities
+  def test_probabilities_without_fit_raises_error
     @classifier.train_spam 'spam'
     @classifier.train_ham 'ham'
 
     refute_predicate @classifier, :fitted?
-    @classifier.probabilities('test')
+    assert_raises(Classifier::NotFittedError) { @classifier.probabilities('test') }
+  end
+
+  def test_explicit_fit_enables_classify
+    @classifier.train_spam 'spam'
+    @classifier.train_ham 'ham'
+
+    refute_predicate @classifier, :fitted?
+    @classifier.fit
 
     assert_predicate @classifier, :fitted?
+    assert_equal 'Spam', @classifier.classify('spam words')
   end
 
   # Multi-class tests
@@ -266,6 +304,7 @@ class LogisticRegressionTest < Minitest::Test
     classifier.train(positive: ['great amazing wonderful love happy'])
     classifier.train(negative: ['terrible awful hate bad angry'])
     classifier.train(neutral: ['okay average normal regular'])
+    classifier.fit
 
     assert_equal 'Positive', classifier.classify('great love happy')
     assert_equal 'Negative', classifier.classify('terrible hate angry')
@@ -276,6 +315,7 @@ class LogisticRegressionTest < Minitest::Test
     classifier = Classifier::LogisticRegression.new :a, :b, :c, :d
 
     classifier.train(a: 'alpha', b: 'beta', c: 'gamma', d: 'delta')
+    classifier.fit
 
     probs = classifier.probabilities('test')
 
@@ -313,6 +353,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_from_json_with_string
     @classifier.train_spam 'spam words'
     @classifier.train_ham 'ham words'
+    @classifier.fit
 
     json = @classifier.to_json
     loaded = Classifier::LogisticRegression.from_json(json)
@@ -325,6 +366,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_from_json_with_hash
     @classifier.train_spam 'spam words'
     @classifier.train_ham 'ham words'
+    @classifier.fit
 
     hash = JSON.parse(@classifier.to_json)
     loaded = Classifier::LogisticRegression.from_json(hash)
@@ -341,6 +383,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_save_and_load_file
     @classifier.train_spam 'spam words'
     @classifier.train_ham 'ham words'
+    @classifier.fit
 
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'classifier.json')
@@ -358,6 +401,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_loaded_classifier_preserves_predictions
     @classifier.train(spam: ['buy free money offer'] * 5)
     @classifier.train(ham: ['hello meeting project friend'] * 5)
+    @classifier.fit
 
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'classifier.json')
@@ -428,6 +472,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_empty_string_classification
     @classifier.train_spam 'spam words'
     @classifier.train_ham 'ham words'
+    @classifier.fit
 
     result = @classifier.classify('')
 
@@ -437,6 +482,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_unicode_text
     @classifier.train_spam 'spam japonais 日本語'
     @classifier.train_ham 'ham chinese 中文'
+    @classifier.fit
 
     # Should handle unicode without crashing
     result = @classifier.classify('日本語 test')
@@ -447,6 +493,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_single_word_documents
     @classifier.train_spam 'spam'
     @classifier.train_ham 'ham'
+    @classifier.fit
 
     assert_equal 'Spam', @classifier.classify('spam')
     assert_equal 'Ham', @classifier.classify('ham')
@@ -458,6 +505,7 @@ class LogisticRegressionTest < Minitest::Test
 
     @classifier.train_spam long_spam
     @classifier.train_ham long_ham
+    @classifier.fit
 
     assert_equal 'Spam', @classifier.classify('buy free money')
   end
@@ -465,6 +513,7 @@ class LogisticRegressionTest < Minitest::Test
   def test_special_characters
     @classifier.train_spam 'Buy! @#$% now!!!'
     @classifier.train_ham 'Hello... how are you???'
+    @classifier.fit
 
     # Should not crash on special characters
     @classifier.classify('!@#$%^&*()')
@@ -478,6 +527,7 @@ class LogisticRegressionTest < Minitest::Test
       @classifier.train_spam 'spam spam spam spam spam'
       @classifier.train_ham 'ham ham ham ham ham'
     end
+    @classifier.fit
 
     probs = @classifier.probabilities('spam spam spam')
 
@@ -515,6 +565,7 @@ class LogisticRegressionTest < Minitest::Test
     # Clear separation between classes should converge quickly
     @classifier.train(spam: ['spam spam spam'] * 20)
     @classifier.train(ham: ['ham ham ham'] * 20)
+    @classifier.fit
 
     # Should be able to perfectly classify training data
     probs = @classifier.probabilities('spam spam spam')

@@ -62,8 +62,6 @@ module Classifier
                    tolerance: DEFAULT_TOLERANCE)
       super()
       categories = categories.flatten
-      raise ArgumentError, 'At least two categories required' if categories.size < 2
-
       @categories = categories.map { |c| c.to_s.prepare_category_name }
       @weights = @categories.to_h { |c| [c, {}] }
       @bias = @categories.to_h { |c| [c, 0.0] }
@@ -99,6 +97,7 @@ module Classifier
     def fit
       synchronize do
         return self if @training_data.empty?
+        raise ArgumentError, 'At least two categories required for fitting' if @categories.size < 2
 
         optimize_weights
         @fitted = true
@@ -122,13 +121,14 @@ module Classifier
 
     # Returns probability distribution across all categories.
     # Probabilities are well-calibrated (unlike Naive Bayes).
+    # Raises NotFittedError if model has not been fitted.
     #
     #   classifier.probabilities("Buy now!")
     #   # => {"Spam" => 0.92, "Ham" => 0.08}
     #
     # @rbs (String) -> Hash[String, Float]
     def probabilities(text)
-      fit unless @fitted
+      raise NotFittedError, 'Model not fitted. Call fit() after training.' unless @fitted
 
       features = text.word_hash
       synchronize do
@@ -137,10 +137,11 @@ module Classifier
     end
 
     # Returns log-odds scores for each category (before softmax).
+    # Raises NotFittedError if model has not been fitted.
     #
     # @rbs (String) -> Hash[String, Float]
     def classifications(text)
-      fit unless @fitted
+      raise NotFittedError, 'Model not fitted. Call fit() after training.' unless @fitted
 
       features = text.word_hash
       synchronize do
@@ -171,6 +172,23 @@ module Classifier
     # @rbs () -> Array[String]
     def categories
       synchronize { @categories.map(&:to_s) }
+    end
+
+    # Adds a new category to the classifier.
+    # Allows dynamic category creation for CLI and incremental training.
+    #
+    # @rbs (String | Symbol) -> void
+    def add_category(category)
+      cat = category.to_s.prepare_category_name
+      synchronize do
+        return if @categories.include?(cat)
+
+        @categories << cat
+        @weights[cat] = {}
+        @bias[cat] = 0.0
+        @fitted = false
+        @dirty = true
+      end
     end
 
     # Returns true if the model has been fitted.
@@ -205,11 +223,10 @@ module Classifier
     end
 
     # Returns a hash representation of the classifier state.
+    # Does NOT auto-fit; saves current state including unfitted models.
     #
     # @rbs (?untyped) -> Hash[Symbol, untyped]
     def as_json(_options = nil)
-      fit unless @fitted
-
       {
         version: 1,
         type: 'logistic_regression',
@@ -217,10 +234,12 @@ module Classifier
         weights: @weights.transform_keys(&:to_s).transform_values { |v| v.transform_keys(&:to_s) },
         bias: @bias.transform_keys(&:to_s),
         vocabulary: @vocabulary.keys.map(&:to_s),
+        training_data: @training_data.map { |d| { category: d[:category].to_s, features: d[:features].transform_keys(&:to_s) } },
         learning_rate: @learning_rate,
         regularization: @regularization,
         max_iterations: @max_iterations,
-        tolerance: @tolerance
+        tolerance: @tolerance,
+        fitted: @fitted
       }
     end
 
@@ -562,8 +581,10 @@ module Classifier
       @regularization = data['regularization']
       @max_iterations = data['max_iterations']
       @tolerance = data['tolerance']
-      @training_data = []
-      @fitted = true
+      @training_data = (data['training_data'] || []).map do |d|
+        { category: d['category'].to_sym, features: d['features'].transform_keys(&:to_sym).transform_values(&:to_i) }
+      end
+      @fitted = data.fetch('fitted', true)
       @dirty = false
       @storage = nil
     end
