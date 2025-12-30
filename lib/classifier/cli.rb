@@ -5,6 +5,14 @@ require 'classifier'
 
 module Classifier
   class CLI
+    # @rbs @args: Array[String]
+    # @rbs @stdin: String?
+    # @rbs @options: Hash[Symbol, untyped]
+    # @rbs @output: Array[String]
+    # @rbs @error: Array[String]
+    # @rbs @exit_code: Integer
+    # @rbs @parser: OptionParser
+
     CLASSIFIER_TYPES = {
       'bayes' => :bayes,
       'lsi' => :lsi,
@@ -28,8 +36,8 @@ module Classifier
         regularization: nil,
         max_iterations: nil
       }
-      @output = []
-      @error = []
+      @output = [] #: Array[String]
+      @error = [] #: Array[String]
       @exit_code = 0
     end
 
@@ -305,10 +313,33 @@ module Classifier
 
       if text.empty?
         lines = read_stdin_lines
+        if lines.empty?
+          show_model_usage(classifier)
+          return
+        end
         lines.each { |line| classify_and_output(classifier, line) }
       else
         classify_and_output(classifier, text)
       end
+    end
+
+    # @rbs (untyped) -> void
+    def show_model_usage(classifier)
+      type = classifier_type_name(classifier)
+      categories = classifier.categories.map(&:to_s).map(&:downcase).join(', ')
+
+      @output << "Model: #{@options[:model]} (#{type})"
+      @output << "Categories: #{categories}"
+      @output << ''
+      @output << 'Classify text:'
+      @output << ''
+      @output << "  classifier 'text to classify'"
+      @output << "  echo 'text to classify' | classifier"
+      @output << ''
+      @output << 'Other commands:'
+      @output << ''
+      @output << '  classifier info              Show model details'
+      @output << '  classifier train <category>  Add more training data'
     end
 
     def classify_and_output(classifier, text)
