@@ -51,17 +51,19 @@ class LRCommandsTest < Minitest::Test
   def test_lr_info_shows_fit_status_before_fit
     create_trained_lr_model
 
-    info = run_cli('info', '-f', @model_path)
+    result = run_cli('info', '-f', @model_path)
+    info = JSON.parse(result[:output])
 
-    assert_match(/status:\s*(not fitted|needs fitting)/i, info[:output])
+    assert_equal false, info['fitted']
   end
 
   def test_lr_info_shows_fit_status_after_fit
     create_fitted_lr_model
 
-    info = run_cli('info', '-f', @model_path)
+    result = run_cli('info', '-f', @model_path)
+    info = JSON.parse(result[:output])
 
-    assert_match(/status:\s*fitted/i, info[:output])
+    assert_equal true, info['fitted']
   end
 
   #
@@ -74,9 +76,10 @@ class LRCommandsTest < Minitest::Test
 
     assert_equal 0, result[:exit_code]
 
-    info = run_cli('info', '-f', @model_path)
+    result = run_cli('info', '-f', @model_path)
+    info = JSON.parse(result[:output])
 
-    assert_match(/status:\s*fitted/i, info[:output])
+    assert_equal true, info['fitted']
   end
 
   def test_fit_on_bayes_is_noop
@@ -96,9 +99,10 @@ class LRCommandsTest < Minitest::Test
     run_cli('-m', 'lr', 'train', 'spam', '-f', @model_path, stdin: 'win big prizes')
 
     # Info should show needs re-fitting
-    info = run_cli('info', '-f', @model_path)
+    result = run_cli('info', '-f', @model_path)
+    info = JSON.parse(result[:output])
 
-    assert_match(/status:\s*(not fitted|needs fitting)/i, info[:output])
+    assert_equal false, info['fitted']
   end
 
   #

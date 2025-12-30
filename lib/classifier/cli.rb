@@ -1,5 +1,6 @@
 # rbs_inline: enabled
 
+require 'json'
 require 'optparse'
 require 'classifier'
 
@@ -190,19 +191,52 @@ module Classifier
       end
 
       classifier = load_classifier
-      type = classifier_type_name(classifier)
+      info = build_model_info(classifier)
+      @output << JSON.pretty_generate(info)
+    end
 
-      @output << "Type: #{type}"
-      @output << "Categories: #{classifier.categories.join(', ')}"
+    def build_model_info(classifier)
+      info = {
+        file: @options[:model],
+        type: classifier_type_name(classifier)
+      }
 
-      @output << "Documents: #{classifier.training_count}" if classifier.respond_to?(:training_count)
+      # Categories - different classifiers store them differently
+      if classifier.respond_to?(:categories)
+        info[:categories] = classifier.categories.map(&:to_s)
+      end
 
-      @output << "Vocabulary: #{classifier.vocab_size}" if classifier.respond_to?(:vocab_size)
+      info[:training_count] = classifier.training_count if classifier.respond_to?(:training_count)
+      info[:vocab_size] = classifier.vocab_size if classifier.respond_to?(:vocab_size)
+      info[:fitted] = classifier.fitted? if classifier.respond_to?(:fitted?)
 
-      return unless classifier.respond_to?(:fitted?)
+      # Category-specific stats for Bayes
+      if classifier.is_a?(Bayes)
+        categories_data = classifier.instance_variable_get(:@categories)
+        info[:category_stats] = classifier.categories.to_h do |cat|
+          cat_data = categories_data[cat.to_sym] || {}
+          [cat.to_s, { unique_words: cat_data.size, total_words: cat_data.values.sum }]
+        end
+      end
 
-      status = classifier.fitted? ? 'fitted' : 'needs fitting'
-      @output << "Status: #{status}"
+      # LSI-specific info
+      if classifier.is_a?(LSI)
+        info[:documents] = classifier.items.size
+        info[:items] = classifier.items
+        # Get unique categories from items
+        categories = classifier.items.map { |item| classifier.categories_for(item) }.flatten.uniq
+        info[:categories] = categories.map(&:to_s) unless categories.empty?
+      end
+
+      # KNN-specific info
+      if classifier.is_a?(KNN)
+        data = classifier.instance_variable_get(:@data) || []
+        info[:documents] = data.size
+        categories = data.map { |d| d[:category] }.uniq
+        info[:categories] = categories.map(&:to_s) unless categories.empty?
+      end
+
+      info
     end
 
     def command_fit

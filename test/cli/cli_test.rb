@@ -97,10 +97,11 @@ class CLITest < Minitest::Test
     assert_equal 0, result[:exit_code]
 
     # Verify both categories exist
-    info = run_cli('info', '-f', @model_path)
+    result = run_cli('info', '-f', @model_path)
+    info = JSON.parse(result[:output])
 
-    assert_match(/spam/i, info[:output])
-    assert_match(/ham/i, info[:output])
+    assert_includes info['categories'], 'Spam'
+    assert_includes info['categories'], 'Ham'
   end
 
   #
@@ -161,10 +162,12 @@ class CLITest < Minitest::Test
     result = run_cli('info', '-f', @model_path)
 
     assert_equal 0, result[:exit_code]
-    assert_match(/type:\s*bayes/i, result[:output])
-    assert_match(/categories:/i, result[:output])
-    assert_match(/spam/i, result[:output])
-    assert_match(/ham/i, result[:output])
+    info = JSON.parse(result[:output])
+    assert_equal 'bayes', info['type']
+    assert_includes info['categories'], 'Spam'
+    assert_includes info['categories'], 'Ham'
+    assert info['category_stats']['Spam']['unique_words'] > 0
+    assert info['category_stats']['Ham']['unique_words'] > 0
   end
 
   def test_info_without_model_fails
@@ -181,9 +184,10 @@ class CLITest < Minitest::Test
 
     assert_equal 0, result[:exit_code]
 
-    info = run_cli('info', '-f', @model_path)
+    result = run_cli('info', '-f', @model_path)
+    info = JSON.parse(result[:output])
 
-    assert_match(/type:\s*lsi/i, info[:output])
+    assert_equal 'lsi', info['type']
   end
 
   def test_train_with_knn_type
@@ -191,9 +195,10 @@ class CLITest < Minitest::Test
 
     assert_equal 0, result[:exit_code]
 
-    info = run_cli('info', '-f', @model_path)
+    result = run_cli('info', '-f', @model_path)
+    info = JSON.parse(result[:output])
 
-    assert_match(/type:\s*knn/i, info[:output])
+    assert_equal 'knn', info['type']
   end
 
   def test_train_with_lr_type
@@ -201,9 +206,10 @@ class CLITest < Minitest::Test
 
     assert_equal 0, result[:exit_code]
 
-    info = run_cli('info', '-f', @model_path)
+    result = run_cli('info', '-f', @model_path)
+    info = JSON.parse(result[:output])
 
-    assert_match(/type:\s*logistic.?regression/i, info[:output])
+    assert_equal 'logistic_regression', info['type']
   end
 
   def test_invalid_classifier_type
@@ -248,9 +254,10 @@ class CLITest < Minitest::Test
 
     assert_equal 0, result[:exit_code]
 
-    info = run_cli('info')
+    result = run_cli('info')
+    info = JSON.parse(result[:output])
 
-    assert_match(/type:\s*lsi/i, info[:output])
+    assert_equal 'lsi', info['type']
   ensure
     ENV.delete('CLASSIFIER_TYPE')
     ENV.delete('CLASSIFIER_MODEL')
