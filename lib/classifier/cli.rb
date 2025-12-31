@@ -25,8 +25,8 @@ module Classifier
       'logistic_regression' => :logistic_regression
     }.freeze
 
-    DEFAULT_REGISTRY = ENV.fetch('CLASSIFIER_REGISTRY', 'cardmagic/classifier-models')
-    CACHE_DIR = ENV.fetch('CLASSIFIER_CACHE', File.expand_path('~/.classifier'))
+    DEFAULT_REGISTRY = ENV.fetch('CLASSIFIER_REGISTRY', 'cardmagic/classifier-models') #: String
+    CACHE_DIR = ENV.fetch('CLASSIFIER_CACHE', File.expand_path('~/.classifier')) #: String
 
     def initialize(args, stdin: nil)
       @args = args.dup
@@ -747,12 +747,13 @@ module Classifier
     def parse_model_spec(spec)
       if spec.start_with?('@')
         # @user/repo:model or @user/repo
+        rest = spec[1..] || ''
         if spec.include?(':')
-          parts = spec[1..].split(':', 2)
+          parts = rest.split(':', 2)
           [parts[0], parts[1]]
         else
           # @user/repo - pull all models from registry
-          [spec[1..], nil]
+          [rest, nil]
         end
       else
         # Just a model name from default registry
