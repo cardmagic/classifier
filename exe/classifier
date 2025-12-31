@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+require 'classifier/cli'
+
+result = Classifier::CLI.new(ARGV).run
+
+warn result[:error] unless result[:error].empty?
+puts result[:output] unless result[:output].empty?
+
+exit result[:exit_code]

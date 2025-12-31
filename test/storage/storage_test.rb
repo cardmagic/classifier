@@ -668,6 +668,7 @@ class LogisticRegressionStorageTest < Minitest::Test
     @classifier.storage = storage
     @classifier.train_spam 'buy now limited offer'
     @classifier.train_ham 'hello friend meeting'
+    @classifier.fit
     @classifier.save
 
     original_classification = @classifier.classify('buy now')
@@ -709,6 +710,7 @@ class LogisticRegressionStorageTest < Minitest::Test
     @classifier.storage = storage
     @classifier.train_spam 'buy now limited offer'
     @classifier.train_ham 'hello friend meeting'
+    @classifier.fit
     @classifier.save
 
     loaded = Classifier::LogisticRegression.load(storage: storage)
@@ -729,10 +731,12 @@ class LogisticRegressionStorageTest < Minitest::Test
     @classifier.storage = storage
     @classifier.train_spam 'buy now'
     @classifier.train_ham 'hello friend'
+    @classifier.fit
     @classifier.save
 
     loaded = Classifier::LogisticRegression.load(storage: storage)
     loaded.train_spam 'more spam words'
+    loaded.fit
     loaded.save
 
     reloaded = Classifier::LogisticRegression.load(storage: storage)

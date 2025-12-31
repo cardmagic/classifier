@@ -5,6 +5,12 @@ target :lib do
 
   check 'lib'
 
+  # Stdlib dependencies for CLI
+  library 'fileutils'
+  library 'uri'
+  library 'net-http'
+  library 'json'
+
   # Strict mode: report methods without type annotations
   configure_code_diagnostics(D::Ruby.strict)
 

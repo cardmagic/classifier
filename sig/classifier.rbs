@@ -1,0 +1,3 @@
+module Classifier
+  VERSION: String
+end

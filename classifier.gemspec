@@ -1,6 +1,8 @@
+require_relative 'lib/classifier/version'
+
 Gem::Specification.new do |s|
   s.name        = 'classifier'
-  s.version     = '2.2.0'
+  s.version     = Classifier::VERSION
   s.summary     = 'Text classification with Bayesian, LSI, Logistic Regression, kNN, and TF-IDF vectorization.'
   s.description = 'A Ruby library for text classification featuring Naive Bayes, LSI (Latent Semantic Indexing), ' \
                   'Logistic Regression, and k-Nearest Neighbors classifiers. Includes TF-IDF vectorization, ' \
@@ -16,7 +18,9 @@ Gem::Specification.new do |s|
     'changelog_uri' => 'https://github.com/cardmagic/classifier/releases'
   }
   s.required_ruby_version = '>= 3.1'
-  s.files = Dir['{lib,sig}/**/*.{rb,rbs}', 'ext/**/*.{c,h,rb}', 'bin/*', 'LICENSE', '*.md', 'test/*']
+  s.files = Dir['{lib,sig,exe}/**/*.{rb,rbs}', 'ext/**/*.{c,h,rb}', 'exe/*', 'bin/*', 'LICENSE', '*.md', 'test/*']
+  s.bindir = 'exe'
+  s.executables = ['classifier']
   s.extensions = ['ext/classifier/extconf.rb']
   s.license = 'LGPL'
 
@@ -28,4 +32,5 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rbs-inline'
   s.add_development_dependency 'rdoc'
   s.add_development_dependency 'rake-compiler'
+  s.add_development_dependency 'webmock'
 end
