@@ -131,7 +131,7 @@ class RegistryCommandsTest < Minitest::Test
     result = run_cli('models', '--local')
 
     assert_equal 0, result[:exit_code]
-    assert_match(/@someone\/models:custom-model/, result[:output])
+    assert_match(%r{@someone/models:custom-model}, result[:output])
   end
 
   def test_models_local_shows_no_models_when_cache_empty

@@ -397,21 +397,21 @@ module Classifier
         return
       end
 
-      models = [] #: Array[{name: String, registry: String?, path: String}]
-
       # Find models from default registry
-      Dir.glob(File.join(models_dir, '*.json')).each do |path|
-        models << { name: File.basename(path, '.json'), registry: nil, path: path }
+      default_models = Dir.glob(File.join(models_dir, '*.json')).map do |path|
+        { name: File.basename(path, '.json'), registry: nil, path: path }
       end
 
       # Find models from custom registries (@user/repo structure)
-      Dir.glob(File.join(models_dir, '@*', '*', '*.json')).each do |path|
+      custom_models = Dir.glob(File.join(models_dir, '@*', '*', '*.json')).map do |path|
         # Extract registry from path: .../models/@user/repo/model.json
         repo_dir = File.dirname(path)
         user_dir = File.dirname(repo_dir)
         registry = "#{File.basename(user_dir).delete_prefix('@')}/#{File.basename(repo_dir)}"
-        models << { name: File.basename(path, '.json'), registry: registry, path: path }
+        { name: File.basename(path, '.json'), registry: registry, path: path }
       end
+
+      models = default_models + custom_models #: Array[{name: String, registry: String?, path: String}]
 
       if models.empty?
         @output << 'No local models found'
@@ -443,7 +443,7 @@ module Classifier
         unit_index += 1
       end
 
-      format('%.1f %s', size, units[unit_index])
+      format('%<size>.1f %<unit>s', size: size, unit: units[unit_index])
     end
 
     def command_pull
