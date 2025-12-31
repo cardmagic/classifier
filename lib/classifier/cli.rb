@@ -135,6 +135,10 @@ module Classifier
           @options[:quiet] = true
         end
 
+        opts.on('--local', 'List locally cached models (for models command)') do
+          @options[:local] = true
+        end
+
         opts.on('-v', '--version', 'Show version') do
           @output << Classifier::VERSION
           @exit_code = 0
@@ -357,8 +361,16 @@ module Classifier
 
     def command_models
       @args.shift # remove 'models'
-      registry_arg = @args.shift
 
+      if @options[:local]
+        list_local_models
+      else
+        list_remote_models
+      end
+    end
+
+    def list_remote_models
+      registry_arg = @args.shift
       registry = parse_registry(registry_arg) || DEFAULT_REGISTRY
       index = fetch_registry_index(registry)
 
@@ -375,6 +387,63 @@ module Classifier
         desc = info['description'] || ''
         @output << format('%-20<name>s %<desc>s (%<type>s, %<size>s)', name: name, desc: desc.slice(0, 40), type: type, size: size)
       end
+    end
+
+    def list_local_models
+      models_dir = File.join(CACHE_DIR, 'models')
+
+      unless Dir.exist?(models_dir)
+        @output << 'No local models found'
+        return
+      end
+
+      models = [] #: Array[{name: String, registry: String?, path: String}]
+
+      # Find models from default registry
+      Dir.glob(File.join(models_dir, '*.json')).each do |path|
+        models << { name: File.basename(path, '.json'), registry: nil, path: path }
+      end
+
+      # Find models from custom registries (@user/repo structure)
+      Dir.glob(File.join(models_dir, '@*', '*', '*.json')).each do |path|
+        # Extract registry from path: .../models/@user/repo/model.json
+        repo_dir = File.dirname(path)
+        user_dir = File.dirname(repo_dir)
+        registry = "#{File.basename(user_dir).delete_prefix('@')}/#{File.basename(repo_dir)}"
+        models << { name: File.basename(path, '.json'), registry: registry, path: path }
+      end
+
+      if models.empty?
+        @output << 'No local models found'
+        return
+      end
+
+      models.each do |model|
+        info = load_model_info(model[:path])
+        type = info['type'] || 'unknown'
+        display_name = model[:registry] ? "@#{model[:registry]}:#{model[:name]}" : model[:name]
+        size = File.size(model[:path])
+        @output << format('%-30<name>s (%<type>s, %<size>s)', name: display_name, type: type, size: human_size(size))
+      end
+    end
+
+    def load_model_info(path)
+      JSON.parse(File.read(path))
+    rescue JSON::ParserError
+      {}
+    end
+
+    def human_size(bytes)
+      units = %w[B KB MB GB]
+      unit_index = 0
+      size = bytes.to_f
+
+      while size >= 1024 && unit_index < units.length - 1
+        size /= 1024
+        unit_index += 1
+      end
+
+      format('%.1f %s', size, units[unit_index])
     end
 
     def command_pull

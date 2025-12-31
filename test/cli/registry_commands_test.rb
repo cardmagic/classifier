@@ -106,6 +106,51 @@ class RegistryCommandsTest < Minitest::Test
     assert_match(/failed to fetch/i, result[:error])
   end
 
+  def test_models_local_lists_cached_models
+    # Create some cached models
+    models_dir = File.join(@cache_dir, 'models')
+    FileUtils.mkdir_p(models_dir)
+    File.write(File.join(models_dir, 'spam-filter.json'), @model_json)
+    File.write(File.join(models_dir, 'sentiment.json'), @model_json)
+
+    result = run_cli('models', '--local')
+
+    assert_equal 0, result[:exit_code]
+    assert_match(/spam-filter/, result[:output])
+    assert_match(/sentiment/, result[:output])
+    assert_match(/bayes/, result[:output])
+    assert_empty result[:error]
+  end
+
+  def test_models_local_lists_models_from_custom_registries
+    # Create cached model from custom registry
+    custom_dir = File.join(@cache_dir, 'models', '@someone/models')
+    FileUtils.mkdir_p(custom_dir)
+    File.write(File.join(custom_dir, 'custom-model.json'), @model_json)
+
+    result = run_cli('models', '--local')
+
+    assert_equal 0, result[:exit_code]
+    assert_match(/@someone\/models:custom-model/, result[:output])
+  end
+
+  def test_models_local_shows_no_models_when_cache_empty
+    result = run_cli('models', '--local')
+
+    assert_equal 0, result[:exit_code]
+    assert_match(/no local models found/i, result[:output])
+  end
+
+  def test_models_local_shows_no_models_when_cache_dir_missing
+    # Cache dir doesn't exist by default in test setup
+    FileUtils.rm_rf(@cache_dir)
+
+    result = run_cli('models', '--local')
+
+    assert_equal 0, result[:exit_code]
+    assert_match(/no local models found/i, result[:output])
+  end
+
   #
   # Pull Command
   #
