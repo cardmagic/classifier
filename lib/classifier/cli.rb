@@ -2,6 +2,9 @@
 
 require 'json'
 require 'optparse'
+require 'net/http'
+require 'uri'
+require 'fileutils'
 require 'classifier'
 
 module Classifier
@@ -22,6 +25,9 @@ module Classifier
       'logistic_regression' => :logistic_regression
     }.freeze
 
+    DEFAULT_REGISTRY = ENV.fetch('CLASSIFIER_REGISTRY', 'cardmagic/classifier-models')
+    CACHE_DIR = ENV.fetch('CLASSIFIER_CACHE', File.expand_path('~/.classifier'))
+
     def initialize(args, stdin: nil)
       @args = args.dup
       @stdin = stdin
@@ -35,7 +41,9 @@ module Classifier
         weighted: false,
         learning_rate: nil,
         regularization: nil,
-        max_iterations: nil
+        max_iterations: nil,
+        remote: nil,
+        output_path: nil
       }
       @output = [] #: Array[String]
       @error = [] #: Array[String]
@@ -68,6 +76,9 @@ module Classifier
         opts.separator '  fit                          Fit the model (logistic regression)'
         opts.separator '  search <query>               Semantic search (LSI only)'
         opts.separator '  related <item>               Find related documents (LSI only)'
+        opts.separator '  models [registry]            List models in registry'
+        opts.separator '  pull <model>                 Download model from registry'
+        opts.separator '  push <file>                  Contribute model to registry'
         opts.separator '  <text>                       Classify text (default action)'
         opts.separator ''
         opts.separator 'Options:'
@@ -82,6 +93,14 @@ module Classifier
           end
 
           @options[:type] = type
+        end
+
+        opts.on('-r', '--remote MODEL', 'Use remote model: name or @user/repo:name') do |model|
+          @options[:remote] = model
+        end
+
+        opts.on('-o', '--output FILE', 'Output path for pull command') do |file|
+          @options[:output_path] = file
         end
 
         opts.on('-p', 'Show probabilities') do
@@ -150,6 +169,12 @@ module Classifier
         command_search
       when 'related'
         command_related
+      when 'models'
+        command_models
+      when 'pull'
+        command_pull
+      when 'push'
+        command_push
       else
         command_classify
       end
@@ -330,8 +355,115 @@ module Classifier
       end
     end
 
+    def command_models
+      @args.shift # remove 'models'
+      registry_arg = @args.shift
+
+      registry = parse_registry(registry_arg) || DEFAULT_REGISTRY
+      index = fetch_registry_index(registry)
+
+      return if @exit_code != 0
+
+      if index['models'].empty?
+        @output << 'No models found in registry'
+        return
+      end
+
+      index['models'].each do |name, info|
+        type = info['type'] || 'unknown'
+        size = info['size'] || 'unknown'
+        desc = info['description'] || ''
+        @output << format('%-20<name>s %<desc>s (%<type>s, %<size>s)', name: name, desc: desc.slice(0, 40), type: type, size: size)
+      end
+    end
+
+    def command_pull
+      @args.shift # remove 'pull'
+      model_spec = @args.shift
+
+      unless model_spec
+        @error << 'Error: model name required for pull command'
+        @exit_code = 2
+        return
+      end
+
+      registry, model_name = parse_model_spec(model_spec)
+      registry ||= DEFAULT_REGISTRY
+
+      if model_name.nil?
+        pull_all_models(registry)
+      else
+        pull_single_model(registry, model_name)
+      end
+    end
+
+    def pull_single_model(registry, model_name)
+      index = fetch_registry_index(registry)
+      return if @exit_code != 0
+
+      model_info = index['models'][model_name]
+      unless model_info
+        @error << "Error: model '#{model_name}' not found in registry #{registry}"
+        @exit_code = 1
+        return
+      end
+
+      file_path = model_info['file'] || "models/#{model_name}.json"
+      output_path = @options[:output_path] || cache_path_for(registry, model_name)
+
+      @output << "Downloading #{model_name} from #{registry}..." unless @options[:quiet]
+
+      content = fetch_github_file(registry, file_path)
+      return if @exit_code != 0
+
+      FileUtils.mkdir_p(File.dirname(output_path))
+      File.write(output_path, content)
+
+      @output << "Saved to #{output_path}" unless @options[:quiet]
+    end
+
+    def pull_all_models(registry)
+      index = fetch_registry_index(registry)
+      return if @exit_code != 0
+
+      if index['models'].empty?
+        @output << 'No models found in registry'
+        return
+      end
+
+      @output << "Downloading #{index['models'].size} models from #{registry}..." unless @options[:quiet]
+
+      index['models'].each_key do |model_name|
+        pull_single_model(registry, model_name)
+        break if @exit_code != 0
+      end
+    end
+
+    def command_push
+      @args.shift # remove 'push'
+
+      @output << 'To contribute a model to the registry:'
+      @output << ''
+      @output << '1. Fork https://github.com/cardmagic/classifier-models'
+      @output << '2. Add your model to the models/ directory'
+      @output << '3. Update models.json with your model metadata'
+      @output << '4. Create a pull request'
+      @output << ''
+      @output << 'Or use the GitHub CLI:'
+      @output << ''
+      @output << '  gh repo fork cardmagic/classifier-models --clone'
+      @output << '  cp ./classifier.json classifier-models/models/my-model.json'
+      @output << '  # Edit classifier-models/models.json to add your model'
+      @output << '  cd classifier-models && gh pr create'
+    end
+
     def command_classify
       text = @args.join(' ')
+
+      if @options[:remote]
+        classify_with_remote(text)
+        return
+      end
 
       if text.empty? && ($stdin.tty? || @stdin.nil?) && !File.exist?(@options[:model])
         show_getting_started
@@ -353,6 +485,42 @@ module Classifier
         lines.each { |line| classify_and_output(classifier, line) }
       else
         classify_and_output(classifier, text)
+      end
+    end
+
+    def classify_with_remote(text)
+      registry, model_name = parse_model_spec(@options[:remote])
+      registry ||= DEFAULT_REGISTRY
+
+      unless model_name
+        @error << 'Error: model name required for -r option'
+        @exit_code = 2
+        return
+      end
+
+      cached_path = cache_path_for(registry, model_name)
+
+      unless File.exist?(cached_path)
+        pull_single_model(registry, model_name)
+        return if @exit_code != 0
+      end
+
+      original_model = @options[:model]
+      @options[:model] = cached_path
+
+      begin
+        classifier = load_classifier
+
+        if text.empty?
+          lines = read_stdin_lines
+          return show_model_usage(classifier) if lines.empty?
+
+          lines.each { |line| classify_and_output(classifier, line) }
+        else
+          classify_and_output(classifier, text)
+        end
+      ensure
+        @options[:model] = original_model
       end
     end
 
@@ -551,9 +719,92 @@ module Classifier
       @output << 'Options:'
       @output << '  -f FILE    Model file (default: ./classifier.json)'
       @output << '  -m TYPE    Model type: bayes, lsi, knn, lr (default: bayes)'
+      @output << '  -r MODEL   Use remote model from registry'
       @output << '  -p         Show probabilities'
       @output << ''
+      @output << 'Use pre-trained models:'
+      @output << ''
+      @output << '  classifier models                       List available models'
+      @output << '  classifier pull sentiment               Download a model'
+      @output << "  classifier -r sentiment 'I love this!'  Classify with remote model"
+      @output << ''
       @output << 'Run "classifier --help" for full usage.'
+    end
+
+    # Parse @user/repo format to extract registry
+    # @rbs (String?) -> String?
+    def parse_registry(arg)
+      return nil unless arg
+      return nil unless arg.start_with?('@')
+
+      # @user/repo format
+      arg[1..] # Remove @ prefix
+    end
+
+    # Parse model spec: name, @user/repo:name, or @user/repo (for all models)
+    # Returns [registry, model_name] where model_name is nil if pulling all
+    # @rbs (String) -> [String?, String?]
+    def parse_model_spec(spec)
+      if spec.start_with?('@')
+        # @user/repo:model or @user/repo
+        if spec.include?(':')
+          parts = spec[1..].split(':', 2)
+          [parts[0], parts[1]]
+        else
+          # @user/repo - pull all models from registry
+          [spec[1..], nil]
+        end
+      else
+        # Just a model name from default registry
+        [nil, spec]
+      end
+    end
+
+    # Get cache path for a model
+    # @rbs (String, String) -> String
+    def cache_path_for(registry, model_name)
+      if registry == DEFAULT_REGISTRY
+        File.join(CACHE_DIR, 'models', "#{model_name}.json")
+      else
+        File.join(CACHE_DIR, 'models', "@#{registry}", "#{model_name}.json")
+      end
+    end
+
+    # Fetch models.json index from a registry
+    # @rbs (String) -> Hash[String, untyped]
+    def fetch_registry_index(registry)
+      content = fetch_github_file(registry, 'models.json')
+      return { 'models' => {} } if @exit_code != 0
+
+      JSON.parse(content)
+    rescue JSON::ParserError => e
+      @error << "Error: invalid models.json in registry: #{e.message}"
+      @exit_code = 1
+      { 'models' => {} }
+    end
+
+    # Fetch a file from GitHub raw content
+    # @rbs (String, String) -> String
+    def fetch_github_file(registry, file_path)
+      url = "https://raw.githubusercontent.com/#{registry}/main/#{file_path}"
+      uri = URI.parse(url)
+
+      response = Net::HTTP.get_response(uri)
+
+      unless response.is_a?(Net::HTTPSuccess)
+        # Try master branch if main fails
+        url = "https://raw.githubusercontent.com/#{registry}/master/#{file_path}"
+        uri = URI.parse(url)
+        response = Net::HTTP.get_response(uri)
+      end
+
+      unless response.is_a?(Net::HTTPSuccess)
+        @error << "Error: failed to fetch #{file_path} from #{registry} (#{response.code})"
+        @exit_code = 1
+        return ''
+      end
+
+      response.body
     end
   end
 end

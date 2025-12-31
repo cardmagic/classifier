@@ -55,12 +55,14 @@ Metrics/CyclomaticComplexity:
   Exclude:
     - 'lib/classifier/extensions/vector.rb'
     - 'lib/classifier/lsi/content_node.rb'
+    - 'lib/classifier/cli.rb'
 
 Metrics/PerceivedComplexity:
   Max: 10
   Exclude:
     - 'lib/classifier/extensions/vector.rb'
     - 'lib/classifier/lsi/content_node.rb'
+    - 'lib/classifier/cli.rb'
 
 # Class length limits - algorithms, tests and CLI can be longer
 Metrics/ClassLength:

@@ -32,4 +32,5 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rbs-inline'
   s.add_development_dependency 'rdoc'
   s.add_development_dependency 'rake-compiler'
+  s.add_development_dependency 'webmock'
 end
