@@ -36,15 +36,15 @@ Classify text instantly with pre-trained models—no coding required:
 
 ```bash
 # Detect spam
-classifier classify "You won a free iPhone!" -r sms-spam-filter
+classifier -r sms-spam-filter "You won a free iPhone"
 # => spam
 
 # Analyze sentiment
-classifier classify "This movie was absolutely amazing!" -r imdb-sentiment
+classifier -r imdb-sentiment "This movie was absolutely amazing"
 # => positive
 
 # Detect emotions
-classifier classify "I'm so happy today!" -r emotion-detection
+classifier -r emotion-detection "I am so happy today"
 # => joy
 
 # List all available models
@@ -59,7 +59,7 @@ classifier train positive reviews/good/*.txt
 classifier train negative reviews/bad/*.txt
 
 # Classify new text
-classifier classify "Great product, highly recommend"
+classifier "Great product, highly recommend"
 # => positive
 ```
 
