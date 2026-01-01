@@ -874,7 +874,7 @@ module Classifier
         return ''
       end
 
-      response.body
+      response.body.force_encoding(Encoding::UTF_8)
     end
   end
 end
