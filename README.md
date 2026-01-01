@@ -24,6 +24,47 @@ Text classification in Ruby. Five algorithms, native performance, streaming supp
 gem 'classifier'
 ```
 
+Or install via Homebrew for CLI-only usage:
+
+```bash
+brew install classifier
+```
+
+## Command Line
+
+Classify text instantly with pre-trained models—no coding required:
+
+```bash
+# Detect spam
+classifier classify "You won a free iPhone!" -r sms-spam-filter
+# => spam
+
+# Analyze sentiment
+classifier classify "This movie was absolutely amazing!" -r imdb-sentiment
+# => positive
+
+# Detect emotions
+classifier classify "I'm so happy today!" -r emotion-detection
+# => joy
+
+# List all available models
+classifier models
+```
+
+Train your own model:
+
+```bash
+# Train from files
+classifier train positive reviews/good/*.txt
+classifier train negative reviews/bad/*.txt
+
+# Classify new text
+classifier classify "Great product, highly recommend"
+# => positive
+```
+
+[CLI Guide →](https://rubyclassifier.com/docs/guides/cli/basics)
+
 ## Quick Start
 
 ### Bayesian
