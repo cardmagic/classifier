@@ -27,7 +27,7 @@ gem 'classifier'
 Or install via Homebrew for CLI-only usage:
 
 ```bash
-brew install classifier
+brew install cardmagic/tap/classifier
 ```
 
 ## Command Line
@@ -64,6 +64,22 @@ classifier "Great product, highly recommend"
 ```
 
 [CLI Guide →](https://rubyclassifier.com/docs/guides/cli/basics)
+
+### Claude Code Plugin
+
+Install as a plugin to get skills (auto-invoked) and slash commands:
+
+```bash
+# Add the marketplace
+claude plugin marketplace add cardmagic/ai-marketplace
+
+# Install the plugin
+claude plugin install classifier@cardmagic
+```
+
+This gives you:
+- **Skill**: Claude automatically classifies text when you ask about spam, sentiment, or emotions
+- **Slash commands**: `/classifier:classify`, `/classifier:train`, `/classifier:models`
 
 ## Quick Start
 
