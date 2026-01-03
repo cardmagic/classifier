@@ -1,0 +1,12 @@
+{
+  "name": "classifier",
+  "description": "Text classification CLI using Bayesian, LSI, KNN, Logistic Regression, and TF-IDF algorithms",
+  "version": "1.0.0",
+  "author": {
+    "name": "Lucas Carlson",
+    "url": "https://github.com/cardmagic"
+  },
+  "repository": "https://github.com/cardmagic/classifier",
+  "license": "LGPL-2.1",
+  "keywords": ["machine-learning", "text-classification", "nlp", "bayesian", "lsi", "cli"]
+}
