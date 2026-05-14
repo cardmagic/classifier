@@ -28,6 +28,17 @@ class BayesianTest < Minitest::Test
     assert_equal 'Spam', classifier.classify('this is spam')
   end
 
+  def test_initialization_with_min_word_length
+    classifier = Classifier::Bayes.new(%w[Spam Ham], min_word_length: 5)
+
+    classifier.train_spam 'bad nasty spam email'
+    classifier.train_ham 'good legitimate email'
+
+    assert_equal 'Spam', classifier.classify('nasty text')
+    assert_equal 'Ham', classifier.classify('legitimate text')
+    assert_equal 'Spam', classifier.classify('good text')
+  end
+
   def test_add_category
     @classifier.add_category 'Test'
 

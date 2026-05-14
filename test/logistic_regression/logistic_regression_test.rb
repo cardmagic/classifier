@@ -56,6 +56,18 @@ class LogisticRegressionTest < Minitest::Test
     assert_instance_of Classifier::LogisticRegression, classifier
   end
 
+  def test_initialization_with_min_word_length
+    classifier = Classifier::LogisticRegression.new(%w[Spam Ham], min_word_length: 5)
+
+    classifier.train_spam 'bad nasty spam email'
+    classifier.train_ham 'good legitimate email'
+    classifier.fit
+
+    assert_equal 'Spam', classifier.classify('nasty text')
+    assert_equal 'Ham', classifier.classify('legitimate text')
+    assert_in_delta 0.5, classifier.probabilities('good text')['Spam'], 0.02
+  end
+
   def test_categories
     assert_equal %w[Spam Ham].sort, @classifier.categories.sort
   end

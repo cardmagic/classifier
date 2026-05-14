@@ -27,8 +27,9 @@ module Classifier
     # initialized and given a training method. E.g.,
     #      b = Classifier::Bayes.new 'Interesting', 'Uninteresting', 'Spam'
     #      b = Classifier::Bayes.new ['Interesting', 'Uninteresting', 'Spam']
-    # @rbs (*String | Symbol | Array[String | Symbol]) -> void
-    def initialize(*categories)
+    #      b = Classifier::Bayes.new 'Spam', min_word_length: 1
+    # @rbs (*String | Symbol | Array[String | Symbol], ?min_word_length: Integer) -> void
+    def initialize(*categories, min_word_length: Classifier.config.min_word_length)
       super()
       @categories = {}
       categories.flatten.each { |category| @categories[category.prepare_category_name] = {} }
@@ -39,6 +40,7 @@ module Classifier
       @cached_vocab_size = nil
       @dirty = false
       @storage = nil
+      @min_word_length = min_word_length
     end
 
     # Trains the classifier with text for a category.
@@ -76,7 +78,7 @@ module Classifier
     #
     # @rbs (String) -> Hash[String, Float]
     def classifications(text)
-      words = text.word_hash.keys
+      words = text.word_hash(@min_word_length).keys
       synchronize do
         training_count = cached_training_count
         vocab_size = cached_vocab_size
@@ -117,7 +119,8 @@ module Classifier
         categories: @categories.transform_keys(&:to_s).transform_values { |v| v.transform_keys(&:to_s) },
         total_words: @total_words,
         category_counts: @category_counts.transform_keys(&:to_s),
-        category_word_count: @category_word_count.transform_keys(&:to_s)
+        category_word_count: @category_word_count.transform_keys(&:to_s),
+        min_word_length: @min_word_length
       }
     end
 
@@ -409,7 +412,7 @@ module Classifier
         invalidate_caches
         @dirty = true
         batch.each do |text|
-          word_hash = text.word_hash
+          word_hash = text.word_hash(@min_word_length)
           @category_counts[category] += 1
           word_hash.each do |word, count|
             @categories[category][word] ||= 0
@@ -425,7 +428,7 @@ module Classifier
     # @rbs (String | Symbol, String) -> void
     def train_single(category, text)
       category = category.prepare_category_name
-      word_hash = text.word_hash
+      word_hash = text.word_hash(@min_word_length)
       synchronize do
         invalidate_caches
         @dirty = true
@@ -443,7 +446,7 @@ module Classifier
     # @rbs (String | Symbol, String) -> void
     def untrain_single(category, text)
       category = category.prepare_category_name
-      word_hash = text.word_hash
+      word_hash = text.word_hash(@min_word_length)
       synchronize do
         invalidate_caches
         @dirty = true
@@ -487,6 +490,7 @@ module Classifier
       @cached_vocab_size = nil
       @dirty = false
       @storage = nil
+      @min_word_length = data['min_word_length'] || Classifier.config.min_word_length
 
       data['categories'].each do |cat_name, words|
         @categories[cat_name.to_sym] = words.transform_keys(&:to_sym)

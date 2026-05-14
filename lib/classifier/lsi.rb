@@ -110,6 +110,7 @@ module Classifier
       @max_rank = options[:max_rank] || DEFAULT_MAX_RANK
       @u_matrix = nil
       @initial_vocab_size = nil
+      @min_word_length = options[:min_word_length] || Classifier.config.min_word_length
     end
 
     # Returns true if the index needs to be rebuilt.  The index needs
@@ -216,7 +217,13 @@ module Classifier
     #
     # @rbs (String, *String | Symbol) ?{ (String) -> String } -> void
     def add_item(item, *categories, &block)
-      clean_word_hash = block ? block.call(item).clean_word_hash : item.to_s.clean_word_hash
+      clean_word_hash =
+        if block
+          block.call(item).clean_word_hash(@min_word_length)
+        else
+          item.to_s.clean_word_hash(@min_word_length)
+        end
+
       node = nil
 
       synchronize do
@@ -480,14 +487,15 @@ module Classifier
     # Custom marshal serialization to exclude mutex state
     # @rbs () -> Array[untyped]
     def marshal_dump
-      [@auto_rebuild, @word_list, @items, @version, @built_at_version, @dirty]
+      [@auto_rebuild, @word_list, @items, @version, @built_at_version, @dirty, @min_word_length]
     end
 
     # Custom marshal deserialization to recreate mutex
     # @rbs (Array[untyped]) -> void
     def marshal_load(data)
       mu_initialize
-      @auto_rebuild, @word_list, @items, @version, @built_at_version, @dirty = data
+      @auto_rebuild, @word_list, @items, @version, @built_at_version, @dirty,
+        @min_word_length = data
       @storage = nil
     end
 

@@ -20,27 +20,27 @@ class String
 
   # Return a Hash of strings => ints. Each word in the string is stemmed,
   # interned, and indexes to its frequency in the document.
-  # @rbs () -> Hash[Symbol, Integer]
-  def word_hash
-    word_hash = clean_word_hash
+  # @rbs (?Integer) -> Hash[Symbol, Integer]
+  def word_hash(min_word_length = 3)
+    word_hash = clean_word_hash(min_word_length)
     symbol_hash = word_hash_for_symbols(gsub(/\w/, ' ').split)
     word_hash.merge(symbol_hash)
   end
 
   # Return a word hash without extra punctuation or short symbols, just stemmed words
-  # @rbs () -> Hash[Symbol, Integer]
-  def clean_word_hash
-    word_hash_for_words gsub(/[^\w\s]/, '').split
+  # @rbs (?Integer) -> Hash[Symbol, Integer]
+  def clean_word_hash(min_word_length = 3)
+    word_hash_for_words(gsub(/[^\w\s]/, '').split, min_word_length)
   end
 
   private
 
-  # @rbs (Array[String]) -> Hash[Symbol, Integer]
-  def word_hash_for_words(words)
+  # @rbs (Array[String], Integer) -> Hash[Symbol, Integer]
+  def word_hash_for_words(words, min_word_length)
     d = Hash.new(0)
     words.each do |word|
       word.downcase!
-      d[word.stem.intern] += 1 if !CORPUS_SKIP_WORDS.include?(word) && word.length > 2
+      d[word.stem.intern] += 1 if !CORPUS_SKIP_WORDS.include?(word) && word.length >= min_word_length
     end
     d
   end
