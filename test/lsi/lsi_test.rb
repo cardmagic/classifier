@@ -691,7 +691,7 @@ class LSITest < Minitest::Test
 
     refute_nil lsi.singular_values
     assert_instance_of Array, lsi.singular_values
-    assert(lsi.singular_values.all? { |v| v.is_a?(Numeric) })
+    assert(lsi.singular_values.all?(Numeric))
     assert_predicate lsi.singular_values.size, :positive?
   end
 

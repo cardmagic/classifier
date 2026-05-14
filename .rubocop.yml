@@ -110,3 +110,11 @@ Style/StringLiteralsInInterpolation:
 # Minitest assertions
 Minitest/MultipleAssertions:
   Max: 10
+
+# Allow multiple classes/modules in extension files that patch stdlib
+# and in test files that group related test classes
+Style/OneClassPerFile:
+  Exclude:
+    - 'lib/classifier/extensions/vector.rb'
+    - 'lib/classifier/lsi.rb'
+    - 'test/**/*'
