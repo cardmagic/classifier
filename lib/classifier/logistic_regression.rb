@@ -34,6 +34,7 @@ module Classifier
     # @rbs @fitted: bool
     # @rbs @dirty: bool
     # @rbs @storage: Storage::Base?
+    # @rbs @min_word_length: Integer
 
     attr_accessor :storage
 

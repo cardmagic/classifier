@@ -80,6 +80,7 @@ module Classifier
     # @rbs @u_matrix: Matrix?
     # @rbs @max_rank: Integer
     # @rbs @initial_vocab_size: Integer?
+    # @rbs @min_word_length: Integer
 
     attr_reader :word_list, :singular_values
     attr_accessor :auto_rebuild, :storage

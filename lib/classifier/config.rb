@@ -1,22 +1,29 @@
 # rbs_inline: enabled
 
 module Classifier
+  # @rbs @config: Config?
+
   # This lazy initialization is not thread-safe.
   # In multi-threaded environments, ensure this method is called
   # or configuration is set explicitly during startup before using classifiers.
+  # @rbs () -> Config
   def config
     @config ||= Config.new
   end
 
+  # @rbs () { (Config) -> void } -> void
   def configure(&block)
-    block.call(config)
+    block&.call(config)
   end
 
   module_function :config, :configure
 
   class Config
+    # @rbs @min_word_length: Integer
+
     attr_accessor :min_word_length #: Integer
 
+    # @rbs () -> void
     def initialize
       @min_word_length = 3
     end
