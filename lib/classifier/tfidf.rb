@@ -28,6 +28,7 @@ module Classifier
     # @rbs @fitted: bool
     # @rbs @dirty: bool
     # @rbs @storage: Storage::Base?
+    # @rbs @min_word_length: Integer
 
     attr_reader :vocabulary, :idf, :num_documents
     attr_accessor :storage
@@ -36,10 +37,12 @@ module Classifier
     # - min_df/max_df: filter terms by document frequency (Integer for count, Float for proportion)
     # - ngram_range: [1,1] for unigrams, [1,2] for unigrams+bigrams
     # - sublinear_tf: use 1 + log(tf) instead of raw term frequency
+    # - min_word_length: minimum word length filter in tokenization
     #
     # @rbs (?min_df: Integer | Float, ?max_df: Integer | Float,
-    #       ?ngram_range: Array[Integer], ?sublinear_tf: bool) -> void
-    def initialize(min_df: 1, max_df: 1.0, ngram_range: [1, 1], sublinear_tf: false)
+    #       ?ngram_range: Array[Integer], ?sublinear_tf: bool, ?min_word_length: Integer) -> void
+    def initialize(min_df: 1, max_df: 1.0, ngram_range: [1, 1], sublinear_tf: false,
+                   min_word_length: Classifier.config.min_word_length)
       validate_df!(min_df, 'min_df')
       validate_df!(max_df, 'max_df')
       validate_ngram_range!(ngram_range)
@@ -54,6 +57,7 @@ module Classifier
       @fitted = false
       @dirty = false
       @storage = nil
+      @min_word_length = min_word_length
     end
 
     # Learns vocabulary and IDF weights from the corpus.
@@ -204,7 +208,8 @@ module Classifier
         vocabulary: @vocabulary,
         idf: @idf,
         num_documents: @num_documents,
-        fitted: @fitted
+        fitted: @fitted,
+        min_word_length: @min_word_length
       }
     end
 
@@ -223,7 +228,8 @@ module Classifier
         min_df: data['min_df'],
         max_df: data['max_df'],
         ngram_range: data['ngram_range'],
-        sublinear_tf: data['sublinear_tf']
+        sublinear_tf: data['sublinear_tf'],
+        min_word_length: data['min_word_length'] || Classifier.config.min_word_length
       )
 
       instance.instance_variable_set(:@vocabulary, symbolize_keys(data['vocabulary']))
@@ -238,12 +244,14 @@ module Classifier
 
     # @rbs () -> Array[untyped]
     def marshal_dump
-      [@min_df, @max_df, @ngram_range, @sublinear_tf, @vocabulary, @idf, @num_documents, @fitted]
+      [@min_df, @max_df, @ngram_range, @sublinear_tf, @vocabulary, @idf, @num_documents, @fitted,
+       @min_word_length]
     end
 
     # @rbs (Array[untyped]) -> void
     def marshal_load(data)
-      @min_df, @max_df, @ngram_range, @sublinear_tf, @vocabulary, @idf, @num_documents, @fitted = data
+      @min_df, @max_df, @ngram_range, @sublinear_tf, @vocabulary, @idf, @num_documents, @fitted,
+        @min_word_length = data
       @dirty = false
       @storage = nil
     end
@@ -334,7 +342,7 @@ module Classifier
       result = Hash.new(0)
 
       if @ngram_range[0] <= 1
-        word_hash = document.clean_word_hash
+        word_hash = document.clean_word_hash(@min_word_length)
         word_hash.each { |term, count| result[term] += count }
       end
 

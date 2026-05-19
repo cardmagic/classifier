@@ -54,6 +54,16 @@ class LSITest < Minitest::Test
     assert_equal ['Cat'], lsi.categories_for('Cats are independent')
   end
 
+  def test_custom_min_word_length
+    lsi = Classifier::LSI.new(min_word_length: 5)
+    lsi.add(
+      'Dog' => ['Dogs are loyal', 'Puppies are cute'],
+      'Cat' => ['Cats are independent', 'Kittens are playful']
+    )
+
+    assert_equal(['Dog'], lsi.categories_for('Puppies are cute'))
+  end
+
   def test_add_classification_works
     lsi = Classifier::LSI.new
     lsi.add(

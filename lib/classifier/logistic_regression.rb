@@ -34,6 +34,7 @@ module Classifier
     # @rbs @fitted: bool
     # @rbs @dirty: bool
     # @rbs @storage: Storage::Base?
+    # @rbs @min_word_length: Integer
 
     attr_accessor :storage
 
@@ -53,13 +54,16 @@ module Classifier
     # - regularization: L2 regularization strength (default: 0.01)
     # - max_iterations: Maximum training iterations (default: 100)
     # - tolerance: Convergence threshold (default: 1e-4)
+    # - min_word_length: Minimum word length filter in tokenization
     #
     # @rbs (*String | Symbol | Array[String | Symbol], ?learning_rate: Float, ?regularization: Float,
-    #       ?max_iterations: Integer, ?tolerance: Float) -> void
+    #       ?max_iterations: Integer, ?tolerance: Float, ?min_word_length: Integer) -> void
+    # rubocop:disable Metrics/ParameterLists
     def initialize(*categories, learning_rate: DEFAULT_LEARNING_RATE,
                    regularization: DEFAULT_REGULARIZATION,
                    max_iterations: DEFAULT_MAX_ITERATIONS,
-                   tolerance: DEFAULT_TOLERANCE)
+                   tolerance: DEFAULT_TOLERANCE,
+                   min_word_length: Classifier.config.min_word_length)
       super()
       categories = categories.flatten
       @categories = categories.map { |c| c.to_s.prepare_category_name }
@@ -74,7 +78,9 @@ module Classifier
       @fitted = false
       @dirty = false
       @storage = nil
+      @min_word_length = min_word_length
     end
+    # rubocop:enable Metrics/ParameterLists
 
     # Trains the classifier with text for a category.
     #
@@ -130,7 +136,7 @@ module Classifier
     def probabilities(text)
       raise NotFittedError, 'Model not fitted. Call fit() after training.' unless @fitted
 
-      features = text.word_hash
+      features = text.word_hash(@min_word_length)
       synchronize do
         softmax(compute_scores(features))
       end
@@ -143,7 +149,7 @@ module Classifier
     def classifications(text)
       raise NotFittedError, 'Model not fitted. Call fit() after training.' unless @fitted
 
-      features = text.word_hash
+      features = text.word_hash(@min_word_length)
       synchronize do
         compute_scores(features).transform_keys(&:to_s)
       end
@@ -239,7 +245,8 @@ module Classifier
         regularization: @regularization,
         max_iterations: @max_iterations,
         tolerance: @tolerance,
-        fitted: @fitted
+        fitted: @fitted,
+        min_word_length: @min_word_length
       }
     end
 
@@ -336,7 +343,7 @@ module Classifier
     def marshal_dump
       fit unless @fitted
       [@categories, @weights, @bias, @vocabulary, @learning_rate, @regularization,
-       @max_iterations, @tolerance, @fitted]
+       @max_iterations, @tolerance, @fitted, @min_word_length]
     end
 
     # Custom marshal deserialization to recreate mutex.
@@ -345,7 +352,7 @@ module Classifier
     def marshal_load(data)
       mu_initialize
       @categories, @weights, @bias, @vocabulary, @learning_rate, @regularization,
-        @max_iterations, @tolerance, @fitted = data
+        @max_iterations, @tolerance, @fitted, @min_word_length = data
       @training_data = []
       @dirty = false
       @storage = nil
@@ -395,7 +402,7 @@ module Classifier
       reader.each_batch do |batch|
         synchronize do
           batch.each do |text|
-            features = text.word_hash
+            features = text.word_hash(@min_word_length)
             features.each_key { |word| @vocabulary[word] = true }
             @training_data << { category: category, features: features }
           end
@@ -444,7 +451,7 @@ module Classifier
       documents.each_slice(batch_size) do |batch|
         synchronize do
           batch.each do |text|
-            features = text.word_hash
+            features = text.word_hash(@min_word_length)
             features.each_key { |word| @vocabulary[word] = true }
             @training_data << { category: category, features: features }
           end
@@ -463,7 +470,7 @@ module Classifier
       category = category.to_s.prepare_category_name
       raise StandardError, "No such category: #{category}" unless @categories.include?(category)
 
-      features = text.word_hash
+      features = text.word_hash(@min_word_length)
       synchronize do
         features.each_key { |word| @vocabulary[word] = true }
         @training_data << { category: category, features: features }
@@ -570,6 +577,7 @@ module Classifier
       @fitted = data.fetch('fitted', true)
       @dirty = false
       @storage = nil
+      @min_word_length = data['min_word_length'] || Classifier.config.min_word_length
     end
 
     def restore_weights_and_bias(data)

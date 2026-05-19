@@ -93,6 +93,16 @@ class TFIDFTest < Minitest::Test
     assert_raises(ArgumentError) { Classifier::TFIDF.new(ngram_range: 'invalid') }
   end
 
+  def test_custom_min_word_length
+    tfidf = Classifier::TFIDF.new(min_word_length: 5)
+    tfidf.fit(@corpus)
+
+    v = tfidf.transform('Dogs are loyal')
+
+    assert_equal(1, v.count)
+    assert_in_delta(1.0, v[:loyal])
+  end
+
   # Fit tests
 
   def test_fit_builds_vocabulary
