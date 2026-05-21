@@ -391,30 +391,12 @@ module Classifier
     #   classifier.fit
     #
     # @rbs (?(String | Symbol), ?IO, ?batch_size: Integer, **Hash[Symbol, IO]) { (Streaming::Progress) -> void } -> void
-    def train_from_stream(category = nil, io = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories)
+    def train_from_stream(category = nil, io = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &)
+      raise ArgumentError, 'Provide either (category, io) or keyword category: io pairs' if category.nil? && io.nil? && categories.empty?
+      raise ArgumentError, 'Provide both category and io, or use keyword arguments' if category.nil? ^ io.nil?
+
       (category && io ? { category => io } : categories).each do |category, io|
-        category = category.to_s.prepare_category_name
-        raise StandardError, "No such category: #{category}" unless @categories.include?(category)
-        raise StandardError, 'Stream must respond to #each_line' unless io.respond_to?(:each_line)
-
-        reader = Streaming::LineReader.new(io, batch_size: batch_size)
-        total = reader.estimate_line_count
-        progress = Streaming::Progress.new(total: total)
-
-        reader.each_batch do |batch|
-          synchronize do
-            batch.each do |text|
-              features = text.word_hash(@min_word_length)
-              features.each_key { |word| @vocabulary[word] = true }
-              @training_data << { category: category, features: features }
-            end
-            @fitted = false
-            @dirty = true
-          end
-          progress.completed += batch.size
-          progress.current_batch += 1
-          yield progress if block_given?
-        end
+        stream_train_category(category, io, batch_size:, &)
       end
     end
 
@@ -442,6 +424,33 @@ module Classifier
     end
 
     private
+
+    # Trains from an IO stream with a single category.
+    # @rbs (String | Symbol, IO, batch_size: Integer) { (Streaming::Progress) -> void } -> void
+    def stream_train_category(category, io, batch_size:)
+      category = category.to_s.prepare_category_name
+      raise StandardError, "No such category: #{category}" unless @categories.include?(category)
+      raise StandardError, 'Stream must respond to #each_line' unless io.respond_to?(:each_line)
+
+      reader = Streaming::LineReader.new(io, batch_size: batch_size)
+      total = reader.estimate_line_count
+      progress = Streaming::Progress.new(total: total)
+
+      reader.each_batch do |batch|
+        synchronize do
+          batch.each do |text|
+            features = text.word_hash(@min_word_length)
+            features.each_key { |word| @vocabulary[word] = true }
+            @training_data << { category: category, features: features }
+          end
+          @fitted = false
+          @dirty = true
+        end
+        progress.completed += batch.size
+        progress.current_batch += 1
+        yield progress if block_given?
+      end
+    end
 
     # Trains a batch of documents for a single category.
     # @rbs (String | Symbol, Array[String], ?batch_size: Integer) { (Streaming::Progress) -> void } -> void
