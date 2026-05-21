@@ -664,28 +664,25 @@ module Classifier
     #
     # @rbs (?(String | Symbol), ?IO, ?batch_size: Integer, **Hash[Symbol, IO]) { (Streaming::Progress) -> void } -> void
     def train_from_stream(category = nil, io = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories)
+      original_auto_rebuild = @auto_rebuild
+      @auto_rebuild = false
       (category && io ? { category => io } : categories).each do |category, io|
         raise StandardError, 'Stream must respond to #each_line' unless io.respond_to?(:each_line)
 
-        original_auto_rebuild = @auto_rebuild
-        @auto_rebuild = false
+        reader = Streaming::LineReader.new(io, batch_size: batch_size)
+        total = reader.estimate_line_count
+        progress = Streaming::Progress.new(total: total)
 
-        begin
-          reader = Streaming::LineReader.new(io, batch_size: batch_size)
-          total = reader.estimate_line_count
-          progress = Streaming::Progress.new(total: total)
-
-          reader.each_batch do |batch|
-            batch.each { |text| add_item(text, category) }
-            progress.completed += batch.size
-            progress.current_batch += 1
-            yield progress if block_given?
-          end
-        ensure
-          @auto_rebuild = original_auto_rebuild
-          build_index if original_auto_rebuild
+        reader.each_batch do |batch|
+          batch.each { |text| add_item(text, category) }
+          progress.completed += batch.size
+          progress.current_batch += 1
+          yield progress if block_given?
         end
       end
+    ensure
+      @auto_rebuild = original_auto_rebuild
+      build_index if original_auto_rebuild
     end
 
     # Adds items to the index in batches from an array.

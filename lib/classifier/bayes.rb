@@ -330,6 +330,9 @@ module Classifier
     #
     # @rbs (?(String | Symbol), ?IO, ?batch_size: Integer, **Hash[Symbol, IO]) { (Streaming::Progress) -> void } -> void
     def train_from_stream(category = nil, io = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories)
+      raise ArgumentError, 'Provide either (category, io) or keyword category: io pairs' if category.nil? && io.nil? && categories.empty?
+      raise ArgumentError, 'Provide both category and io, or use keyword arguments' if category.nil? ^ io.nil?
+
       (category && io ? { category => io } : categories).each do |category, io|
         category = category.prepare_category_name
         raise StandardError, "No such category: #{category}" unless @categories.key?(category)
