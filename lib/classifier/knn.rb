@@ -268,9 +268,9 @@ module Classifier
     #     puts "#{progress.completed} documents processed"
     #   end
     #
-    # @rbs (String | Symbol, IO, ?batch_size: Integer) { (Streaming::Progress) -> void } -> void
-    def train_from_stream(category, io, batch_size: Streaming::DEFAULT_BATCH_SIZE, &block)
-      @lsi.train_from_stream(category, io, batch_size: batch_size, &block)
+    # @rbs (?(String | Symbol), ?IO, ?batch_size: Integer, **Hash[Symbol, IO]) { (Streaming::Progress) -> void } -> void
+    def train_from_stream(category = nil, io = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &block)
+      @lsi.train_from_stream(category, io, batch_size: batch_size, **categories, &block)
       synchronize { @dirty = true }
     end
 

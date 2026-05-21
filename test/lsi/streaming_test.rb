@@ -23,6 +23,23 @@ class LSIStreamingTest < Minitest::Test
     assert_equal 'dog', result.to_s
   end
 
+  def test_train_from_stream_many_categories
+    lsi = Classifier::LSI.new
+    lsi.train_from_stream(
+      dog: StringIO.new("dogs are loyal pets\npuppies are playful\ndogs bark at strangers\n"),
+      cat: StringIO.new("cats are independent\nkittens are curious\ncats meow softly\n")
+    )
+
+    assert_equal :dog, lsi.classify('loyal pet that barks')
+    assert_equal :cat, lsi.classify('independent curious pet')
+  end
+
+  def test_train_from_stream_invalid_io_type
+    assert_raises(StandardError) do
+      @lsi.train_from_stream(category: Object.new)
+    end
+  end
+
   def test_train_from_stream_empty_io
     @lsi.train_from_stream(:category, StringIO.new(''))
 
