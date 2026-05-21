@@ -328,12 +328,12 @@ module Classifier
     #     puts "#{progress.completed} documents processed"
     #   end
     #
-    # @rbs (?(String | Symbol), ?IO, ?batch_size: Integer, **Hash[Symbol, IO]) { (Streaming::Progress) -> void } -> void
+    # @rbs (?(String | Symbol | nil), ?IO?, ?batch_size: Integer, **IO) { (Streaming::Progress) -> void } -> void
     def train_from_stream(category = nil, io = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &)
       raise ArgumentError, 'Provide either (category, io) or keyword category: io pairs' if category.nil? && io.nil? && categories.empty?
       raise ArgumentError, 'Provide both category and io, or use keyword arguments' if category.nil? ^ io.nil?
 
-      (category && io ? { category => io } : categories).each do |category, io|
+      (category && io ? { category => io } : categories).each do |(category, io)|
         stream_train_category(category, io, batch_size: batch_size, &)
       end
     end
