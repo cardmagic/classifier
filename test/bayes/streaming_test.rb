@@ -29,7 +29,7 @@ class BayesStreamingTest < Minitest::Test
   end
 
   def test_train_from_stream_invalid_io_type
-    assert_raises(StandardError) do
+    assert_raises(ArgumentError) do
       @classifier.train_from_stream(spam: Object.new)
     end
   end

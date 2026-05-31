@@ -269,9 +269,9 @@ module Classifier
     #   end
     #
     # @rbs (?(String | Symbol | nil), ?IO?, ?batch_size: Integer, **IO) { (Streaming::Progress) -> void } -> void
-    def train_from_stream(category = nil, io = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &block)
-      # @type var categories: untyped
-      @lsi.train_from_stream(category, io, batch_size: batch_size, **categories, &block)
+    def train_from_stream(category = nil, io = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &)
+      # @type var categories: untype
+      @lsi.train_from_stream(category, io, batch_size: batch_size, **categories, &)
       synchronize { @dirty = true }
     end
 

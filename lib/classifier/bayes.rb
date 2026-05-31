@@ -331,10 +331,11 @@ module Classifier
     # @rbs (?(String | Symbol | nil), ?IO?, ?batch_size: Integer, **IO) { (Streaming::Progress) -> void } -> void
     def train_from_stream(category = nil, io = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &)
       raise ArgumentError, 'Provide either (category, io) or keyword category: io pairs' if category.nil? && io.nil? && categories.empty?
-      raise ArgumentError, 'Provide both category and io, or use keyword arguments' if category.nil? ^ io.nil?
+      raise ArgumentError, 'Provide both category and io, or use keyword arguments' if [category, io].one?(&:nil?)
 
-      (category && io ? { category => io } : categories).each do |(category, io)|
-        stream_train_category(category, io, batch_size: batch_size, &)
+      pairs = category && io ? { category => io } : categories
+      pairs.each do |cat, stream|
+        stream_train_category(cat, stream, batch_size: batch_size, &)
       end
     end
 
@@ -386,8 +387,8 @@ module Classifier
     # @rbs (String | Symbol, IO, batch_size: Integer) { (Streaming::Progress) -> void } -> void
     def stream_train_category(category, io, batch_size:)
       category = category.prepare_category_name
-      raise StandardError, "No such category: #{category}" unless @categories.key?(category)
-      raise StandardError, 'Stream must respond to #each_line' unless io.respond_to?(:each_line)
+      raise ArgumentError, "No such category: #{category}" unless @categories.key?(category)
+      raise ArgumentError, 'Stream must respond to #each_line' unless io.respond_to?(:each_line)
 
       reader = Streaming::LineReader.new(io, batch_size: batch_size)
       total = reader.estimate_line_count

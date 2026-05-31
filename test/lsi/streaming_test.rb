@@ -34,10 +34,26 @@ class LSIStreamingTest < Minitest::Test
     assert_equal :cat, lsi.classify('independent curious pet')
   end
 
+  def test_train_from_stream_raises_without_args
+    assert_raises(ArgumentError) { @lsi.train_from_stream }
+  end
+
+  def test_train_from_stream_raises_with_partial_args
+    assert_raises(ArgumentError) { @lsi.train_from_stream(:spam) }
+  end
+
   def test_train_from_stream_invalid_io_type
-    assert_raises(StandardError) do
-      @lsi.train_from_stream(category: Object.new)
+    assert_raises(ArgumentError) { @lsi.train_from_stream(category: Object.new) }
+  end
+
+  def test_train_from_stream_with_invalid_io_type_does_not_modify_auto_rebuild_setting
+    @lsi = Classifier::LSI.new(auto_rebuild: true)
+
+    assert_raises(ArgumentError) do
+      @lsi.train_from_stream(cat1: StringIO.new("one\ntwo\n"), cat2: Object.new)
     end
+
+    assert @lsi.auto_rebuild
   end
 
   def test_train_from_stream_empty_io
@@ -99,10 +115,34 @@ class LSIStreamingTest < Minitest::Test
     refute_predicate @lsi, :needs_rebuild?
   end
 
+  def test_train_from_stream_with_keyword_categories_rebuilds_index_when_auto_rebuild
+    @lsi = Classifier::LSI.new(auto_rebuild: true)
+
+    @lsi.train_from_stream(
+      dog: StringIO.new("dogs are loyal\ndogs bark\n"),
+      cat: StringIO.new("cats are independent\ncats meow\n")
+    )
+
+    # Index should be built
+    refute_predicate @lsi, :needs_rebuild?
+  end
+
   def test_train_from_stream_skips_rebuild_when_auto_rebuild_false
     @lsi = Classifier::LSI.new(auto_rebuild: false)
 
     @lsi.train_from_stream(:category, StringIO.new("document one\ndocument two\n"))
+
+    # Index should need rebuild
+    assert_predicate @lsi, :needs_rebuild?
+  end
+
+  def test_train_from_stream_with_keyword_categories_skips_rebuild_when_auto_rebuild_false
+    @lsi = Classifier::LSI.new(auto_rebuild: false)
+
+    @lsi.train_from_stream(
+      cat1: StringIO.new("document one\ndocument two\n"),
+      cat2: StringIO.new("document three\ndocument four\n")
+    )
 
     # Index should need rebuild
     assert_predicate @lsi, :needs_rebuild?

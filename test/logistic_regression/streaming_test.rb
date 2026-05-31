@@ -24,8 +24,16 @@ class LogisticRegressionStreamingTest < Minitest::Test
 
   def test_train_from_stream_invalid_io_type
     classifier = Classifier::LogisticRegression.new('Spam', 'Ham')
-    assert_raises(StandardError) do
-      classifier.train_from_stream(spam: Object.new)
-    end
+    assert_raises(ArgumentError) { classifier.train_from_stream(spam: Object.new) }
+  end
+
+  def test_train_from_stream_raises_without_args
+    classifier = Classifier::LogisticRegression.new('Spam', 'Ham')
+    assert_raises(ArgumentError) { classifier.train_from_stream }
+  end
+
+  def test_train_from_stream_raises_with_partial_args
+    classifier = Classifier::LogisticRegression.new('Spam', 'Ham')
+    assert_raises(ArgumentError) { classifier.train_from_stream(:spam) }
   end
 end

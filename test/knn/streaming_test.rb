@@ -22,8 +22,16 @@ class KNNStreamingTest < Minitest::Test
 
   def test_train_from_stream_invalid_io_type
     knn = Classifier::KNN.new
-    assert_raises(StandardError) do
-      knn.train_from_stream(spam: Object.new)
-    end
+    assert_raises(ArgumentError) { knn.train_from_stream(spam: Object.new) }
+  end
+
+  def test_train_from_stream_raises_without_args
+    knn = Classifier::KNN.new
+    assert_raises(ArgumentError) { knn.train_from_stream }
+  end
+
+  def test_train_from_stream_raises_with_partial_args
+    knn = Classifier::KNN.new
+    assert_raises(ArgumentError) { knn.train_from_stream(:spam) }
   end
 end
