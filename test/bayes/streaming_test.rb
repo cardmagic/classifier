@@ -17,6 +17,23 @@ class BayesStreamingTest < Minitest::Test
     assert_equal 'Spam', @classifier.classify('buy cheap free')
   end
 
+  def test_train_from_stream_many_categories
+    classifier = Classifier::Bayes.new('Spam', 'Ham')
+    classifier.train_from_stream(
+      spam: StringIO.new("buy now cheap\nfree money\nlimited offer\n"),
+      ham: StringIO.new("hello friend\nmeeting tomorrow\n")
+    )
+
+    assert_equal 'Spam', classifier.classify('buy free')
+    assert_equal 'Ham', classifier.classify('hello meeting')
+  end
+
+  def test_train_from_stream_invalid_io_type
+    assert_raises(ArgumentError) do
+      @classifier.train_from_stream(spam: Object.new)
+    end
+  end
+
   def test_train_from_stream_empty_io
     io = StringIO.new('')
     @classifier.train_from_stream(:spam, io)

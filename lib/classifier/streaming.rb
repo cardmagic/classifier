@@ -26,8 +26,8 @@ module Classifier
     # Trains the classifier from an IO stream.
     # Each line in the stream is treated as a separate document.
     #
-    # @rbs (Symbol | String, IO, ?batch_size: Integer) { (Progress) -> void } -> void
-    def train_from_stream(category, io, batch_size: DEFAULT_BATCH_SIZE, &block)
+    # @rbs (?(Symbol | String | nil), ?IO?, ?batch_size: Integer, **IO) { (Progress) -> void } -> void
+    def train_from_stream(category = nil, io = nil, batch_size: DEFAULT_BATCH_SIZE, **categories, &block)
       raise NotImplementedError, "#{self.class} must implement train_from_stream"
     end
 

@@ -662,21 +662,22 @@ module Classifier
     #     puts "#{progress.completed} documents processed"
     #   end
     #
-    # @rbs (String | Symbol, IO, ?batch_size: Integer) { (Streaming::Progress) -> void } -> void
-    def train_from_stream(category, io, batch_size: Streaming::DEFAULT_BATCH_SIZE)
-      original_auto_rebuild = @auto_rebuild
-      @auto_rebuild = false
+    # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+    # @rbs (?(String | Symbol | nil), ?IO?, ?batch_size: Integer, **IO) { (Streaming::Progress) -> void } -> void
+    def train_from_stream(category = nil, io = nil, batch_size: Streaming::DEFAULT_BATCH_SIZE, **categories, &)
+      # rubocop:enable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+      raise ArgumentError, 'Provide either (category, io) or keyword category: io pairs' if category.nil? && io.nil? && categories.empty?
+      raise ArgumentError, 'Provide both category and io, or use keyword arguments' if [category, io].one?(&:nil?)
 
+      pairs = category && io ? { category => io } : categories
+      pairs.each_value do |io|
+        raise ArgumentError, 'Stream must respond to #each_line' unless io.respond_to?(:each_line)
+      end
       begin
-        reader = Streaming::LineReader.new(io, batch_size: batch_size)
-        total = reader.estimate_line_count
-        progress = Streaming::Progress.new(total: total)
-
-        reader.each_batch do |batch|
-          batch.each { |text| add_item(text, category) }
-          progress.completed += batch.size
-          progress.current_batch += 1
-          yield progress if block_given?
+        original_auto_rebuild = @auto_rebuild
+        @auto_rebuild = false
+        pairs.each do |cat, stream|
+          stream_train_category(cat, stream, batch_size:, &)
         end
       ensure
         @auto_rebuild = original_auto_rebuild
@@ -728,6 +729,21 @@ module Classifier
     end
 
     private
+
+    # Trains from an IO stream with a single category.
+    # @rbs (String | Symbol, IO, batch_size: Integer) { (Streaming::Progress) -> void } -> void
+    def stream_train_category(category, io, batch_size:)
+      reader = Streaming::LineReader.new(io, batch_size: batch_size)
+      total = reader.estimate_line_count
+      progress = Streaming::Progress.new(total: total)
+
+      reader.each_batch do |batch|
+        batch.each { |text| add_item(text, category) }
+        progress.completed += batch.size
+        progress.current_batch += 1
+        yield progress if block_given?
+      end
+    end
 
     # Restores LSI state from a JSON string (used by reload)
     # @rbs (String) -> void
