@@ -95,6 +95,10 @@ module Classifier
           @options[:type] = type
         end
 
+        opts.on('--search TEXT', 'Find models by name or description. Use quotes for multiword search') do |text|
+          @options[:search] = text
+        end
+
         opts.on('-r', '--remote MODEL', 'Use remote model: name or @user/repo:name') do |model|
           @options[:remote] = model
         end
@@ -376,12 +380,20 @@ module Classifier
 
       return if @exit_code != 0
 
-      if index['models'].empty?
+      models = index['models']
+
+      unless @options[:search].nil?
+        models = models.filter do |name, info|
+          [name, info['description']].any?(/#{Regexp.escape(@options[:search])}/i)
+        end
+      end
+
+      if models.empty?
         @output << 'No models found in registry'
         return
       end
 
-      index['models'].each do |name, info|
+      models.each do |name, info|
         type = info['type'] || 'unknown'
         size = info['size'] || 'unknown'
         desc = info['description'] || ''
@@ -412,6 +424,12 @@ module Classifier
       end
 
       models = default_models + custom_models #: Array[{name: String, registry: String?, path: String}]
+
+      unless @options[:search].nil?
+        models = models.filter do |model|
+          model[:name] =~ /#{Regexp.escape(@options[:search])}/i
+        end
+      end
 
       if models.empty?
         @output << 'No local models found'
