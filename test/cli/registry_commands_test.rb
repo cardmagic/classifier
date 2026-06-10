@@ -162,7 +162,7 @@ class RegistryCommandsTest < Minitest::Test
     refute_match(/sentiment/, result[:output])
   end
 
-  def test_models_remote_search_by_decription
+  def test_models_remote_search_by_description
     stub_request(:get, 'https://raw.githubusercontent.com/cardmagic/classifier-models/main/models.json')
       .to_return(status: 200, body: @models_json)
 

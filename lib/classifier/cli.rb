@@ -95,7 +95,10 @@ module Classifier
           @options[:type] = type
         end
 
-        opts.on('--search TEXT', 'Find models by name or description. Use quotes for multiword search') do |text|
+        opts.on(
+          '--search TEXT',
+          'Search remote models by name/description, and local models by name only. Use quotes for multiword search'
+        ) do |text|
           @options[:search] = text
         end
 
@@ -382,7 +385,7 @@ module Classifier
 
       models = index['models']
 
-      unless @options[:search].nil?
+      if @options[:search]
         models = models.filter do |name, info|
           [name, info['description']].any?(/#{Regexp.escape(@options[:search])}/i)
         end
@@ -425,7 +428,7 @@ module Classifier
 
       models = default_models + custom_models #: Array[{name: String, registry: String?, path: String}]
 
-      unless @options[:search].nil?
+      if @options[:search]
         models = models.filter do |model|
           model[:name] =~ /#{Regexp.escape(@options[:search])}/i
         end
