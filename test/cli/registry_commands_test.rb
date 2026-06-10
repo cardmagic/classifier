@@ -151,6 +151,64 @@ class RegistryCommandsTest < Minitest::Test
     assert_match(/no local models found/i, result[:output])
   end
 
+  def test_models_remote_search_by_name
+    stub_request(:get, 'https://raw.githubusercontent.com/cardmagic/classifier-models/main/models.json')
+      .to_return(status: 200, body: @models_json)
+
+    result = run_cli('models', '--search', 'spam-filter')
+
+    assert_equal 0, result[:exit_code]
+    assert_match(/spam-filter/, result[:output])
+    refute_match(/sentiment/, result[:output])
+  end
+
+  def test_models_remote_search_by_description
+    stub_request(:get, 'https://raw.githubusercontent.com/cardmagic/classifier-models/main/models.json')
+      .to_return(status: 200, body: @models_json)
+
+    result = run_cli('models', '--search', 'Spam Detection')
+
+    assert_equal 0, result[:exit_code]
+    assert_match(/spam-filter/, result[:output])
+    refute_match(/sentiment/, result[:output])
+  end
+
+  def test_models_remote_search_no_found
+    stub_request(:get, 'https://raw.githubusercontent.com/cardmagic/classifier-models/main/models.json')
+      .to_return(status: 200, body: @models_json)
+
+    result = run_cli('models', '--search', '[a-z]+')
+
+    assert_equal 0, result[:exit_code]
+    assert_match(/No models found in registry/, result[:output])
+  end
+
+  def test_models_local_search_by_name
+    # Create some cached models
+    models_dir = File.join(@cache_dir, 'models')
+    FileUtils.mkdir_p(models_dir)
+    File.write(File.join(models_dir, 'spam-filter.json'), @model_json)
+    File.write(File.join(models_dir, 'sentiment.json'), @model_json)
+
+    result = run_cli('models', '--local', '--search', 'spam-filter')
+
+    assert_equal 0, result[:exit_code]
+    assert_match(/spam-filter/, result[:output])
+    refute_match(/sentiment/, result[:output])
+  end
+
+  def test_models_local_search_no_found
+    # Create some cached models
+    models_dir = File.join(@cache_dir, 'models')
+    FileUtils.mkdir_p(models_dir)
+    File.write(File.join(models_dir, 'spam-filter.json'), @model_json)
+
+    result = run_cli('models', '--local', '--search', '[a-z]+')
+
+    assert_equal 0, result[:exit_code]
+    assert_match(/No local models found/, result[:output])
+  end
+
   #
   # Pull Command
   #
