@@ -377,13 +377,36 @@ module Classifier
     end
 
     def list_remote_models
-      registry_arg = @args.shift
-      registry = parse_registry(registry_arg) || DEFAULT_REGISTRY
+      registry_or_model_arg = @args.shift
+      registry, model = detect_registry_and_model(registry_or_model_arg)
+      registry = parse_registry(registry) || DEFAULT_REGISTRY
       index = fetch_registry_index(registry)
 
       return if @exit_code != 0
 
       models = index['models']
+
+      if model
+        name, info = models.find { |name, _| name == model }
+        if name.nil?
+          @output << "No model #{model.inspect} found in registry"
+          return
+        end
+
+        type = info['type'] || 'unknown'
+        size = info['size'] || 'unknown'
+        desc = info['description'] || ''
+        categories = (info['categories'] || []).map(&:downcase).join(', ')
+        version = info['version'] || ''
+        author = info['author'] || ''
+        @output << format(
+          "Name: %<name>s\nDescription: %<desc>s\nType: %<type>s\n" \
+          "Categories: %<categories>s\nVersion: %<version>s\nAuthor: %<author>s\nSize: %<size>s",
+          name: name, desc: desc.slice(0, 40), type: type, categories: categories,
+          version: version, author: author, size: size
+        )
+        return
+      end
 
       if @options[:search]
         models = models.filter do |name, info|
@@ -405,6 +428,8 @@ module Classifier
     end
 
     def list_local_models
+      model_arg = @args.shift
+
       models_dir = File.join(CACHE_DIR, 'models')
 
       unless Dir.exist?(models_dir)
@@ -430,6 +455,26 @@ module Classifier
 
       models.each do |model|
         model[:info] = load_model_info(model[:path])
+      end
+
+      if model_arg
+        model = models.find { |model| model[:name] == model_arg }
+        if model.nil?
+          @output << "No local model #{model_arg.inspect} found"
+          return
+        end
+        display_name = model[:registry] ? "@#{model[:registry]}:#{model[:name]}" : model[:name]
+        type = model.dig(:info, 'type') || 'unknown'
+        version = model.dig(:info, 'version')
+        categories = (model.dig(:info, 'categories') || {}).keys.map(&:downcase).join(', ')
+        size = File.size(model[:path])
+        @output << format(
+          "Name: %<name>s\nType: %<type>s\n" \
+          "Categories: %<categories>s\nVersion: %<version>s\nSize: %<size>s",
+          name: display_name, type: type, categories: categories,
+          version: version, size: human_size(size)
+        )
+        return
       end
 
       if @options[:search]
@@ -822,6 +867,16 @@ module Classifier
       @output << "  classifier -r sentiment 'I love this!'  Classify with remote model"
       @output << ''
       @output << 'Run "classifier --help" for full usage.'
+    end
+
+    # Detect registry and model
+    # @rbs (String?) -> [String?, String?]
+    def detect_registry_and_model(arg)
+      return nil, nil if arg.nil?
+      return *arg.split(':') if arg.include?(':')
+      return nil, arg unless arg.start_with?('@')
+
+      [arg, nil]
     end
 
     # Parse @user/repo format to extract registry
