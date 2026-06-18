@@ -869,7 +869,6 @@ module Classifier
       @output << 'Run "classifier --help" for full usage.'
     end
 
-    # Detect registry and model
     # @rbs (String?) -> [String?, String?]
     def detect_registry_and_model(arg)
       return nil, nil if arg.nil?
