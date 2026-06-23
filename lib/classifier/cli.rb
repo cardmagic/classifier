@@ -95,6 +95,13 @@ module Classifier
           @options[:type] = type
         end
 
+        opts.on(
+          '--search TEXT',
+          'Search remote models by name/description, and local models by name only. Use quotes for multiword search'
+        ) do |text|
+          @options[:search] = text
+        end
+
         opts.on('-r', '--remote MODEL', 'Use remote model: name or @user/repo:name') do |model|
           @options[:remote] = model
         end
@@ -376,12 +383,20 @@ module Classifier
 
       return if @exit_code != 0
 
-      if index['models'].empty?
+      models = index['models']
+
+      if @options[:search]
+        models = models.filter do |name, info|
+          [name, info['description']].any?(/#{Regexp.escape(@options[:search])}/i)
+        end
+      end
+
+      if models.empty?
         @output << 'No models found in registry'
         return
       end
 
-      index['models'].each do |name, info|
+      models.each do |name, info|
         type = info['type'] || 'unknown'
         size = info['size'] || 'unknown'
         desc = info['description'] || ''
@@ -413,14 +428,23 @@ module Classifier
 
       models = default_models + custom_models #: Array[{name: String, registry: String?, path: String}]
 
+      models.each do |model|
+        model[:info] = load_model_info(model[:path])
+      end
+
+      if @options[:search]
+        models = models.filter do |model|
+          [model[:name], model.dig(:info, 'description')].any?(/#{Regexp.escape(@options[:search])}/i)
+        end
+      end
+
       if models.empty?
         @output << 'No local models found'
         return
       end
 
       models.each do |model|
-        info = load_model_info(model[:path])
-        type = info['type'] || 'unknown'
+        type = model.dig(:info, 'type') || 'unknown'
         display_name = model[:registry] ? "@#{model[:registry]}:#{model[:name]}" : model[:name]
         size = File.size(model[:path])
         @output << format('%-30<name>s (%<type>s, %<size>s)', name: display_name, type: type, size: human_size(size))
