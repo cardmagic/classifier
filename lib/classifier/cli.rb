@@ -428,9 +428,13 @@ module Classifier
 
       models = default_models + custom_models #: Array[{name: String, registry: String?, path: String}]
 
+      models.each do |model|
+        model[:info] = load_model_info(model[:path])
+      end
+
       if @options[:search]
         models = models.filter do |model|
-          model[:name] =~ /#{Regexp.escape(@options[:search])}/i
+          [model[:name], model.dig(:info, 'description')].any?(/#{Regexp.escape(@options[:search])}/i)
         end
       end
 
@@ -440,8 +444,7 @@ module Classifier
       end
 
       models.each do |model|
-        info = load_model_info(model[:path])
-        type = info['type'] || 'unknown'
+        type = model.dig(:info, 'type') || 'unknown'
         display_name = model[:registry] ? "@#{model[:registry]}:#{model[:name]}" : model[:name]
         size = File.size(model[:path])
         @output << format('%-30<name>s (%<type>s, %<size>s)', name: display_name, type: type, size: human_size(size))
