@@ -56,6 +56,14 @@ class RegistryCommandsTest < Minitest::Test
     cli.run
   end
 
+  def create_local_model_fixtures
+    # Create some cached models
+    models_dir = File.join(@cache_dir, 'models')
+    FileUtils.mkdir_p(models_dir)
+    File.write(File.join(models_dir, 'spam-filter.json'), @model_json)
+    File.write(File.join(models_dir, 'sentiment.json'), @model_json)
+  end
+
   #
   # Models Command
   #
@@ -106,12 +114,45 @@ class RegistryCommandsTest < Minitest::Test
     assert_match(/failed to fetch/i, result[:error])
   end
 
+  def test_models_model_detail_view
+    stub_request(:get, 'https://raw.githubusercontent.com/cardmagic/classifier-models/main/models.json')
+      .to_return(status: 200, body: @models_json)
+
+    result = run_cli('models', 'sentiment')
+
+    assert_equal 0, result[:exit_code]
+    assert_match('Name: sentiment', result[:output])
+    assert_match('Description: Sentiment analysis', result[:output])
+    assert_match('Type: bayes', result[:output])
+    assert_empty result[:error]
+  end
+
+  def test_models_model_detail_view_if_not_found
+    stub_request(:get, 'https://raw.githubusercontent.com/cardmagic/classifier-models/main/models.json')
+      .to_return(status: 200, body: @models_json)
+
+    result = run_cli('models', 'no-model')
+
+    assert_equal 0, result[:exit_code]
+    assert_match('No model "no-model" found in registry', result[:output])
+    assert_empty result[:error]
+  end
+
+  def test_models_model_detail_view_with_custom_registry
+    stub_request(:get, 'https://raw.githubusercontent.com/someone/models/main/models.json')
+      .to_return(status: 200, body: @models_json)
+
+    result = run_cli('models', '@someone/models:spam-filter')
+
+    assert_equal 0, result[:exit_code]
+    assert_match('Name: spam-filter', result[:output])
+    assert_match('Description: Email spam detection', result[:output])
+    assert_match('Type: bayes', result[:output])
+    assert_empty result[:error]
+  end
+
   def test_models_local_lists_cached_models
-    # Create some cached models
-    models_dir = File.join(@cache_dir, 'models')
-    FileUtils.mkdir_p(models_dir)
-    File.write(File.join(models_dir, 'spam-filter.json'), @model_json)
-    File.write(File.join(models_dir, 'sentiment.json'), @model_json)
+    create_local_model_fixtures
 
     result = run_cli('models', '--local')
 
@@ -151,6 +192,28 @@ class RegistryCommandsTest < Minitest::Test
     assert_match(/no local models found/i, result[:output])
   end
 
+  def test_models_local_model_detail_view
+    create_local_model_fixtures
+
+    result = run_cli('models', '--local', 'spam-filter')
+
+    assert_equal 0, result[:exit_code]
+    assert_match('Name: spam-filter', result[:output])
+    assert_match('Type: bayes', result[:output])
+    assert_match('Categories: spam, ham', result[:output])
+    assert_empty result[:error]
+  end
+
+  def test_models_local_model_detail_view_if_not_found
+    create_local_model_fixtures
+
+    result = run_cli('models', '--local', 'no-model')
+
+    assert_equal 0, result[:exit_code]
+    assert_match('No local model "no-model" found', result[:output])
+    assert_empty result[:error]
+  end
+
   def test_models_remote_search_by_name
     stub_request(:get, 'https://raw.githubusercontent.com/cardmagic/classifier-models/main/models.json')
       .to_return(status: 200, body: @models_json)
@@ -184,11 +247,7 @@ class RegistryCommandsTest < Minitest::Test
   end
 
   def test_models_local_search_by_name
-    # Create some cached models
-    models_dir = File.join(@cache_dir, 'models')
-    FileUtils.mkdir_p(models_dir)
-    File.write(File.join(models_dir, 'spam-filter.json'), @model_json)
-    File.write(File.join(models_dir, 'sentiment.json'), @model_json)
+    create_local_model_fixtures
 
     result = run_cli('models', '--local', '--search', 'spam-filter')
 
