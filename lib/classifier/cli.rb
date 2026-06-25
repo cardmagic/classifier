@@ -387,8 +387,8 @@ module Classifier
       models = index['models']
 
       if model
-        name, info = models.find { |name, _| name == model }
-        if name.nil?
+        info = models[model]
+        if info.nil?
           @output << "No model #{model.inspect} found in registry"
           return
         end
@@ -402,7 +402,7 @@ module Classifier
         @output << format(
           "Name: %<name>s\nDescription: %<desc>s\nType: %<type>s\n" \
           "Categories: %<categories>s\nVersion: %<version>s\nAuthor: %<author>s\nSize: %<size>s",
-          name: name, desc: desc.slice(0, 40), type: type, categories: categories,
+          name: model, desc: desc, type: type, categories: categories,
           version: version, author: author, size: size
         )
         return
@@ -872,7 +872,7 @@ module Classifier
     # @rbs (String?) -> [String?, String?]
     def detect_registry_and_model(arg)
       return nil, nil if arg.nil?
-      return *arg.split(':') if arg.include?(':')
+      return *arg.split(':', 2) if arg.include?(':')
       return nil, arg unless arg.start_with?('@')
 
       [arg, nil]
