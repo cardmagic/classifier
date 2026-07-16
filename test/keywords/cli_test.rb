@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../test_helper'
 require 'classifier/keywords/cli'
 
@@ -62,6 +64,12 @@ module Keywords
     end
 
     def test_keywords_without_args
+      unless $stdin.tty?
+        skip(
+          'This test should be skipped if the stdin contains data, ' \
+          "i.e. the test is run like this: echo '' | bundle exec rake"
+        )
+      end
       result = run_cli
 
       assert_match('Keyword extraction and term analysis using TF-IDF', result[:output])

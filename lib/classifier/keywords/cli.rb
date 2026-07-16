@@ -123,7 +123,10 @@ module Classifier
       end
 
       def command_fit
-        @args.shift # remove 'fit'
+        # @type var streams: Array[IO | StringIO]
+        streams = []
+
+        @args.shift
 
         streams =
           if @args.empty?
@@ -141,28 +144,26 @@ module Classifier
         tfidf.fit_from_stream(Streaming::MultiIO.new(streams))
         tfidf.save_to_file(@options[:model])
         @output << "Saved to #{@options[:model].inspect}" unless @options[:quiet]
+      ensure
+        streams.each(&:close) unless @args.empty?
       end
 
       def command_extract
-        @args.shift # remove 'extract'
+        @args.shift
 
         document =
           if @args.empty?
             @stdin ? @stdin.to_s : $stdin.read
           else
             file = File.expand_path(@args.first)
-            if File.exist?(file)
-              File.read(file)
-            else
-              @args.first
-            end
+            File.exist?(file) ? File.read(file) : @args.first
           end
 
         transform(document)
       end
 
       def command_info
-        @args.shift # remove 'info'
+        @args.shift
 
         tfidf = TFIDF.load_from_file(@options[:model])
         documents = number_with_delimiter(tfidf.num_documents)
@@ -243,8 +244,8 @@ module Classifier
         @output << vector.map { |k, v| "#{k}:#{v}" }.join(' ')
       end
 
-      def number_with_delimiter(number, delemiter: ',')
-        number.to_s.reverse.scan(/\d{1,3}/).join(delemiter).reverse
+      def number_with_delimiter(number, delimiter: ',')
+        number.to_s.reverse.scan(/\d{1,3}/).join(delimiter).reverse
       end
     end
   end
