@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Force UTF-8 encoding for proper handling of model data and user input
+Encoding.default_external = Encoding::UTF_8
+Encoding.default_internal = Encoding::UTF_8
+
+require 'classifier/keywords/cli'
+
+result = Classifier::Keywords::CLI.new(ARGV).run
+
+warn result[:error] unless result[:error].empty?
+puts result[:output] unless result[:output].empty?
+
+exit result[:exit_code]

@@ -15,14 +15,14 @@ module Classifier
     class LineReader
       include Enumerable #[String]
 
-      # @rbs @io: IO
+      # @rbs @io: IO | Classifier::Streaming::MultiIO
       # @rbs @batch_size: Integer
 
       attr_reader :batch_size
 
       # Creates a new LineReader.
       #
-      # @rbs (IO, ?batch_size: Integer) -> void
+      # @rbs (IO | Classifier::Streaming::MultiIO, ?batch_size: Integer) -> void
       def initialize(io, batch_size: 100)
         @io = io
         @batch_size = batch_size
@@ -68,27 +68,29 @@ module Classifier
       def estimate_line_count(sample_size: 100)
         return nil unless @io.respond_to?(:size) && @io.respond_to?(:rewind)
 
+        io = @io #: ::IO
+
         begin
-          original_pos = @io.pos
-          @io.rewind
+          original_pos = io.pos
+          io.rewind
 
           sample_bytes = 0
           sample_lines = 0
 
           sample_size.times do
-            line = @io.gets
+            line = io.gets
             break unless line
 
             sample_bytes += line.bytesize
             sample_lines += 1
           end
 
-          @io.seek(original_pos)
+          io.seek(original_pos)
 
           return nil if sample_lines.zero?
 
           avg_line_size = sample_bytes.to_f / sample_lines
-          io_size = @io.__send__(:size) #: Integer
+          io_size = io.__send__(:size) #: Integer
           (io_size / avg_line_size).round
         rescue IOError, Errno::ESPIPE
           nil

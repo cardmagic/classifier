@@ -30,6 +30,7 @@ Metrics/BlockLength:
     - 'test/**/*'
     - 'lib/classifier/extensions/vector.rb'
     - 'lib/classifier/cli.rb'
+    - 'lib/classifier/keywords/cli.rb'
 
 # Allow longer methods in complex algorithms (SVD, etc.) and CLI
 Metrics/MethodLength:
@@ -39,6 +40,7 @@ Metrics/MethodLength:
     - 'lib/classifier/extensions/vector.rb'
     - 'lib/classifier/lsi/content_node.rb'
     - 'lib/classifier/cli.rb'
+    - 'lib/classifier/keywords/cli.rb'
 
 # Allow higher complexity for mathematical algorithms and CLI
 Metrics/AbcSize:
@@ -49,6 +51,7 @@ Metrics/AbcSize:
     - 'lib/classifier/lsi.rb'
     - 'lib/classifier/lsi/content_node.rb'
     - 'lib/classifier/cli.rb'
+    - 'lib/classifier/keywords/cli.rb'
 
 Metrics/CyclomaticComplexity:
   Max: 10
