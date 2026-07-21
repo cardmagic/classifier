@@ -12,6 +12,12 @@ class StringExtensionsTest < Minitest::Test
 
     assert_equal hash, "here are some good words of test's. I hope you love them!".clean_word_hash
   end
+
+  def test_stem_to_word_hash
+    hash = { rubi: 'ruby', program: 'programming', eleg: 'elegance', mean: 'means', defin: 'defines' }
+
+    assert_equal(hash, 'Ruby programming is elegant. Ruby means elegance. Elegance defines Ruby'.stem_to_word_hash)
+  end
 end
 
 class ArrayExtensionsTest < Minitest::Test

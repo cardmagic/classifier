@@ -8,6 +8,8 @@ require 'classifier'
 module Classifier
   module Keywords
     class CLI
+      class UsageError < StandardError; end
+
       # @rbs @args: Array[String]
       # @rbs @stdin: String?
       # @rbs @options: Hash[Symbol, untyped]
@@ -36,7 +38,8 @@ module Classifier
         parse_options
         execute_command
         { output: @output.join("\n"), error: @error.join("\n"), exit_code: @exit_code }
-      rescue OptionParser::InvalidOption, OptionParser::MissingArgument, OptionParser::InvalidArgument => e
+      rescue OptionParser::InvalidOption, OptionParser::MissingArgument,
+             OptionParser::InvalidArgument, UsageError => e
         @error << "Error: #{e.message}"
         @exit_code = 2
         { output: @output.join("\n"), error: @error.join("\n"), exit_code: @exit_code }
@@ -53,7 +56,7 @@ module Classifier
           opts.banner = 'Usage: keywords [text] [options] [command] [arguments]'
           opts.separator ''
           opts.separator 'Commands:'
-          opts.separator '  fit <files...>     Fit the model from files or stdin'
+          opts.separator '  fit <files...>     Fit the model from files or stdin (each line is treated as a separate document)'
           opts.separator '  extract <file>     Extract keywords from a file'
           opts.separator '  info               Show model information'
           opts.separator '  <text>             Get weighted terms from text'
@@ -65,6 +68,8 @@ module Classifier
           end
 
           opts.on('-n', '--top N', Integer, 'Show top N terms only') do |n|
+            raise OptionParser::InvalidArgument, 'must be positive' unless n.positive?
+
             @options[:top] = n
           end
 
@@ -77,10 +82,15 @@ module Classifier
           end
 
           opts.on('--ngram MIN,MAX', Array, 'N-gram range (default: 1,1)') do |range|
-            invalid_range = range.count != 2 || !range.all? { |n| n =~ /\d+/ }
-            raise OptionParser::InvalidArgument, 'must have only 2 integers' if invalid_range
+            raise OptionParser::InvalidArgument, 'requires exactly two values' if range.count != 2
 
-            @options[:ngram_range] = range.map(&:to_i)
+            raise OptionParser::InvalidArgument, 'must be integers' unless range.all? { |n| n =~ /\A\d+\z/ }
+
+            min, max = range.map(&:to_i)
+
+            raise OptionParser::InvalidArgument, 'bounds must be >= 1 and min <= max' if min < 1 || max < 1 || min > max
+
+            @options[:ngram_range] = [min, max]
           end
 
           opts.on('-q', 'Quiet mode') do
@@ -142,6 +152,9 @@ module Classifier
           ngram_range: @options[:ngram_range]
         )
         tfidf.fit_from_stream(Streaming::MultiIO.new(streams))
+
+        raise UsageError, 'No documents found to save the model' if tfidf.num_documents.zero?
+
         tfidf.save_to_file(@options[:model])
         @output << "Saved to #{@options[:model].inspect}" unless @options[:quiet]
       ensure
@@ -204,6 +217,8 @@ module Classifier
         @output << '  # Fit from stdin'
         @output << '  cat documents.txt | keywords fit'
         @output << ''
+        @output << '  # Keep in mind that each line is treated as a separate document.'
+        @output << ''
         @output << 'Then extract weighted terms and analyze text:'
         @output << ''
         @output << '  # Extract from string'
@@ -227,7 +242,6 @@ module Classifier
         @output << 'General Options:'
         @output << '  -m, --model FILE       Model file (default: ./keywords.json)'
         @output << '  -n, --top N            Show top N terms only (e.g. keywords -n 5 "text...")'
-        @output << '  -q                     Quiet mode (clean output for scripting/pipelines)'
         @output << ''
         @output << 'Fit-specific Options:'
         @output << '  --min-df N             Minimum document frequency (default: 1)'
@@ -238,10 +252,16 @@ module Classifier
       end
 
       def transform(document)
+        unless File.exist?(@options[:model])
+          raise UsageError, "No model found; run 'keywords fit' first or " \
+                            "pass correct model using the '-m' option."
+        end
+
+        stem_map = document.stem_to_word_hash
         tfidf = TFIDF.load_from_file(@options[:model])
         vector = tfidf.transform(document).sort_by { |_, v| v }.reverse
         vector = vector.first(@options[:top]) if @options[:top]
-        @output << vector.map { |k, v| "#{k}:#{v}" }.join(' ')
+        @output << vector.map { |k, v| "#{stem_map[k]}:#{v.round(2)}" }.join(' ')
       end
 
       def number_with_delimiter(number, delimiter: ',')

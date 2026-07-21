@@ -96,7 +96,7 @@ module Keywords
       assert_predicate File.size(@model_path), :positive?
     end
 
-    def test_fit_command_with_invalid_ngram
+    def test_fit_command_with_invalid_ngram_one_value
       result = run_cli(
         '-m', @model_path, '--min-df', '2', '--max-df', '0.5', '--ngram', '12',
         'fit',
@@ -104,7 +104,63 @@ module Keywords
       )
 
       assert_equal 2, result[:exit_code]
-      assert_match('must have only 2 integers', result[:error])
+      assert_match('requires exactly two values', result[:error])
+      refute_path_exists @model_path
+    end
+
+    def test_fit_command_with_invalid_ngram_three_value
+      result = run_cli(
+        '-m', @model_path, '--min-df', '2', '--max-df', '0.5', '--ngram', '1,2,3',
+        'fit',
+        stdin: 'Cats are independent and self-sufficient'
+      )
+
+      assert_equal 2, result[:exit_code]
+      assert_match('requires exactly two values', result[:error])
+      refute_path_exists @model_path
+    end
+
+    def test_fit_command_with_invalid_ngram_value_not_integers
+      result = run_cli(
+        '-m', @model_path, '--min-df', '2', '--max-df', '0.5', '--ngram', '1abc,2xyz',
+        'fit',
+        stdin: 'Cats are independent and self-sufficient'
+      )
+
+      assert_equal 2, result[:exit_code]
+      assert_match('must be integers', result[:error])
+      refute_path_exists @model_path
+    end
+
+    def test_fit_command_with_zero_ngram_bounds_error
+      result = run_cli(
+        '-m', @model_path, '--min-df', '2', '--max-df', '0.5', '--ngram', '0,1',
+        'fit',
+        stdin: 'Cats are independent and self-sufficient'
+      )
+
+      assert_equal 2, result[:exit_code]
+      assert_match('bounds must be >= 1 and min <= max', result[:error])
+      refute_path_exists @model_path
+    end
+
+    def test_fit_command_with_ngram_min_exceeds_max_error
+      result = run_cli(
+        '-m', @model_path, '--min-df', '2', '--max-df', '0.5', '--ngram', '2,1',
+        'fit',
+        stdin: 'Cats are independent and self-sufficient'
+      )
+
+      assert_equal 2, result[:exit_code]
+      assert_match('bounds must be >= 1 and min <= max', result[:error])
+      refute_path_exists @model_path
+    end
+
+    def test_fit_command_with_no_documents
+      result = run_cli('-m', @model_path, 'fit', stdin: '')
+
+      assert_equal 2, result[:exit_code]
+      assert_match('No documents found to save the model', result[:error])
       refute_path_exists @model_path
     end
 
@@ -113,9 +169,9 @@ module Keywords
       result = run_cli('-m', @model_path, '-n', '1', 'extract', 'Dogs and cats are great')
 
       assert_equal 0, result[:exit_code]
-      assert_match('great:0.680918560398684', result[:output])
-      refute_match('cat:0.5178561161676974', result[:output])
-      refute_match('dog:0.5178561161676974', result[:output])
+      assert_match('great:0.68', result[:output])
+      refute_match('cats:0.52', result[:output])
+      refute_match('dogs:0.52', result[:output])
     end
 
     def test_extract_command_stdin
@@ -123,9 +179,9 @@ module Keywords
       result = run_cli('-m', @model_path, '-n', '1', 'extract', stdin: 'Dogs and cats are great')
 
       assert_equal 0, result[:exit_code]
-      assert_match('great:0.680918560398684', result[:output])
-      refute_match('cat:0.5178561161676974', result[:output])
-      refute_match('dog:0.5178561161676974', result[:output])
+      assert_match('great:0.68', result[:output])
+      refute_match('cats:0.52', result[:output])
+      refute_match('dogs:0.52', result[:output])
     end
 
     def test_keywords_command
@@ -133,9 +189,9 @@ module Keywords
       result = run_cli('-m', @model_path, '-n', '1', 'Dogs and cats are great')
 
       assert_equal 0, result[:exit_code]
-      assert_match('great:0.680918560398684', result[:output])
-      refute_match('cat:0.5178561161676974', result[:output])
-      refute_match('dog:0.5178561161676974', result[:output])
+      assert_match('great:0.68', result[:output])
+      refute_match('cats:0.52', result[:output])
+      refute_match('dogs:0.52', result[:output])
     end
 
     def test_keywords_command_stdin
@@ -143,9 +199,34 @@ module Keywords
       result = run_cli('-m', @model_path, '-n', '1', stdin: 'Dogs and cats are great')
 
       assert_equal 0, result[:exit_code]
-      assert_match('great:0.680918560398684', result[:output])
-      refute_match('cat:0.5178561161676974', result[:output])
-      refute_match('dog:0.5178561161676974', result[:output])
+      assert_match('great:0.68', result[:output])
+      refute_match('cats:0.52', result[:output])
+      refute_match('dogs:0.52', result[:output])
+    end
+
+    def test_keywords_command_output_original_words
+      make_model
+      result = run_cli('-m', @model_path, 'Dogs and cats are great. Large dog. Smart dog')
+
+      assert_equal 0, result[:exit_code]
+      assert_match('great:0.38', result[:output])
+      assert_match('cats:0.29', result[:output])
+      assert_match('dog:0.88', result[:output])
+    end
+
+    def test_keywords_command_with_not_existing_model
+      result = run_cli('-m', @model_path, 'Dogs and cats are great')
+
+      assert_equal 2, result[:exit_code]
+      assert_match('No model found', result[:error])
+    end
+
+    def test_keywords_command_with_negative_top_option
+      make_model
+      result = run_cli('-m', @model_path, '-n', '-2', 'Dogs and cats are great')
+
+      assert_equal 2, result[:exit_code]
+      assert_match('must be positive', result[:error])
     end
 
     def test_info_command
