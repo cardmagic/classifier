@@ -138,13 +138,12 @@ module Classifier
 
         @args.shift
 
-        streams =
-          if @args.empty?
-            [@stdin ? StringIO.new(@stdin.to_s) : $stdin]
-          else
-            files = @args.map { |arg| Dir.glob(arg).map { |f| File.expand_path(f) } }.flatten.uniq
-            files.map { |f| File.open(f) }
-          end
+        if @args.empty?
+          streams = [@stdin ? StringIO.new(@stdin.to_s) : $stdin]
+        else
+          files = @args.map { |arg| Dir.glob(arg).map { |f| File.expand_path(f) } }.flatten.uniq
+          files.each { |f| streams << File.open(f) }
+        end
 
         tfidf = TFIDF.new(
           min_df: @options[:min_df],
