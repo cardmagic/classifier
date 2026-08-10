@@ -47,6 +47,31 @@ module Keywords
       tfidf.save_to_file(@model_path)
     end
 
+    def make_bigram_model
+      tfidf = Classifier::TFIDF.new(ngram_range: [1, 2])
+      tfidf.fit(
+        [
+          'Machine learning creates smart systems',
+          'Tech companies build machine learning tools',
+          'Modern machine learning relies heavily on advanced neural networks',
+          'Powerful machine learning drives advanced neural networks'
+        ]
+      )
+      tfidf.save_to_file(@model_path)
+    end
+
+    def make_min_word_len2_model
+      tfidf = Classifier::TFIDF.new(min_word_length: 2)
+      tfidf.fit(
+        [
+          'go to db',
+          'db is an elegant store',
+          'go build web apps'
+        ]
+      )
+      tfidf.save_to_file(@model_path)
+    end
+
     def test_help_flag
       result = run_cli('-h')
 
@@ -164,9 +189,22 @@ module Keywords
       refute_path_exists @model_path
     end
 
+    def test_extract_command_with_not_exists_input_file
+      make_model
+      file = File.join(@tmpdir, 'not_exists.txt')
+
+      result = run_cli('-m', @model_path, '-n', '1', 'extract', file)
+
+      assert_equal 2, result[:exit_code]
+      assert_match("Error: File \"#{file}\" does not exists", result[:error])
+    end
+
     def test_extract_command
       make_model
-      result = run_cli('-m', @model_path, '-n', '1', 'extract', 'Dogs and cats are great')
+      file = File.join(@tmpdir, 'a.txt')
+      File.write(file, 'Dogs and cats are great')
+
+      result = run_cli('-m', @model_path, '-n', '1', 'extract', file)
 
       assert_equal 0, result[:exit_code]
       assert_match('great:0.68', result[:output])
@@ -229,12 +267,43 @@ module Keywords
       assert_match('must be positive', result[:error])
     end
 
+    def test_keywords_command_with_bigram_model
+      make_bigram_model
+      result = run_cli('-m', @model_path, 'machine learning neural networks')
+
+      assert_equal 0, result[:exit_code]
+      assert_match('neural networks:0.48', result[:output])
+      assert_match('networks:0.48', result[:output])
+      assert_match('neural:0.48', result[:output])
+      assert_match('machine learning:0.32', result[:output])
+      assert_match('learning:0.32', result[:output])
+      assert_match('machine:0.32', result[:output])
+    end
+
+    def test_keywords_command_with_min_word_len2_model
+      make_min_word_len2_model
+      result = run_cli('-m', @model_path, 'go to db elegant store')
+
+      assert_equal 0, result[:exit_code]
+      assert_match('store:0.56', result[:output])
+      assert_match('elegant:0.56', result[:output])
+      assert_match('db:0.43', result[:output])
+      assert_match('go:0.43', result[:output])
+    end
+
     def test_info_command
       make_model
       result = run_cli('-m', @model_path, 'info')
 
       assert_equal 0, result[:exit_code]
       assert_match("Documents: 3\nVocabulary: 9\nMin DF: 1\nMax DF: 1.0", result[:output])
+    end
+
+    def test_info_command_with_not_existing_model
+      result = run_cli('-m', @model_path, 'info')
+
+      assert_equal 2, result[:exit_code]
+      assert_match('No model found', result[:error])
     end
   end
 end

@@ -168,13 +168,17 @@ module Classifier
             @stdin ? @stdin.to_s : $stdin.read
           else
             file = File.expand_path(@args.first)
-            File.exist?(file) ? File.read(file) : @args.first
+            raise UsageError, "File #{file.inspect} does not exists" unless File.exist?(file)
+
+            File.read(file)
           end
 
         transform(document)
       end
 
       def command_info
+        ensure_model_exists!
+
         @args.shift
 
         tfidf = TFIDF.load_from_file(@options[:model])
@@ -251,16 +255,24 @@ module Classifier
       end
 
       def transform(document)
-        unless File.exist?(@options[:model])
-          raise UsageError, "No model found; run 'keywords fit' first or " \
-                            "pass correct model using the '-m' option."
-        end
+        ensure_model_exists!
 
         stem_map = document.stem_to_word_hash
         tfidf = TFIDF.load_from_file(@options[:model])
         vector = tfidf.transform(document).sort_by { |_, v| v }.reverse
         vector = vector.first(@options[:top]) if @options[:top]
-        @output << vector.map { |k, v| "#{stem_map[k]}:#{v.round(2)}" }.join(' ')
+        @output << vector.map { |k, v| "#{label_for(k, stem_map)}:#{v.round(2)}" }.join(' ')
+      end
+
+      def ensure_model_exists!
+        return if File.exist?(@options[:model])
+
+        raise UsageError, "No model found; run 'keywords fit' first or " \
+                          "pass correct model using the '-m' option."
+      end
+
+      def label_for(key, stem_map)
+        key.to_s.split('_').map { |part| stem_map[part.to_sym] || part }.join(' ')
       end
 
       def number_with_delimiter(number, delimiter: ',')
