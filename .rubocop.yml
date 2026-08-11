@@ -59,6 +59,7 @@ Metrics/CyclomaticComplexity:
     - 'lib/classifier/extensions/vector.rb'
     - 'lib/classifier/lsi/content_node.rb'
     - 'lib/classifier/cli.rb'
+    - 'lib/classifier/keywords/cli.rb'
 
 Metrics/PerceivedComplexity:
   Max: 10

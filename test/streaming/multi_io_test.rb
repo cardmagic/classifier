@@ -33,4 +33,24 @@ class MultiIOTest < Minitest::Test
 
     assert_equal '112233445566778899', lines.join
   end
+
+  def test_each_line_if_given_path_as_strings
+    Dir.mktmpdir do |dir|
+      a = File.join(dir, 'a.txt')
+      b = File.join(dir, 'b.txt')
+      io = StringIO.new("333\n")
+
+      File.write(a, "111\n222\n")
+      File.write(b, "444\n")
+
+      stream = Classifier::Streaming::MultiIO.new([a, io, b])
+
+      lines = []
+      stream.each_line do |line|
+        lines << line.chomp
+      end
+
+      assert_equal '111222333444', lines.join
+    end
+  end
 end

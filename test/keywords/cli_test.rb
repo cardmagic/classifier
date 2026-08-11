@@ -54,7 +54,8 @@ module Keywords
           'Machine learning creates smart systems',
           'Tech companies build machine learning tools',
           'Modern machine learning relies heavily on advanced neural networks',
-          'Powerful machine learning drives advanced neural networks'
+          'Powerful machine learning drives advanced neural networks',
+          'machine_learning neural_networks'
         ]
       )
       tfidf.save_to_file(@model_path)
@@ -181,6 +182,28 @@ module Keywords
       refute_path_exists @model_path
     end
 
+    def test_fit_command_with_negative_min_df
+      result = run_cli(
+        '-m', @model_path, '--min-df', '-2', 'fit',
+        stdin: 'Cats are independent and self-sufficient'
+      )
+
+      assert_equal 2, result[:exit_code]
+      assert_match('must be non-negative', result[:error])
+      refute_path_exists @model_path
+    end
+
+    def test_fit_command_with_out_of_bounds_max_df
+      result = run_cli(
+        '-m', @model_path, '--max-df', '9.9', 'fit',
+        stdin: 'Cats are independent and self-sufficient'
+      )
+
+      assert_equal 2, result[:exit_code]
+      assert_match('must be between 0.0 and 1.0', result[:error])
+      refute_path_exists @model_path
+    end
+
     def test_fit_command_with_no_documents
       result = run_cli('-m', @model_path, 'fit', stdin: '')
 
@@ -196,7 +219,7 @@ module Keywords
       result = run_cli('-m', @model_path, '-n', '1', 'extract', file)
 
       assert_equal 2, result[:exit_code]
-      assert_match("Error: File \"#{file}\" does not exists", result[:error])
+      assert_match("Error: File \"#{file}\" does not exist", result[:error])
     end
 
     def test_extract_command
@@ -272,12 +295,20 @@ module Keywords
       result = run_cli('-m', @model_path, 'machine learning neural networks')
 
       assert_equal 0, result[:exit_code]
-      assert_match('neural networks:0.48', result[:output])
-      assert_match('networks:0.48', result[:output])
-      assert_match('neural:0.48', result[:output])
-      assert_match('machine learning:0.32', result[:output])
-      assert_match('learning:0.32', result[:output])
-      assert_match('machine:0.32', result[:output])
+      assert_match('networks:0.49', result[:output])
+      assert_match('neural:0.49', result[:output])
+      assert_match('neural networks:0.41', result[:output])
+      assert_match('machine learning:0.34', result[:output])
+      assert_match('learning:0.34', result[:output])
+      assert_match('machine:0.34', result[:output])
+    end
+
+    def test_keywords_command_with_bigram_model_and_snake_case_input
+      make_bigram_model
+      result = run_cli('-m', @model_path, 'machine_learning neural networks')
+
+      assert_equal 0, result[:exit_code]
+      assert_match('machine_learning:0.6', result[:output])
     end
 
     def test_keywords_command_with_min_word_len2_model

@@ -74,10 +74,14 @@ module Classifier
           end
 
           opts.on('--min-df N', Integer, 'Minimum document frequency (default: 1)') do |n|
+            raise OptionParser::InvalidArgument, 'must be non-negative' if n.negative?
+
             @options[:min_df] = n
           end
 
           opts.on('--max-df N', Float, 'Maximum document frequency ratio (default: 1.0)') do |n|
+            raise OptionParser::InvalidArgument, 'must be between 0.0 and 1.0' unless n.between?(0.0, 1.0)
+
             @options[:max_df] = n
           end
 
@@ -133,31 +137,32 @@ module Classifier
       end
 
       def command_fit
-        # @type var streams: Array[IO | StringIO]
-        streams = []
-
         @args.shift
 
-        if @args.empty?
-          streams = [@stdin ? StringIO.new(@stdin.to_s) : $stdin]
-        else
-          files = @args.map { |arg| Dir.glob(arg).map { |f| File.expand_path(f) } }.flatten.uniq
-          files.each { |f| streams << File.open(f) }
-        end
+        # @type var sources: Array[IO | StringIO | String]
+        sources =
+          if @args.empty?
+            [@stdin ? StringIO.new(@stdin.to_s) : $stdin]
+          else
+            @args.flat_map do |arg|
+              matches = Dir.glob(arg)
+              raise UsageError, "No files matched #{arg.inspect}" if matches.empty?
+
+              matches.map { |f| File.expand_path(f) }
+            end.uniq
+          end
 
         tfidf = TFIDF.new(
           min_df: @options[:min_df],
           max_df: @options[:max_df],
           ngram_range: @options[:ngram_range]
         )
-        tfidf.fit_from_stream(Streaming::MultiIO.new(streams))
+        tfidf.fit_from_stream(Streaming::MultiIO.new(sources))
 
         raise UsageError, 'No documents found to save the model' if tfidf.num_documents.zero?
 
         tfidf.save_to_file(@options[:model])
         @output << "Saved to #{@options[:model].inspect}" unless @options[:quiet]
-      ensure
-        streams.each(&:close) unless @args.empty?
       end
 
       def command_extract
@@ -168,7 +173,7 @@ module Classifier
             @stdin ? @stdin.to_s : $stdin.read
           else
             file = File.expand_path(@args.first)
-            raise UsageError, "File #{file.inspect} does not exists" unless File.exist?(file)
+            raise UsageError, "File #{file.inspect} does not exist" unless File.exist?(file)
 
             File.read(file)
           end
@@ -272,7 +277,9 @@ module Classifier
       end
 
       def label_for(key, stem_map)
-        key.to_s.split('_').map { |part| stem_map[part.to_sym] || part }.join(' ')
+        stem_map.fetch(key.to_sym) do
+          key.to_s.split('_').map { |part| stem_map[part.to_sym] || part }.join(' ')
+        end
       end
 
       def number_with_delimiter(number, delimiter: ',')
