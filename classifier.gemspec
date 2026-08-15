@@ -20,7 +20,7 @@ Gem::Specification.new do |s|
   s.required_ruby_version = '>= 3.1'
   s.files = Dir['{lib,sig,exe}/**/*.{rb,rbs}', 'ext/**/*.{c,h,rb}', 'exe/*', 'bin/*', 'LICENSE', '*.md', 'test/*']
   s.bindir = 'exe'
-  s.executables = ['classifier']
+  s.executables = %w[classifier keywords]
   s.extensions = ['ext/classifier/extconf.rb']
   s.license = 'LGPL'
 

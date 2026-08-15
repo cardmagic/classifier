@@ -63,6 +63,49 @@ classifier "Great product, highly recommend"
 # => positive
 ```
 
+Extract keywords and analyze term importance using TF-IDF instantly:
+
+```bash
+# Extract from a raw string
+keywords "Ruby is a programming language"
+# => ruby:0.52 programming:0.41 language:0.38
+
+# Extract from a file
+keywords extract article.txt
+# => machine:0.61 learning:0.58 neural:0.45 network:0.42
+
+# Pipeline with stdin and web data
+curl -s https://example.com/article | keywords extract
+
+# Get top 5 terms only
+keywords -n 5 "long document with many terms..."
+
+# Use a custom model file
+keywords -m custom_model.json "Ruby is a programming language"
+```
+
+Build your own vocabulary (fit data):
+```bash
+# Fit from multiple files
+keywords fit corpus/*.txt
+
+# Fit from stdin (each line is treated as a separate document)
+cat documents.txt | keywords fit
+
+# Tune vocabulary filters during fitting
+keywords fit --min-df 2 --max-df 0.85 --ngram 1,2 corpus/*.txt
+```
+
+Inspect your model:
+```bash
+# Check model statistics and parameters
+keywords info
+# => Documents: 1,234
+# => Vocabulary: 5,678
+# => Min DF: 1
+# => Max DF: 1.0
+```
+
 [CLI Guide →](https://rubyclassifier.com/docs/guides/cli/basics)
 
 ### Claude Code Plugin

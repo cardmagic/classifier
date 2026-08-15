@@ -30,7 +30,7 @@ module Classifier
     # @rbs @storage: Storage::Base?
     # @rbs @min_word_length: Integer
 
-    attr_reader :vocabulary, :idf, :num_documents
+    attr_reader :vocabulary, :idf, :num_documents, :min_df, :max_df
     attr_accessor :storage
 
     # Creates a new TF-IDF vectorizer.
@@ -285,7 +285,8 @@ module Classifier
     #     puts "#{progress.completed} documents loaded"
     #   end
     #
-    # @rbs (IO, ?batch_size: Integer) { (Streaming::Progress) -> void } -> self
+    # @rbs (IO | Classifier::Streaming::MultiIO, ?batch_size: Integer) -> self
+    # @rbs (IO | Classifier::Streaming::MultiIO, ?batch_size: Integer) { (Streaming::Progress) -> void } -> self
     def fit_from_stream(io, batch_size: Streaming::DEFAULT_BATCH_SIZE)
       reader = Streaming::LineReader.new(io, batch_size: batch_size)
       total = reader.estimate_line_count

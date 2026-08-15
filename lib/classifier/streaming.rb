@@ -2,6 +2,7 @@
 
 require_relative 'streaming/progress'
 require_relative 'streaming/line_reader'
+require_relative 'streaming/multi_io'
 
 module Classifier
   # Streaming module provides memory-efficient training capabilities for classifiers.

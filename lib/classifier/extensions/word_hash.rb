@@ -33,6 +33,12 @@ class String
     word_hash_for_words(gsub(/[^\w\s]/, '').split, min_word_length)
   end
 
+  # Builds a mapping between stemmed roots and their most frequent original words.
+  # @rbs (?Integer) -> Hash[Symbol, String]
+  def stem_to_word_hash(min_word_length = 3)
+    mapping_stem_to_word_for_words(gsub(/[^\w\s]/, '').split, min_word_length)
+  end
+
   private
 
   # @rbs (Array[String], Integer) -> Hash[Symbol, Integer]
@@ -52,6 +58,20 @@ class String
       d[word.intern] += 1
     end
     d
+  end
+
+  # @rbs (Array[String], Integer) -> Hash[Symbol, Integer]
+  def mapping_stem_to_word_for_words(words, min_word_length)
+    h = {}
+    words.map { _1.tap(&:downcase!) }.tally.each do |word, count|
+      next unless !CORPUS_SKIP_WORDS.include?(word) && word.length >= min_word_length
+
+      stem = word.stem.intern
+      h[stem] ||= [word, count]
+      h[stem] = [word, count] if h.dig(stem, 1) < count
+    end
+    h.each_key { |k| h[k] = h[k].first }
+    h
   end
 
   CORPUS_SKIP_WORDS = ::Set.new(%w[
