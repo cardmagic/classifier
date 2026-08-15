@@ -27,7 +27,7 @@ gem 'classifier'
 Or install via Homebrew for CLI-only usage:
 
 ```bash
-brew install cardmagic/tap/classifier
+brew install classifier
 ```
 
 ## Command Line
