@@ -21,6 +21,18 @@
   frequent original word in the text.
 - Add the `min_df` and `max_df` readers to `Classifier::TFIDF`.
 - Accept a `MultiIO` in `TFIDF#fit_from_stream` and `Streaming::LineReader`.
+- Fix `Marshal` support in `Classifier::Bayes`. The dump left out
+  `min_word_length`, so the restored classifier raised
+  `ArgumentError: comparison of Integer with nil failed` on its first
+  `classify`. A dump written by an older version still loads, and takes the
+  configured default.
+- Fix `LSI#highest_relative_content`, which returned an Enumerator rather than
+  the documented array of documents.
+- Fix `LSI#highest_ranked_stems`, which repeated one stem when the document
+  vector held equal weights. It looked up each weight by value, so tied weights
+  all resolved to the same index.
+- Add a `docs/` reference for the command line tools, each classifier,
+  persistence, streaming, and configuration.
 
 ## 2.6.0 - 2026-06-25
 

@@ -279,14 +279,17 @@ module Classifier
     # Custom marshal serialization to exclude mutex state
     # @rbs () -> Array[untyped]
     def marshal_dump
-      [@categories, @total_words, @category_counts, @category_word_count, @dirty]
+      [@categories, @total_words, @category_counts, @category_word_count, @dirty,
+       @min_word_length]
     end
 
     # Custom marshal deserialization to recreate mutex
     # @rbs (Array[untyped]) -> void
     def marshal_load(data)
       mu_initialize
-      @categories, @total_words, @category_counts, @category_word_count, @dirty = data
+      @categories, @total_words, @category_counts, @category_word_count, @dirty,
+        @min_word_length = data
+      @min_word_length ||= Classifier.config.min_word_length
       @cached_training_count = nil
       @cached_vocab_size = nil
       @storage = nil

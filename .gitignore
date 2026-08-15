@@ -25,6 +25,7 @@ mkmf.log
 # OS files
 .DS_Store
 
-# Claude Code local settings
-.claude/
+# Claude Code local settings, except tracked project skills
+.claude/*
+!.claude/skills/
 sig/generated/

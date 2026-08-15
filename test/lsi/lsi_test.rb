@@ -270,6 +270,33 @@ class LSITest < Minitest::Test
     assert_equal %i[dog text deal], lsi.highest_ranked_stems(@str1)
   end
 
+  def test_highest_ranked_stems_returns_distinct_stems
+    lsi = Classifier::LSI.new
+    lsi.add(dog: 'dog puppy canine bark fetch loyal', cat: 'cat kitten feline meow purr independent')
+    lsi.add_item 'bird sparrow robin fly nest feather', 'Bird'
+
+    stems = lsi.highest_ranked_stems('dog puppy canine bark fetch loyal', 3)
+
+    assert_equal 3, stems.size
+    assert_equal stems.uniq, stems
+  end
+
+  def test_highest_relative_content_returns_an_array
+    lsi = Classifier::LSI.new
+    lsi.add_item @str1, 'Dog'
+    lsi.add_item @str2, 'Dog'
+    lsi.add_item @str3, 'Cat'
+
+    result = lsi.highest_relative_content(2)
+
+    assert_kind_of Array, result
+    assert_equal 2, result.size
+  end
+
+  def test_highest_relative_content_is_empty_before_a_build
+    assert_empty Classifier::LSI.new.highest_relative_content(2)
+  end
+
   def test_summary
     summary = [@str1, @str2, @str3, @str4, @str5].join.summary(2)
     # Summary should contain 2 sentences separated by [...]

@@ -6,7 +6,7 @@
 
 Text classification in Ruby. Five algorithms, native performance, streaming support.
 
-**[Documentation](https://rubyclassifier.com/docs)** · **[Tutorials](https://rubyclassifier.com/docs/tutorials)** · **[API Reference](https://rubydoc.info/gems/classifier)**
+**[Reference](docs/)** · **[Documentation](https://rubyclassifier.com/docs)** · **[Tutorials](https://rubyclassifier.com/docs/tutorials)** · **[API Reference](https://rubydoc.info/gems/classifier)**
 
 ## Why This Library?
 
@@ -32,7 +32,7 @@ brew install cardmagic/tap/classifier
 
 ## Command Line
 
-Classify text instantly with pre-trained models—no coding required:
+Classify text instantly with pre-trained models. No code required:
 
 ```bash
 # Detect spam
@@ -63,42 +63,46 @@ classifier "Great product, highly recommend"
 # => positive
 ```
 
-Extract keywords and analyze term importance using TF-IDF instantly:
+The `keywords` command scores term importance with TF-IDF. It has no
+pre-trained models, so build a vocabulary first. Every later command reads
+that model:
 
 ```bash
-# Extract from a raw string
-keywords "Ruby is a programming language"
-# => ruby:0.52 programming:0.41 language:0.38
+# Fit from multiple files. Each line becomes a separate document.
+keywords fit corpus/*.txt
+# => Saved to "/path/to/keywords.json"
 
-# Extract from a file
+# Fit from stdin
+cat documents.txt | keywords fit
+
+# Tune the vocabulary filters during the fit
+keywords fit --min-df 2 --max-df 0.85 --ngram 1,2 corpus/*.txt
+```
+
+Then score any text against that vocabulary:
+
+```bash
+# Score a raw string
+keywords "Ruby is a programming language"
+# => language:0.58 programming:0.58 ruby:0.58
+
+# Score a file
 keywords extract article.txt
-# => machine:0.61 learning:0.58 neural:0.45 network:0.42
+# => machine:0.58 network:0.47 neural:0.47 learning:0.47
 
 # Pipeline with stdin and web data
 curl -s https://example.com/article | keywords extract
 
-# Get top 5 terms only
+# Get the top 5 terms only
 keywords -n 5 "long document with many terms..."
 
-# Use a custom model file
+# Use a different model file
 keywords -m custom_model.json "Ruby is a programming language"
 ```
 
-Build your own vocabulary (fit data):
+Inspect the model:
+
 ```bash
-# Fit from multiple files
-keywords fit corpus/*.txt
-
-# Fit from stdin (each line is treated as a separate document)
-cat documents.txt | keywords fit
-
-# Tune vocabulary filters during fitting
-keywords fit --min-df 2 --max-df 0.85 --ngram 1,2 corpus/*.txt
-```
-
-Inspect your model:
-```bash
-# Check model statistics and parameters
 keywords info
 # => Documents: 1,234
 # => Vocabulary: 5,678
@@ -106,7 +110,14 @@ keywords info
 # => Max DF: 1.0
 ```
 
-[CLI Guide →](https://rubyclassifier.com/docs/guides/cli/basics)
+The output maps stems back to whole words, so a model built from `programming`
+prints `programming`, not `program`. An n-gram label joins its parts with a
+space, as in `machine learning:0.35`.
+
+Run `keywords --help` for the full option list. A usage error exits 2 and any
+other error exits 1, so scripts can tell the two apart.
+
+[keywords reference →](docs/keywords.md) · [CLI Guide →](https://rubyclassifier.com/docs/guides/cli/basics)
 
 ### Claude Code Plugin
 
@@ -143,6 +154,7 @@ classifier.classify("Cheap pills!")  # => "Spam"
 classifier = Classifier::LogisticRegression.new(:positive, :negative)
 classifier.train(positive: "love amazing great wonderful")
 classifier.train(negative: "hate terrible awful bad")
+classifier.fit                     # required before the first classify
 classifier.classify("I love it!")  # => "Positive"
 ```
 [Logistic Regression Guide →](https://rubyclassifier.com/docs/guides/logisticregression/basics)
@@ -171,7 +183,7 @@ knn.classify("programming code")  # => "tech"
 ```ruby
 tfidf = Classifier::TFIDF.new
 tfidf.fit(["Ruby is great", "Python is great", "Ruby on Rails"])
-tfidf.transform("Ruby programming")  # => {:rubi => 1.0}
+tfidf.transform("Ruby programming")  # => {rubi: 1.0}
 ```
 [TF-IDF Guide →](https://rubyclassifier.com/docs/guides/tfidf/basics)
 
@@ -179,19 +191,29 @@ tfidf.transform("Ruby programming")  # => {:rubi => 1.0}
 
 ### Incremental LSI
 
-Add documents without rebuilding the entire index—400x faster for streaming data:
+Add documents without a rebuild of the whole index. Turn `auto_rebuild` off, add
+the starting corpus, then build once:
 
 ```ruby
-lsi = Classifier::LSI.new(incremental: true)
-lsi.add(tech: ["Ruby is elegant", "Python is popular"])
+lsi = Classifier::LSI.new(incremental: true, auto_rebuild: false)
+lsi.add(tech: [
+  "Ruby is an elegant programming language for web development",
+  "Python is a popular programming language for data science",
+  "JavaScript runs in browsers and powers modern web applications",
+  "Java is a compiled language used for enterprise backend systems",
+  "Rust provides memory safety without a garbage collector runtime"
+])
 lsi.build_index
 
-# These use Brand's algorithm—no full rebuild
-lsi.add(tech: "Go is fast")
-lsi.add(tech: "Rust is safe")
+# This uses Brand's algorithm. No full rebuild.
+lsi.add(tech: "Go is a fast compiled language for backend systems")
+lsi.incremental_enabled?  # => true
 ```
 
-[Learn more →](https://rubyclassifier.com/docs/guides/lsi/basics)
+Incremental mode needs the starting corpus in place before the first build, and
+it falls back to a full rebuild when one document grows the vocabulary too far.
+
+[Incremental LSI →](docs/lsi.md#incremental-mode) · [Learn more →](https://rubyclassifier.com/docs/guides/lsi/basics)
 
 ### Persistence
 
