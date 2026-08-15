@@ -138,8 +138,9 @@ $ classifier -m lsi related article.txt
 ## Using both commands together
 
 `classifier` and `keywords` answer different questions about the same text.
-`classifier` gives a category. `keywords` gives the terms that carry the text.
-Run them side by side to see the label and the reason behind it.
+`classifier` gives a category. `keywords` names the terms that make the text
+distinctive against its corpus. Run them side by side to read a label together
+with what the document is about.
 
 Fit a vocabulary from the same corpus you train on, and the two views line up:
 
@@ -169,8 +170,26 @@ $ keywords -m reviews.json -n 5 "Broken on arrival, awful quality and useless cu
 useless:0.4 awful:0.4 arrival:0.4 broken:0.4 service:0.34
 ```
 
-The first line is the verdict. The second says which terms drove it, which is
-what you need when a classification surprises you.
+The first line is the verdict. The second is the document in shorthand, which
+tells you what the classifier was reading when a result surprises you.
+
+**The second line is not an explanation of the first.** The two commands hold
+separate models. `keywords` reports TF-IDF weight, which measures how well a
+term separates this document from the rest of the corpus. It never sees the
+classifier, and it does not know which category a term favors. A term can top
+the list and carry no weight in the decision.
+
+Read it as context, not as attribution. When a label looks wrong, the terms
+tell you whether the document says what you assumed, which is usually the real
+problem. For the weights a model actually holds, use
+`Classifier::LogisticRegression#weights` from Ruby, which returns the learned
+weight per term and per category:
+
+```ruby
+classifier.weights("positive", limit: 5)
+```
+
+No command line flag reports per-term weights for a Bayes model.
 
 ### Find the words your corpus wastes on itself
 
@@ -264,7 +283,8 @@ positive:0.21 negative:0.79        # weaker, from the top terms alone
 Confidence drops from 0.92 to 0.79. TF-IDF ranks a term by how much it
 distinguishes one document from the rest of the corpus, which is not the same
 as how much it signals a category. Here it puts `arrived` first, a neutral
-word about delivery. Classify the full text and use `keywords` to explain it.
+word about delivery. Classify the full text, and read `keywords` alongside it
+for context rather than for attribution.
 
 ## Install without Ruby
 
