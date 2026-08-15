@@ -144,12 +144,7 @@ module Classifier
           if @args.empty?
             [@stdin ? StringIO.new(@stdin.to_s) : $stdin]
           else
-            @args.flat_map do |arg|
-              matches = Dir.glob(arg)
-              raise UsageError, "No files matched #{arg.inspect}" if matches.empty?
-
-              matches.map { |f| File.expand_path(f) }
-            end.uniq
+            collect_files
           end
 
         tfidf = TFIDF.new(
@@ -165,6 +160,19 @@ module Classifier
         @output << "Saved to #{@options[:model].inspect}" unless @options[:quiet]
       end
 
+      def collect_files
+        files = @args.flat_map do |arg|
+          matches = Dir.glob(arg)
+          raise UsageError, "No files matched #{arg.inspect}" if matches.empty?
+
+          matches.select { |f| File.file?(f) }.map { |f| File.expand_path(f) }
+        end.uniq
+
+        raise UsageError, 'No files to fit' if files.empty?
+
+        files
+      end
+
       def command_extract
         @args.shift
 
@@ -174,6 +182,7 @@ module Classifier
           else
             file = File.expand_path(@args.first)
             raise UsageError, "File #{file.inspect} does not exist" unless File.exist?(file)
+            raise UsageError, "#{file.inspect} is a directory, not a file" if File.directory?(file)
 
             File.read(file)
           end
