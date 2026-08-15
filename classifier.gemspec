@@ -15,10 +15,11 @@ Gem::Specification.new do |s|
     'documentation_uri' => 'https://rubyclassifier.com/docs',
     'source_code_uri' => 'https://github.com/cardmagic/classifier',
     'bug_tracker_uri' => 'https://github.com/cardmagic/classifier/issues',
-    'changelog_uri' => 'https://github.com/cardmagic/classifier/releases'
+    'changelog_uri' => 'https://github.com/cardmagic/classifier/blob/master/CHANGELOG.md'
   }
   s.required_ruby_version = '>= 3.1'
-  s.files = Dir['{lib,sig,exe}/**/*.{rb,rbs}', 'ext/**/*.{c,h,rb}', 'exe/*', 'bin/*', 'LICENSE', '*.md', 'test/*']
+  s.files = Dir['{lib,sig,exe}/**/*.{rb,rbs}', 'ext/**/*.{c,h,rb}', 'exe/*', 'bin/*', 'LICENSE',
+                'README.md', 'CHANGELOG.md', 'test/*']
   s.bindir = 'exe'
   s.executables = %w[classifier keywords]
   s.extensions = ['ext/classifier/extconf.rb']
