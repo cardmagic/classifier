@@ -118,7 +118,23 @@ space, as in `machine learning:0.35`.
 Run `keywords --help` for the full option list. A usage error exits 2 and any
 other error exits 1, so scripts can tell the two apart.
 
-[keywords reference →](docs/keywords.md) · [CLI Guide →](https://rubyclassifier.com/docs/guides/cli/basics)
+Run the two commands side by side to read a label together with the terms that
+make the text distinctive:
+
+```bash
+classifier -f reviews-model.json -p "Broken on arrival, awful quality"
+# => positive:0.12 negative:0.88
+
+keywords -m reviews.json -n 5 "Broken on arrival, awful quality"
+# => awful:0.52 arrival:0.52 broken:0.52 quality:0.44
+```
+
+They keep separate models in separate formats, so `classifier` takes `-f` and
+`keywords` takes `-m`, and neither reads the other's file. The terms are
+context, not an explanation of the label: TF-IDF measures how well a term
+separates a document from its corpus, not how much it favors a category.
+
+[Using both commands →](docs/cli.md#using-both-commands-together) · [keywords reference →](docs/keywords.md) · [CLI Guide →](https://rubyclassifier.com/docs/guides/cli/basics)
 
 ### Claude Code Plugin
 
