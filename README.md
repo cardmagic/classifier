@@ -118,7 +118,20 @@ space, as in `machine learning:0.35`.
 Run `keywords --help` for the full option list. A usage error exits 2 and any
 other error exits 1, so scripts can tell the two apart.
 
-[keywords reference →](docs/keywords.md) · [CLI Guide →](https://rubyclassifier.com/docs/guides/cli/basics)
+Run the two commands side by side to get the label and the reason for it:
+
+```bash
+classifier -f reviews-model.json -p "Broken on arrival, awful quality"
+# => positive:0.12 negative:0.88
+
+keywords -m reviews.json -n 5 "Broken on arrival, awful quality"
+# => awful:0.52 arrival:0.52 broken:0.52 quality:0.44
+```
+
+They keep separate models in separate formats, so `classifier` takes `-f` and
+`keywords` takes `-m`, and neither reads the other's file.
+
+[Using both commands →](docs/cli.md#using-both-commands-together) · [keywords reference →](docs/keywords.md) · [CLI Guide →](https://rubyclassifier.com/docs/guides/cli/basics)
 
 ### Claude Code Plugin
 
