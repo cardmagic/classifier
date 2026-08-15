@@ -634,4 +634,35 @@ class BayesianTest < Minitest::Test
       assert_equal 'Uninteresting', loaded.classify('boring content')
     end
   end
+
+  def test_marshal_round_trip_can_classify
+    @classifier.train_interesting 'here are some good words'
+    @classifier.train_uninteresting 'here are some bad words'
+
+    loaded = Marshal.load(Marshal.dump(@classifier))
+
+    assert_equal 'Interesting', loaded.classify('good')
+  end
+
+  def test_marshal_round_trip_keeps_min_word_length
+    classifier = Classifier::Bayes.new('Interesting', 'Uninteresting', min_word_length: 2)
+    classifier.train_interesting 'go db ok'
+    classifier.train_uninteresting 'be at up'
+
+    loaded = Marshal.load(Marshal.dump(classifier))
+
+    assert_equal 2, loaded.instance_variable_get(:@min_word_length)
+    assert_equal 'Interesting', loaded.classify('go db')
+  end
+
+  def test_marshal_load_tolerates_a_payload_without_min_word_length
+    @classifier.train_interesting 'here are some good words'
+    legacy = @classifier.marshal_dump[0, 5]
+
+    loaded = Classifier::Bayes.allocate
+    loaded.marshal_load(legacy)
+
+    assert_equal Classifier.config.min_word_length,
+                 loaded.instance_variable_get(:@min_word_length)
+  end
 end

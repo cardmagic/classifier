@@ -348,7 +348,7 @@ module Classifier
         avg_density = {}
         @items.each_key { |x| avg_density[x] = proximity_array_for_content_unlocked(x).sum { |pair| pair[1] } }
 
-        avg_density.keys.sort_by { |x| avg_density[x] }.reverse[0..(max_chunks - 1)].map
+        avg_density.keys.sort_by { |x| avg_density[x] }.reverse[0..(max_chunks - 1)]
       end
     end
 
@@ -480,8 +480,8 @@ module Classifier
         raise 'Requested stem ranking on non-indexed content!' unless @items[doc]
 
         arr = node_for_content_unlocked(doc).lsi_vector.to_a
-        top_n = arr.sort.reverse[0..(count - 1)]
-        top_n.collect { |x| @word_list.word_for_index(arr.index(x)) }
+        top_indices = arr.each_index.sort_by { |index| -arr[index] }.first(count)
+        top_indices.collect { |index| @word_list.word_for_index(index) }
       end
     end
 
