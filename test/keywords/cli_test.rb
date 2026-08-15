@@ -212,6 +212,49 @@ module Keywords
       refute_path_exists @model_path
     end
 
+    def test_fit_command_skips_directories_matched_by_a_glob
+      make_articles
+      FileUtils.mkdir_p(File.join(@tmpdir, 'articles', 'nested'))
+
+      result = run_cli('-m', @model_path, 'fit', *Dir.glob(File.join(@tmpdir, 'articles/*')))
+
+      assert_equal 0, result[:exit_code]
+      assert_predicate File.size(@model_path), :positive?
+    end
+
+    def test_fit_command_with_directory_argument
+      dir = File.join(@tmpdir, 'articles')
+      FileUtils.mkdir_p(dir)
+
+      result = run_cli('-m', @model_path, 'fit', dir)
+
+      assert_equal 2, result[:exit_code]
+      assert_match('Error: No files to fit', result[:error])
+      refute_path_exists @model_path
+    end
+
+    def test_fit_command_with_not_exists_input_file
+      make_articles
+      missing = File.join(@tmpdir, 'articles', 'not_exists.txt')
+
+      result = run_cli('-m', @model_path, 'fit', File.join(@tmpdir, 'articles/a1.txt'), missing)
+
+      assert_equal 2, result[:exit_code]
+      assert_match("Error: No files matched #{missing.inspect}", result[:error])
+      refute_path_exists @model_path
+    end
+
+    def test_extract_command_with_directory_input
+      make_model
+      dir = File.join(@tmpdir, 'articles')
+      FileUtils.mkdir_p(dir)
+
+      result = run_cli('-m', @model_path, 'extract', dir)
+
+      assert_equal 2, result[:exit_code]
+      assert_match("Error: #{dir.inspect} is a directory, not a file", result[:error])
+    end
+
     def test_extract_command_with_not_exists_input_file
       make_model
       file = File.join(@tmpdir, 'not_exists.txt')
