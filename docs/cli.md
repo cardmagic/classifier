@@ -140,5 +140,5 @@ $ classifier -m lsi related article.txt
 Homebrew installs the command line tools on their own:
 
 ```bash
-brew install cardmagic/tap/classifier
+brew install classifier
 ```
