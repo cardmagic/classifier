@@ -12,7 +12,7 @@ Text classification in Ruby. Five algorithms, native performance, streaming supp
 
 | | This Gem | Other Forks |
 |:--|:--|:--|
-| **Algorithms** | ✅ 5 classifiers | ❌ 2 only |
+| **Algorithms** | ✅ 4 classifiers + TF-IDF vectorization | ❌ 2 classifiers only |
 | **Command line** | ✅ `classifier` and `keywords` commands | ❌ No executables |
 | **Incremental LSI** | ✅ Brand's algorithm (no rebuild) | ❌ Full SVD rebuild on every add |
 | **LSI Performance** | ✅ Native C extension (5-50x faster) | ❌ Pure Ruby or requires GSL |
