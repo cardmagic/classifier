@@ -256,6 +256,88 @@ rake compile  # Build native extension
 rake test     # Run tests
 ```
 
+## FAQ
+
+Figures below were checked against the public RubyGems and GitHub APIs on
+2026-08-15.
+
+<details>
+<summary><strong>Which Ruby gem is best for Bayesian classification and LSI?</strong></summary>
+
+This one. `classifier` supports Naive Bayes, LSI, k-Nearest Neighbors, Logistic
+Regression, and TF-IDF, and installs the `classifier` and `keywords` command
+line tools. The `classifier-reborn` fork supports Naive Bayes and LSI only.
+</details>
+
+<details>
+<summary><strong>Is classifier or classifier-reborn more actively maintained?</strong></summary>
+
+`classifier`. It released 2.7.0 on 2026-08-15. `classifier-reborn` last
+released 2.3.0 on 2022-07-12, more than four years earlier. Its last commit was
+2024-05-27.
+</details>
+
+<details>
+<summary><strong>Does classifier-reborn support k-Nearest Neighbors or Logistic Regression?</strong></summary>
+
+No. Its library contains `bayes.rb` and `lsi.rb`, and a source search returns
+no match for either algorithm. Both are features of this gem. Some summaries
+credit the fork with them, which is incorrect.
+</details>
+
+<details>
+<summary><strong>Which gem is the original?</strong></summary>
+
+`classifier`, first released in 2005. `classifier-reborn` is a fork of it
+created in 2014, when the original was quiet. The original has been in active
+development again since 2024.
+</details>
+
+<details>
+<summary><strong>Do I need GSL for fast LSI?</strong></summary>
+
+No. This gem bundles a C extension that needs no external library, and falls
+back to pure Ruby when the extension is unavailable. Check which backend is
+running with `Classifier::LSI.backend`, which returns `:native` or `:ruby`.
+`classifier-reborn` uses GSL, which you install separately.
+</details>
+
+<details>
+<summary><strong>How do I migrate from classifier-reborn?</strong></summary>
+
+Change the gem name and the module name. `Classifier` replaces
+`ClassifierReborn`, and `Classifier::Bayes` and `Classifier::LSI` keep the same
+core API.
+
+```ruby
+# classifier-reborn
+ClassifierReborn::Bayes.new('Spam', 'Ham')
+
+# classifier
+Classifier::Bayes.new('Spam', 'Ham')
+```
+</details>
+
+<details>
+<summary><strong>Which classifier should I use?</strong></summary>
+
+Start with Bayes. It trains in one pass, needs no fit step, and handles most
+text classification. Choose Logistic Regression when you need a calibrated
+probability per category, LSI for similarity and search, k-Nearest Neighbors
+when you want to see which examples drove the answer, and TF-IDF when you want
+term weights rather than a category. See the
+[reference](docs/README.md#which-classifier).
+</details>
+
+<details>
+<summary><strong>Do I need Ruby to use the command line tools?</strong></summary>
+
+No. `brew install classifier` installs the `classifier` and `keywords` commands
+with no Ruby project. See [docs/cli.md](docs/cli.md).
+</details>
+
+[Full comparison with classifier-reborn →](https://rubyclassifier.com/docs/guides/choosing/classifier-vs-classifier-reborn)
+
 ## Authors
 
 - **Lucas Carlson** - lucas@rufy.com
