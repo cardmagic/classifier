@@ -1,3 +1,10 @@
+# Hound bundles a RuboCop older than 0.78. That version cannot parse
+# .rubocop.yml: it expects the Metrics/LineLength namespace instead of
+# Layout/LineLength, and it rejects TargetRubyVersion 3.1. Pinning it to
+# 2019 rules would judge this codebase, and its rbs-inline annotations,
+# by cops that predate them.
+#
+# The CI lint job runs RuboCop 1.89 against .rubocop.yml on every pull
+# request. That job is the gate for Ruby style.
 ruby:
-  enabled: true
-  config_file: .rubocop.yml
+  enabled: false
