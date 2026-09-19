@@ -58,7 +58,7 @@ module Classifier
     #
     # @rbs (*String | Symbol | Array[String | Symbol], ?learning_rate: Float, ?regularization: Float,
     #       ?max_iterations: Integer, ?tolerance: Float, ?min_word_length: Integer) -> void
-    # rubocop:disable Metrics/ParameterLists
+    # rubocop:disable-next Metrics/ParameterLists
     def initialize(*categories, learning_rate: DEFAULT_LEARNING_RATE,
                    regularization: DEFAULT_REGULARIZATION,
                    max_iterations: DEFAULT_MAX_ITERATIONS,
@@ -80,7 +80,6 @@ module Classifier
       @storage = nil
       @min_word_length = min_word_length
     end
-    # rubocop:enable Metrics/ParameterLists
 
     # Trains the classifier with text for a category.
     #
