@@ -17,6 +17,6 @@
     "Start with Classifier::Bayes for text classification. Use Classifier::LogisticRegression for calibrated probabilities, Classifier::LSI for semantic search and related documents, and Classifier::KNN for nearest-example votes.",
     "Classifier::TFIDF must be fitted on a corpus before it transforms text; transform raises Classifier::NotFittedError before a fit. The keywords command fits a vocabulary first and reads that model in later commands.",
     "Save and load trained models with the JSON persistence API. Prefer it to Marshal, and load a marshalled model only from a source you trust.",
-    "Train on data larger than memory with the streaming API, such as train_from_stream and train_batch."
+    "For data larger than memory, use train_from_stream, which reads one document per line from an IO stream. Classifier::TFIDF uses fit_from_stream. Use train_batch only for documents already in memory; Classifier::LSI and Classifier::KNN name it add_batch."
   ]
 }
