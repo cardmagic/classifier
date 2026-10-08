@@ -1,0 +1,22 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "url": "https://context7.com/cardmagic/classifier",
+  "public_key": "pk_veEo2smPvGYMwP1MncN1A",
+  "projectTitle": "Classifier (Ruby gem)",
+  "description": "Text classification in Ruby: Naive Bayes, Logistic Regression, LSI (Latent Semantic Indexing), k-Nearest Neighbors, and TF-IDF vectorization, with a native C extension, streaming training, pluggable persistence, and the classifier and keywords command-line tools. Requires Ruby 3.1+.",
+  "folders": [
+    "docs"
+  ],
+  "excludeFiles": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CONTRIBUTING.md"
+  ],
+  "rules": [
+    "Install with gem 'classifier' in the Gemfile, or brew install classifier for the command-line tools only. The gem requires Ruby 3.1 or newer.",
+    "Start with Classifier::Bayes for text classification. Use Classifier::LogisticRegression for calibrated probabilities, Classifier::LSI for semantic search and related documents, and Classifier::KNN for nearest-example votes.",
+    "Classifier::TFIDF must be fitted on a corpus before it transforms text; transform raises Classifier::NotFittedError before a fit. The keywords command fits a vocabulary first and reads that model in later commands.",
+    "Save and load trained models with the JSON persistence API. Prefer it to Marshal, and load a marshalled model only from a source you trust.",
+    "For data larger than memory, use train_from_stream, which reads one document per line from an IO stream. Classifier::TFIDF uses fit_from_stream. Use train_batch only for documents already in memory; Classifier::LSI and Classifier::KNN name it add_batch."
+  ]
+}
