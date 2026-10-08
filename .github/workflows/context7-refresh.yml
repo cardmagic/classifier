@@ -1,0 +1,40 @@
+name: Context7 refresh
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "README.md"
+      - "context7.json"
+      - "docs/**"
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger a Context7 refresh
+        env:
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+          LIBRARY_NAME: /${{ github.repository }}
+        run: |
+          status=$(curl --silent --show-error --max-time 180 --output response.json --write-out '%{http_code}' \
+            -X POST https://context7.com/api/v1/refresh \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $CONTEXT7_API_KEY" \
+            -d "{\"libraryName\": \"$LIBRARY_NAME\"}")
+          cat response.json
+          echo
+          if [ "$status" = "200" ]; then
+            exit 0
+          fi
+          if [ "$status" = "400" ] && jq -e '.error == "too-early"' response.json > /dev/null; then
+            echo "::notice::Context7 refreshed $LIBRARY_NAME recently, so it skipped this refresh."
+            exit 0
+          fi
+          echo "::error::Context7 refresh failed with HTTP $status."
+          exit 1
