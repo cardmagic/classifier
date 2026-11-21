@@ -41,6 +41,7 @@ GEM
     erb (4.0.4.1)
       cgi (>= 0.3.3)
     fast-stemmer (1.0.2)
+    ffi (1.17.2)
     ffi (1.17.2-arm64-darwin)
     ffi (1.17.2-x86_64-linux-gnu)
     fileutils (1.8.0)
@@ -60,7 +61,7 @@ GEM
     mutex_m (0.3.0)
     ostruct (0.6.3)
     parallel (1.28.0)
-    parser (3.3.13.0)
+    parser (3.3.14.0)
       ast (~> 2.4.1)
       racc
     prism (1.9.0)
@@ -87,9 +88,9 @@ GEM
       erb
       psych (>= 4.0.0)
       tsort
-    regexp_parser (2.13.1)
+    regexp_parser (2.13.4)
     rexml (3.4.4)
-    rubocop (1.92.2)
+    rubocop (1.92.3)
       json (>= 2.3)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.1.0)
@@ -100,9 +101,11 @@ GEM
       rubocop-ast (>= 1.49.0, < 2.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (>= 2.4.0, < 4.0)
-    rubocop-ast (1.50.0)
+    rubocop-ast (1.53.0)
+      ast (~> 2.4)
       parser (>= 3.3.7.2)
-      prism (~> 1.7)
+      prism (>= 1.7)
+      racc
     rubocop-minitest (0.41.0)
       lint_roller (~> 1.1)
       rubocop (>= 1.89.0, < 2.0)
